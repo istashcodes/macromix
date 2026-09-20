@@ -485,6 +485,11 @@ async function saveTargets() {
   applyTargetsToUI();
   updateCirclesProgress();
   closeSettingsModal();
+
+  if (window.MacromixFirebase && currentUserHandle) {
+    window.MacromixFirebase.syncTargetsToFirestore(currentUserHandle, userTargets);
+  }
+
   AppLogger.log('UI', 'Daily targets successfully saved');
 }
 
@@ -653,6 +658,10 @@ function renderStreak() {
   const streak = calculateStreak();
   streakBadge.textContent = `🔥 ${streak}d`;
   streakBadge.setAttribute('title', `${streak} consecutive day${streak === 1 ? '' : 's'} logging macros`);
+
+  if (window.MacromixFirebase && currentUserHandle) {
+    window.MacromixFirebase.syncStreakToFirestore(currentUserHandle, streak);
+  }
 }
 
 function filterAndRenderSelectedDate() {
@@ -1816,6 +1825,11 @@ async function checkUserProfileOnboarding() {
       badgeEl.style.display = 'flex';
     }
     if (onboardingEl) onboardingEl.classList.add('hidden');
+    if (window.MacromixFirebase) {
+      try {
+        window.MacromixFirebase.syncStreakToFirestore(cachedHandle, calculateStreak());
+      } catch (e) {}
+    }
     return;
   }
 
@@ -1871,6 +1885,20 @@ async function registerHandleOnboarding(handle, authMethod = 'passkey') {
     return false;
   }
 
+  // 1. Direct Client Firestore Registration
+  if (window.MacromixFirebase && typeof window.MacromixFirebase.createHandleProfile === 'function') {
+    try {
+      const fireRes = await window.MacromixFirebase.createHandleProfile(clean, authMethod, userTargets);
+      if (!fireRes.success) {
+        showOnboardingError(fireRes.error || "Could not claim handle. Please try another.");
+        return false;
+      }
+    } catch (fErr) {
+      console.warn("[Macromix] Firestore handle registration warning:", fErr);
+    }
+  }
+
+  // 2. Also persist to local FastAPI server if available
   try {
     const res = await fetch('/api/user/profile', {
       method: 'POST',
@@ -1880,44 +1908,33 @@ async function registerHandleOnboarding(handle, authMethod = 'passkey') {
 
     if (!res.ok) {
       const err = await res.json();
-      showOnboardingError(err.detail || "Could not claim handle. Please try another.");
-      return false;
+      if (res.status === 409) {
+        showOnboardingError(err.detail || "Could not claim handle. Please try another.");
+        return false;
+      }
     }
-
-    const data = await res.json();
-    currentUserHandle = data.handle;
-    localStorage.setItem('macromix_user_handle', data.handle);
-
-    const badgeEl = document.getElementById('header-handle-badge');
-    const badgeText = document.getElementById('header-handle-text');
-    if (badgeEl && badgeText) {
-      badgeText.textContent = '@' + data.handle;
-      badgeEl.style.display = 'flex';
-    }
-
-    const onboardingEl = document.getElementById('onboarding-screen');
-    if (onboardingEl) {
-      onboardingEl.classList.add('hidden');
-    }
-    document.body.style.overflow = '';
-
-    AppLogger.log('AUTH', `Successfully onboarded user via ${authMethod}: @${data.handle}`, data, 'SUCCESS');
-    return true;
   } catch (e) {
-    // Offline/standalone fallback
-    currentUserHandle = clean;
-    localStorage.setItem('macromix_user_handle', clean);
-    const badgeEl = document.getElementById('header-handle-badge');
-    const badgeText = document.getElementById('header-handle-text');
-    if (badgeEl && badgeText) {
-      badgeText.textContent = '@' + clean;
-      badgeEl.style.display = 'flex';
-    }
-    const onboardingEl = document.getElementById('onboarding-screen');
-    if (onboardingEl) onboardingEl.classList.add('hidden');
-    document.body.style.overflow = '';
-    return true;
+    // Local server offline; client Firestore handles persistence
   }
+
+  currentUserHandle = clean;
+  localStorage.setItem('macromix_user_handle', clean);
+
+  const badgeEl = document.getElementById('header-handle-badge');
+  const badgeText = document.getElementById('header-handle-text');
+  if (badgeEl && badgeText) {
+    badgeText.textContent = '@' + clean;
+    badgeEl.style.display = 'flex';
+  }
+
+  const onboardingEl = document.getElementById('onboarding-screen');
+  if (onboardingEl) {
+    onboardingEl.classList.add('hidden');
+  }
+  document.body.style.overflow = '';
+
+  AppLogger.log('AUTH', `Successfully onboarded user via ${authMethod}: @${clean}`, { handle: clean, authMethod }, 'SUCCESS');
+  return true;
 }
 
 async function handlePasskeyAuth() {

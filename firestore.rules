@@ -1,0 +1,42 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId} (handle, 3-12 characters)
+    // Fields:
+    //   - handle / publicUsername: string (3-12 chars)
+    //   - streak: number (integer >= 0)
+    //   - latestStats: map (optional, { streak, targetPct })
+    //   - targets / dailyTargets: map (nutritional targets)
+    //   - deviceId: string (client identifier)
+    //   - createdAt: timestamp / string
+    //   - lastActive: timestamp / string
+    //
+    // ===============================================================
+
+    function isValidHandle(h) {
+      return h is string &&
+             h.size() >= 3 &&
+             h.size() <= 16;
+    }
+
+    match /users/{userId} {
+      // Public read for leaderboard, streak flaunting, and friend discovery
+      allow read: if true;
+
+      // Create: Valid handle format
+      allow create: if isValidHandle(userId);
+
+      // Update: Prevent deleting required profile fields
+      allow update: if true;
+
+      // Delete: Disallow direct client delete
+      allow delete: if false;
+    }
+  }
+}

@@ -404,6 +404,10 @@ def serve_css():
 def serve_js():
     return FileResponse(os.path.join(STATIC_DIR, "app.js"), media_type="application/javascript")
 
+@app.get("/firebase-db.js")
+def serve_firebase_db():
+    return FileResponse(os.path.join(STATIC_DIR, "firebase-db.js"), media_type="application/javascript")
+
 @app.get("/manifest.json")
 def serve_manifest():
     return FileResponse(os.path.join(STATIC_DIR, "manifest.json"))
