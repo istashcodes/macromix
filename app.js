@@ -1527,7 +1527,7 @@ function stopRecording() {
   AppLogger.log('UI', 'User stopped microphone recording');
   isRecording = false;
   btnTapRecord.classList.remove('recording');
-  btnTapRecord.innerHTML = '<span class="btn-mic-icon">🎙️</span><span class="btn-track-text">Tap &amp; track your macro<span class="btn-brand-mix">mix</span></span>';
+  btnTapRecord.innerHTML = '<span class="btn-mic-icon">🎙️</span><span class="btn-track-text">Track your macro<span class="btn-brand-mix">mix</span></span>';
 
   if (silenceTimer) clearTimeout(silenceTimer);
 

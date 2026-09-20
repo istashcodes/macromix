@@ -478,6 +478,15 @@ body {
   transition: transform 0.05s ease, box-shadow 0.05s ease;
 }
 
+.btn-mic-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 2px;
+}
+
 .btn-track-text {
   white-space: nowrap;
   letter-spacing: -0.04em;

@@ -143,10 +143,11 @@ def test_e2e_macronomics_app(app_server):
         assert "0d" in page.locator("#streak-badge").inner_text()
         print(f"[Playwright] Initial Circles: {val_cal} kcal, {val_prot}g prot, {val_carb}c, {val_fiber}fib. Streak: {page.locator('#streak-badge').inner_text()}")
 
-        # 2b. Verify 'Tap & track your macromix' button text
+        # 2b. Verify 'Track your macromix' button text
         tap_track_btn = page.locator("#btn-tap-record")
-        assert "Tap & track your" in tap_track_btn.inner_text(), f"Expected 'Tap & track your macromix', got '{tap_track_btn.inner_text()}'"
-        print(f"[Playwright] Verified button text contains 'Tap & track your macromix': '{tap_track_btn.inner_text()}'.")
+        assert "Track your" in tap_track_btn.inner_text(), f"Expected 'Track your macromix', got '{tap_track_btn.inner_text()}'"
+        assert "macromix" in tap_track_btn.inner_text()
+        print(f"[Playwright] Verified button text contains 'Track your macromix': '{tap_track_btn.inner_text()}'.")
 
         # 3. Test Dynamic Log Button State & Empty Log Prevention
         input_box = page.locator("#manual-text-input")
