@@ -260,8 +260,8 @@ def get_profile(user_id: int = 1):
 @app.post("/api/user/profile")
 def save_profile_handle(req: HandleUpdateRequest):
     clean = req.handle.strip().lower().lstrip("@")
-    if not clean or len(clean) < 3 or len(clean) > 20 or not re.match(r'^[a-z0-9_]+$', clean):
-        raise HTTPException(status_code=400, detail="Handle must be 3-20 characters and contain only lowercase letters, numbers, and underscores.")
+    if not clean or len(clean) < 3 or len(clean) > 12 or not re.match(r'^[a-z0-9_]+$', clean):
+        raise HTTPException(status_code=400, detail="Handle must be 3-12 characters and contain only lowercase letters, numbers, and underscores.")
     ok = update_user_handle(clean, req.user_id)
     if not ok:
         raise HTTPException(status_code=409, detail="Handle is already taken by another user.")

@@ -651,7 +651,7 @@ function renderStreak() {
   const streakBadge = document.getElementById('streak-badge');
   if (!streakBadge) return;
   const streak = calculateStreak();
-  streakBadge.textContent = `🔥 ${streak} ${streak === 1 ? 'Day' : 'Days'}`;
+  streakBadge.textContent = `🔥 ${streak}d`;
   streakBadge.setAttribute('title', `${streak} consecutive day${streak === 1 ? '' : 's'} logging macros`);
 }
 
@@ -1616,6 +1616,9 @@ function setupSettingsModal() {
   const btn = document.getElementById('open-settings-btn');
   if (btn) btn.onclick = openSettingsModal;
 
+  const handleBadge = document.getElementById('header-handle-badge');
+  if (handleBadge) handleBadge.onclick = openSettingsModal;
+
   // Close modals when clicking outside on backdrop
   window.addEventListener('click', (e) => {
     const settingsModal = document.getElementById('settings-modal');
@@ -1863,8 +1866,8 @@ function clearOnboardingError() {
 async function registerHandleOnboarding(handle, authMethod = 'passkey') {
   clearOnboardingError();
   const clean = (handle || '').trim().toLowerCase().replace(/^@+/, '');
-  if (!clean || clean.length < 3 || clean.length > 20 || !/^[a-z0-9_]+$/.test(clean)) {
-    showOnboardingError("Handle must be 3-20 characters (letters, numbers, underscores).");
+  if (!clean || clean.length < 3 || clean.length > 12 || !/^[a-z0-9_]+$/.test(clean)) {
+    showOnboardingError("Handle must be 3-12 characters (letters, numbers, underscores).");
     return false;
   }
 

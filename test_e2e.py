@@ -140,7 +140,7 @@ def test_e2e_macronomics_app(app_server):
         assert int(val_carb) == 0
         assert int(val_fiber) == 0
         assert page.locator("#circle-fiber").count() == 1
-        assert "0 Days" in page.locator("#streak-badge").inner_text()
+        assert "0d" in page.locator("#streak-badge").inner_text()
         print(f"[Playwright] Initial Circles: {val_cal} kcal, {val_prot}g prot, {val_carb}c, {val_fiber}fib. Streak: {page.locator('#streak-badge').inner_text()}")
 
         # 2b. Verify 'Tap & track your macromix' button text
@@ -242,9 +242,9 @@ def test_e2e_macronomics_app(app_server):
         assert 2 <= b_fat <= 30, f"Expected Fat 2-30g, got {b_fat}"
         print("[Playwright] Macro breakdown matches Google AI / Gemini benchmark!")
 
-        # Verify streak updated to 1 Day after today's meal
-        assert "1 Day" in page.locator("#streak-badge").inner_text()
-        print("[Playwright] Verified streak is '🔥 1 Day' after logging today's meal.")
+        # Verify streak updated to 1d after today's meal
+        assert "1d" in page.locator("#streak-badge").inner_text()
+        print("[Playwright] Verified streak is '🔥 1d' after logging today's meal.")
 
         # 5b. Test Date Navigation (< TODAY >) and Next Arrow Disabled on Today
         prev_date_btn = page.locator("#btn-date-prev")
@@ -280,9 +280,9 @@ def test_e2e_macronomics_app(app_server):
         assert not submit_btn.is_disabled()
         submit_btn.click()
         page.wait_for_selector(".meal-item-row:has-text('chicken')", timeout=30000)
-        page.wait_for_function("document.getElementById('streak-badge').innerText.includes('2 Day')")
-        assert "2 Day" in page.locator("#streak-badge").inner_text()
-        print("[Playwright] Verified streak counter incremented to '🔥 2 Days' for 2 consecutive days (yesterday and today)!")
+        page.wait_for_function("document.getElementById('streak-badge').innerText.includes('2d')")
+        assert "2d" in page.locator("#streak-badge").inner_text()
+        print("[Playwright] Verified streak counter incremented to '🔥 2d' for 2 consecutive days (yesterday and today)!")
 
         # Navigate back to Today
         next_date_btn.click()
@@ -291,8 +291,8 @@ def test_e2e_macronomics_app(app_server):
         assert next_date_btn.is_disabled(), "Next arrow must be disabled again upon returning to TODAY"
         assert int(page.locator("#val-cal").inner_text()) == b_cal
         assert page.locator(".meal-group").count() > 0
-        assert "2 Day" in page.locator("#streak-badge").inner_text()
-        print("[Playwright] Navigated back to TODAY: next arrow disabled again, circles restored, streak still '🔥 2 Days'.")
+        assert "2d" in page.locator("#streak-badge").inner_text()
+        print("[Playwright] Navigated back to TODAY: next arrow disabled again, circles restored, streak still '🔥 2d'.")
 
         # 5c. Test Touch Swipe Gestures between Days
         # Swipe Right (left-to-right) on .circles-container: navigates to YESTERDAY
@@ -331,7 +331,7 @@ def test_e2e_macronomics_app(app_server):
         page.reload()
         page.wait_for_selector(".meal-item-row", timeout=5000)
         assert int(page.locator("#val-cal").inner_text()) == b_cal
-        assert "2 Day" in page.locator("#streak-badge").inner_text()
+        assert "2d" in page.locator("#streak-badge").inner_text()
         # Transcript should still be present and collapsed by default after reload
         assert page.locator(".transcript-details").first.is_visible()
         assert page.locator(".transcript-details[open]").count() == 0
@@ -468,15 +468,18 @@ def test_e2e_macronomics_app(app_server):
         assert page.locator(".meal-group-header").count() == 0, "No meal group header should exist"
         print(f"[Playwright] Successfully logged '{yogurt_text}' without database errors!")
 
-        # 14. Test Daily Macro Targets Modal & Carbs/Fiber Target Format (Requirement 2)
+        # 14. Test Daily Macro Targets Modal opened via Handle Badge (Requirement: fire icon button removed from titlebar)
         # Verify Gemini badge and modal are completely absent (Requirement 1)
         assert page.locator("#gemini-badge").count() == 0, "Gemini badge must not exist"
         assert page.locator("#gemini-modal").count() == 0, "Gemini modal must not exist"
 
-        # Test Settings Button with Fire Icon opening Daily Macro Targets Modal ONLY
-        settings_btn = page.locator("#open-settings-btn")
-        assert "🔥" in settings_btn.inner_text(), f"Expected fire icon on settings button, got {settings_btn.inner_text()}"
-        settings_btn.click()
+        # Verify fire icon button is removed from titlebar
+        assert page.locator("#open-settings-btn").count() == 0, "Expected #open-settings-btn fire button to be removed from titlebar"
+
+        # Open Daily Macro Targets Modal by clicking the user handle badge in the titlebar
+        handle_badge = page.locator("#header-handle-badge")
+        assert handle_badge.is_visible(), "Expected handle badge to be visible in title bar"
+        handle_badge.click()
         page.wait_for_selector("#settings-modal:not(.hidden)")
         assert "TARGETS" in page.locator("#settings-modal .modal-title").inner_text().upper()
 
@@ -524,7 +527,7 @@ def test_e2e_macronomics_app(app_server):
         print("[Playwright] Verified Settings modal updates targets and carbs/fiber display correctly without 'fib' abbreviation!")
 
         # Capture screenshot of Daily Macro Targets modal
-        settings_btn.click()
+        handle_badge.click()
         page.wait_for_selector("#settings-modal:not(.hidden)")
         page.screenshot(path="/Users/satish.s/.gemini/antigravity/brain/1b29da82-03ee-4adf-ba27-814141ad0f77/macro_targets_modal_verified.png")
         page.locator("#settings-modal .close-btn").click()

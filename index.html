@@ -45,10 +45,10 @@
 
         <!-- Handle Input & 1-Tap Passwordless Auth -->
         <div class="onboarding-form-card">
-          <label class="handle-field-label" for="onboarding-handle-input">Claim your handle</label>
+          <label class="handle-field-label" for="onboarding-handle-input">Claim your handle (max 12 chars)</label>
           <div class="handle-input-box">
             <span class="handle-at">@</span>
-            <input type="text" id="onboarding-handle-input" class="handle-text-input" placeholder="yourname" autocomplete="off" spellcheck="false" autocapitalize="none">
+            <input type="text" id="onboarding-handle-input" class="handle-text-input" placeholder="yourname" maxlength="12" autocomplete="off" spellcheck="false" autocapitalize="none">
           </div>
           <div id="handle-status-msg" class="handle-status-msg"></div>
 
@@ -75,11 +75,10 @@
         <h1 class="brand-title">macro<span>mix</span></h1>
       </div>
       <div class="header-actions">
-        <div class="header-handle-badge" id="header-handle-badge" onclick="openProfileSettings()" title="Your Profile Handle" style="display: none;">
+        <div class="header-handle-badge" id="header-handle-badge" onclick="openSettingsModal()" title="Daily Macro Targets" style="display: none;">
           <span id="header-handle-text">@you</span>
         </div>
-        <div class="streak-badge" id="streak-badge">🔥 0 Days</div>
-        <button class="icon-btn" id="open-settings-btn" onclick="openSettingsModal()" title="Daily Macro Targets">🔥</button>
+        <div class="streak-badge" id="streak-badge">🔥 0d</div>
       </div>
     </header>
 
