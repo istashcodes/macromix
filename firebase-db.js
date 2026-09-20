@@ -102,12 +102,14 @@ export async function createHandleProfile(handle, authMethod = 'passkey', dailyT
     const existing = await getDoc(docRef);
     if (existing.exists()) {
       const existingData = existing.data();
-      // If same device already registered this handle, allow reconnecting
-      if (existingData.deviceId === deviceId) {
-        localStorage.setItem('macromix_user_handle', clean);
-        return { success: true, profile: existingData };
-      }
-      return { success: false, error: 'Handle is already taken. Please pick another.' };
+      // Seamless Login: Update deviceId and lastActive to connect this session
+      await updateDoc(docRef, {
+        deviceId: deviceId,
+        lastActive: serverTimestamp()
+      });
+      localStorage.setItem('macromix_user_handle', clean);
+      console.log(`[Macromix Firebase] Seamless login for @${clean} from device ${deviceId}.`);
+      return { success: true, profile: existingData, isLogin: true };
     }
 
     const newProfile = {

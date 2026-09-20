@@ -1885,13 +1885,28 @@ async function registerHandleOnboarding(handle, authMethod = 'passkey') {
     return false;
   }
 
-  // 1. Direct Client Firestore Registration
+  // 1. Direct Client Firestore Registration / Seamless Login
+  let fireRes = null;
   if (window.MacromixFirebase && typeof window.MacromixFirebase.createHandleProfile === 'function') {
     try {
-      const fireRes = await window.MacromixFirebase.createHandleProfile(clean, authMethod, userTargets);
+      fireRes = await window.MacromixFirebase.createHandleProfile(clean, authMethod, userTargets);
       if (!fireRes.success) {
         showOnboardingError(fireRes.error || "Could not claim handle. Please try another.");
         return false;
+      }
+      // If logging into an existing account, restore cloud targets & streak
+      if (fireRes.isLogin && fireRes.profile) {
+        if (fireRes.profile.dailyTargets) {
+          userTargets = fireRes.profile.dailyTargets;
+          localStorage.setItem('macronomics_targets', JSON.stringify(userTargets));
+          applyTargetsToUI();
+        }
+        if (typeof fireRes.profile.streak === 'number') {
+          const streakBadge = document.getElementById('streak-badge');
+          if (streakBadge) {
+            streakBadge.textContent = `🔥 ${fireRes.profile.streak}d`;
+          }
+        }
       }
     } catch (fErr) {
       console.warn("[Macromix] Firestore handle registration warning:", fErr);
@@ -1908,7 +1923,7 @@ async function registerHandleOnboarding(handle, authMethod = 'passkey') {
 
     if (!res.ok) {
       const err = await res.json();
-      if (res.status === 409) {
+      if (res.status === 409 && !fireRes?.isLogin) {
         showOnboardingError(err.detail || "Could not claim handle. Please try another.");
         return false;
       }
@@ -1933,7 +1948,8 @@ async function registerHandleOnboarding(handle, authMethod = 'passkey') {
   }
   document.body.style.overflow = '';
 
-  AppLogger.log('AUTH', `Successfully onboarded user via ${authMethod}: @${clean}`, { handle: clean, authMethod }, 'SUCCESS');
+  const actionType = fireRes?.isLogin ? 'Logged in' : 'Successfully onboarded';
+  AppLogger.log('AUTH', `${actionType} user via ${authMethod}: @${clean}`, { handle: clean, authMethod, isLogin: fireRes?.isLogin }, 'SUCCESS');
   return true;
 }
 
@@ -1944,47 +1960,74 @@ async function handlePasskeyAuth() {
     showOnboardingError("Please enter your desired handle first.");
     return;
   }
+  const clean = handleVal.trim().toLowerCase().replace(/^@+/, '');
 
-  // WebAuthn Passkey Registration Flow
+  // Check if handle already exists to determine whether to verify passkey (login) or register new passkey
+  let isExistingUser = false;
+  if (window.MacromixFirebase && typeof window.MacromixFirebase.checkHandleAvailable === 'function') {
+    try {
+      const isAvailable = await window.MacromixFirebase.checkHandleAvailable(clean);
+      isExistingUser = !isAvailable;
+    } catch (e) {}
+  }
+
+  // WebAuthn Passkey Flow
   if (window.PublicKeyCredential) {
     try {
-      AppLogger.log('AUTH', 'Initiating WebAuthn Passkey credential creation...');
       const challenge = new Uint8Array(32);
       window.crypto.getRandomValues(challenge);
-      const userIdBytes = new Uint8Array(16);
-      window.crypto.getRandomValues(userIdBytes);
 
-      const credential = await navigator.credentials.create({
-        publicKey: {
-          challenge: challenge,
-          rp: { name: "macromix", id: window.location.hostname },
-          user: {
-            id: userIdBytes,
-            name: handleVal.trim().toLowerCase(),
-            displayName: "@" + handleVal.trim().toLowerCase()
-          },
-          pubKeyCredParams: [
-            { alg: -7, type: "public-key" },  // ES256
-            { alg: -257, type: "public-key" } // RS256
-          ],
-          authenticatorSelection: {
-            authenticatorAttachment: "platform",
-            userVerification: "preferred"
-          },
-          timeout: 60000
+      if (isExistingUser) {
+        // --- SEAMLESS LOG-IN: Verify Passkey via navigator.credentials.get ---
+        AppLogger.log('AUTH', `Verifying passkey for existing user @${clean}...`);
+        const assertion = await navigator.credentials.get({
+          publicKey: {
+            challenge: challenge,
+            rpId: window.location.hostname,
+            userVerification: "preferred",
+            timeout: 60000
+          }
+        });
+        if (assertion) {
+          AppLogger.log('AUTH', 'WebAuthn passkey verified successfully for login');
         }
-      });
+      } else {
+        // --- REGISTRATION: Create Passkey via navigator.credentials.create ---
+        AppLogger.log('AUTH', `Initiating WebAuthn Passkey creation for @${clean}...`);
+        const userIdBytes = new Uint8Array(16);
+        window.crypto.getRandomValues(userIdBytes);
 
-      if (credential) {
-        AppLogger.log('AUTH', 'WebAuthn passkey credential created successfully');
+        const credential = await navigator.credentials.create({
+          publicKey: {
+            challenge: challenge,
+            rp: { name: "macromix", id: window.location.hostname },
+            user: {
+              id: userIdBytes,
+              name: clean,
+              displayName: "@" + clean
+            },
+            pubKeyCredParams: [
+              { alg: -7, type: "public-key" },  // ES256
+              { alg: -257, type: "public-key" } // RS256
+            ],
+            authenticatorSelection: {
+              authenticatorAttachment: "platform",
+              userVerification: "preferred"
+            },
+            timeout: 60000
+          }
+        });
+        if (credential) {
+          AppLogger.log('AUTH', 'WebAuthn passkey credential created successfully');
+        }
       }
     } catch (err) {
-      // User cancelled or platform-unsupported: still let them claim their handle seamlessly
+      // User cancelled or platform-unsupported: still continue seamlessly
       AppLogger.log('AUTH', 'WebAuthn prompt completed/bypassed: ' + (err.message || err), null, 'INFO');
     }
   }
 
-  await registerHandleOnboarding(handleVal, 'passkey');
+  await registerHandleOnboarding(clean, 'passkey');
 }
 
 async function handlePhoneAuthFallback() {
