@@ -469,7 +469,7 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 1.0rem;
   font-weight: 900;
-  letter-spacing: -0.04em;
+  letter-spacing: 0.035em;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -489,13 +489,13 @@ body {
 
 .btn-track-text {
   white-space: nowrap;
-  letter-spacing: -0.04em;
+  letter-spacing: 0.035em;
 }
 
 .btn-brand-mix {
   color: var(--prot-color);
   font-weight: 900;
-  letter-spacing: -0.04em;
+  letter-spacing: 0.035em;
 }
 
 .btn-primary:active, .btn-primary.recording {
