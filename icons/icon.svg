@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+    <linearGradient id="flameGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="120" fill="url(#bgGrad)"/>
+  <!-- Fire Flame icon -->
+  <path d="M256 90c0 0-70 85-70 160 0 38.65 31.35 70 70 70s70-31.35 70-70c0-75-70-160-70-160z" fill="url(#flameGrad)"/>
+  <path d="M256 180c0 0-35 42.5-35 80 0 19.325 15.675 35 35 35s35-15.675 35-35c0-37.5-35-80-35-80z" fill="#fbbf24"/>
+  <!-- Macro progress rings -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="24"/>
+  <path d="M 256 76 A 180 180 0 1 1 76 256" fill="none" stroke="#22c55e" stroke-width="24" stroke-linecap="round"/>
+</svg>

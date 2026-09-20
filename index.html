@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>macromix</title>
+  
+  <meta name="description" content="Voice-first macro and calorie tracker powered by USDA SR Legacy deterministic grounding and Gemini Multimodal AI.">
+  <meta name="theme-color" content="#FFE600">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="macromix">
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css?v=1.9">
+</head>
+<body>
+
+  <!-- Dedicated First-Time User Onboarding Screen -->
+  <section id="onboarding-screen" class="onboarding-screen hidden">
+    <div class="onboarding-container">
+      <div class="onboarding-top">
+        <div class="onboarding-brand">
+          <img src="icons/logo.png" alt="macromix logo" class="onboarding-brand-logo">
+          <h1 class="onboarding-brand-title">macro<span>mix</span></h1>
+        </div>
+
+        <!-- 2-Line Intro Card -->
+        <div class="onboarding-intro-card">
+          <div class="intro-headline">Track macros everyday. Get ready to flaunt! 🔥</div>
+          <div class="intro-subtext">
+            <div>• <span class="highlight-1">Track macros effortlessly</span> with voice and smart AI.</div>
+            <div>• <span class="highlight-2">Share streaks &amp; meals</span> with friends for real accountability.</div>
+          </div>
+        </div>
+
+        <!-- Handle Input & 1-Tap Passwordless Auth -->
+        <div class="onboarding-form-card">
+          <label class="handle-field-label" for="onboarding-handle-input">Claim your handle</label>
+          <div class="handle-input-box">
+            <span class="handle-at">@</span>
+            <input type="text" id="onboarding-handle-input" class="handle-text-input" placeholder="yourname" autocomplete="off" spellcheck="false" autocapitalize="none">
+          </div>
+          <div id="handle-status-msg" class="handle-status-msg"></div>
+
+          <button type="button" id="btn-onboard-passkey" class="btn-onboard-passkey" onclick="handlePasskeyAuth()">
+            <span class="btn-passkey-icon">🛡️</span>
+            <span>Continue with FaceID / TouchID</span>
+          </button>
+
+          <div class="onboarding-or-divider">OR</div>
+
+          <button type="button" id="btn-onboard-phone" class="btn-onboard-phone" onclick="handlePhoneAuthFallback()">
+            Use phone SMS code instead
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand-wrapper">
+        <img src="icons/logo.png" alt="macromix logo" class="brand-logo-img">
+        <h1 class="brand-title">macro<span>mix</span></h1>
+      </div>
+      <div class="header-actions">
+        <div class="header-handle-badge" id="header-handle-badge" onclick="openProfileSettings()" title="Your Profile Handle" style="display: none;">
+          <span id="header-handle-text">@you</span>
+        </div>
+        <div class="streak-badge" id="streak-badge">🔥 0 Days</div>
+        <button class="icon-btn" id="open-settings-btn" onclick="openSettingsModal()" title="Daily Macro Targets">🔥</button>
+      </div>
+    </header>
+
+    <!-- Circles Macro Dashboard -->
+    <section class="circles-container">
+      <div class="date-nav-bar">
+        <button type="button" class="date-nav-arrow" id="btn-date-prev" onclick="changeDate(-1)" title="Previous Day">◀</button>
+        <button type="button" class="date-nav-pill" id="date-label" onclick="resetToToday()" title="Jump to Today">TODAY</button>
+        <button type="button" class="date-nav-arrow disabled" id="btn-date-next" onclick="changeDate(1)" title="Next Day" disabled>▶</button>
+      </div>
+      <hr class="date-divider">
+      <div class="circles-grid">
+        <!-- Calories Circle -->
+        <div class="circle-card cal">
+          <div class="circle-svg-wrap">
+            <svg class="circle-svg" viewBox="0 0 36 36">
+              <path class="circle-bg" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="circle-cal" class="circle-progress" stroke="var(--cal-color)" fill="none" stroke-dasharray="100, 100" stroke-dashoffset="100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div class="circle-inside">
+              <div class="circle-val" id="val-cal">0</div>
+              <div class="circle-unit">kcal</div>
+            </div>
+          </div>
+          <span class="circle-name">Calories</span>
+          <span class="circle-target" id="tgt-cal">/ 2000</span>
+        </div>
+
+        <!-- Protein Circle -->
+        <div class="circle-card prot">
+          <div class="circle-svg-wrap">
+            <svg class="circle-svg" viewBox="0 0 36 36">
+              <path class="circle-bg" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="circle-prot" class="circle-progress" stroke="var(--prot-color)" fill="none" stroke-dasharray="100, 100" stroke-dashoffset="100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div class="circle-inside">
+              <div class="circle-val" id="val-prot">0</div>
+              <div class="circle-unit">g</div>
+            </div>
+          </div>
+          <span class="circle-name">Protein</span>
+          <span class="circle-target" id="tgt-prot">/ 150g</span>
+        </div>
+
+        <!-- Carbs & Fiber Circle -->
+        <div class="circle-card carb">
+          <div class="circle-svg-wrap">
+            <svg class="circle-svg" viewBox="0 0 36 36">
+              <!-- Outer Circle: Carbs -->
+              <path class="circle-bg" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="circle-carb" class="circle-progress" stroke="var(--carb-color)" fill="none" stroke-dasharray="100, 100" stroke-dashoffset="100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <!-- Inner Circle: Fiber -->
+              <path class="circle-bg-inner" fill="none" pathLength="100" d="M18 6.5 a 11.5 11.5 0 0 1 0 23 a 11.5 11.5 0 0 1 0 -23" />
+              <path id="circle-fiber" class="circle-progress-inner" stroke="var(--fiber-color)" fill="none" pathLength="100" stroke-dasharray="100, 100" stroke-dashoffset="100" d="M18 6.5 a 11.5 11.5 0 0 1 0 23 a 11.5 11.5 0 0 1 0 -23" />
+            </svg>
+            <div class="circle-inside carb-inside">
+              <div class="macro-val-line">
+                <span class="circle-val" id="val-carb">0</span><span class="circle-unit">c</span>
+              </div>
+              <div class="macro-val-line fiber-line">
+                <span class="circle-val-fib" id="val-fiber">0</span><span class="circle-unit-fib">fib</span>
+              </div>
+            </div>
+          </div>
+          <span class="circle-name">CARBS &bull; FIB</span>
+          <span class="circle-target"><span id="tgt-carb">/ 200g</span> &bull; <span id="tgt-fiber">30g</span></span>
+        </div>
+
+        <!-- Fat Circle -->
+        <div class="circle-card fat">
+          <div class="circle-svg-wrap">
+            <svg class="circle-svg" viewBox="0 0 36 36">
+              <path class="circle-bg" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="circle-fat" class="circle-progress" stroke="var(--fat-color)" fill="none" stroke-dasharray="100, 100" stroke-dashoffset="100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div class="circle-inside">
+              <div class="circle-val" id="val-fat">0</div>
+              <div class="circle-unit">g</div>
+            </div>
+          </div>
+          <span class="circle-name">Fat</span>
+          <span class="circle-target" id="tgt-fat">/ 65g</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Unified Logging & Timeline Container (Screenshot Match) -->
+    <section class="main-container-card">
+      <div id="mic-status-text" class="mic-status-banner">Mic Idle • Ready to Record</div>
+
+      <div class="voice-buttons-row">
+        <button type="button" class="btn-primary" id="btn-tap-record" onclick="toggleVoiceRecording()">
+          <span class="btn-mic-icon">🎙️</span><span class="btn-track-text">Tap &amp; track your macro<span class="btn-brand-mix">mix</span></span>
+        </button>
+      </div>
+
+      <form id="text-log-form" onsubmit="handleTextLog(event)" class="text-input-wrap">
+        <input type="text" id="manual-text-input" class="neo-input" placeholder="Or type e.g. 100g cooked chicken breast at 1 pm..." autocomplete="off">
+        <button type="submit" class="btn-log" id="btn-submit-log" disabled>Log ⚡</button>
+      </form>
+
+      <!-- Chronological Meal Timeline (LOGGED MEALS Box) -->
+      <div class="timeline-box">
+        <div class="timeline-header">
+          <span class="timeline-title">LOGGED MEALS</span>
+        </div>
+        <div id="meal-timeline-content">
+          <div class="empty-state">No meals logged yet today. Tap the mic or type above!</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Daily Macro Targets Modal -->
+  <div id="settings-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Daily Macro Targets</h2>
+        <button type="button" class="close-btn" onclick="closeSettingsModal()">✕</button>
+      </div>
+
+      <div class="form-group">
+        <div class="targets-form-grid">
+          <div class="target-field full-width">
+            <label class="target-field-label" for="tgt-input-cal">Calories (kcal)</label>
+            <input type="number" id="tgt-input-cal" class="neo-input" value="2000" min="0" step="10">
+          </div>
+          <div class="target-field">
+            <label class="target-field-label" for="tgt-input-prot">Protein (g)</label>
+            <input type="number" id="tgt-input-prot" class="neo-input" value="150" min="0" step="1">
+          </div>
+          <div class="target-field">
+            <label class="target-field-label" for="tgt-input-fat">Fat (g)</label>
+            <input type="number" id="tgt-input-fat" class="neo-input" value="65" min="0" step="1">
+          </div>
+          <div class="target-field">
+            <label class="target-field-label" for="tgt-input-carb">Carbs (g)</label>
+            <input type="number" id="tgt-input-carb" class="neo-input" value="200" min="0" step="1">
+          </div>
+          <div class="target-field">
+            <label class="target-field-label" for="tgt-input-fiber">Fiber (g)</label>
+            <input type="number" id="tgt-input-fiber" class="neo-input" value="30" min="0" step="1">
+          </div>
+        </div>
+      </div>
+      <button type="button" class="btn-primary" onclick="saveTargets()">Save Daily Targets</button>
+    </div>
+  </div>
+
+  <!-- Inline Edit Item Drawer -->
+  <div id="edit-item-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Edit Food Portion</h2>
+        <button type="button" class="close-btn" onclick="closeEditModal()">✕</button>
+      </div>
+      <div class="form-group">
+        <label id="edit-food-name-label">Food Item</label>
+        <input type="hidden" id="edit-item-id">
+        <div style="display: flex; gap: 8px;">
+          <input type="number" id="edit-quantity" class="neo-input" step="any">
+          <input type="text" id="edit-unit" class="neo-input" style="max-width: 80px;" readonly>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Standardized Weight (grams)</label>
+        <input type="number" id="edit-weight-g" class="neo-input" step="any">
+      </div>
+      <button type="button" class="btn-primary" onclick="saveItemEdit()">Update Item & Recalculate Circles</button>
+    </div>
+  </div>
+
+  <!-- Frontend Controller -->
+  <script src="app.js?v=2.7"></script>
+</body>
+</html>

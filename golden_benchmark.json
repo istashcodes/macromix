@@ -1,0 +1,1434 @@
+[
+  {
+    "id": 1,
+    "transcript": "I ate 100 grams of cooked chicken breast at 1 pm",
+    "expected_extraction": {
+      "meal_type": "lunch",
+      "logged_time": "13:00",
+      "items": [
+        {
+          "food_name": "chicken breast",
+          "preparation_state": "cooked",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 171077,
+        "description": "Chicken, breast, meat only, cooked, roasted",
+        "calories": 165.0,
+        "protein_g": 31.02,
+        "carbs_g": 0.0,
+        "fat_g": 3.57,
+        "fiber_g": 0.0
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "transcript": "Had 150 grams of raw chicken breast for meal prep",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "chicken breast",
+          "preparation_state": "raw",
+          "quantity": 150.0,
+          "unit": "g",
+          "standardized_weight_g": 150.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 171076,
+        "description": "Chicken, breast, meat only, raw",
+        "calories": 180.0,
+        "protein_g": 33.81,
+        "carbs_g": 0.0,
+        "fat_g": 3.93,
+        "fiber_g": 0.0
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "transcript": "Had 2 large boiled eggs and 1 slice of whole wheat toast for breakfast at 8 am",
+    "expected_extraction": {
+      "meal_type": "breakfast",
+      "logged_time": "08:00",
+      "items": [
+        {
+          "food_name": "egg",
+          "preparation_state": "boiled",
+          "quantity": 2.0,
+          "unit": "large",
+          "standardized_weight_g": 100.0
+        },
+        {
+          "food_name": "whole wheat toast",
+          "preparation_state": "toasted",
+          "quantity": 1.0,
+          "unit": "slice",
+          "standardized_weight_g": 28.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 173424,
+        "description": "Egg, whole, cooked, hard-boiled",
+        "calories": 155.0,
+        "protein_g": 12.58,
+        "carbs_g": 1.12,
+        "fat_g": 10.61,
+        "fiber_g": 0.0
+      },
+      {
+        "fdc_id": 172688,
+        "description": "Bread, whole-wheat, commercially prepared",
+        "calories": 69.16,
+        "protein_g": 3.63,
+        "carbs_g": 11.59,
+        "fat_g": 1.07,
+        "fiber_g": 1.9
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "transcript": "Ate 200 grams of cooked white long grain rice",
+    "expected_extraction": {
+      "meal_type": "lunch",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "white rice",
+          "preparation_state": "cooked",
+          "quantity": 200.0,
+          "unit": "g",
+          "standardized_weight_g": 200.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 169757,
+        "description": "Rice, white, long-grain, regular, enriched, cooked",
+        "calories": 260.0,
+        "protein_g": 5.38,
+        "carbs_g": 56.34,
+        "fat_g": 0.56,
+        "fiber_g": 0.8
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "transcript": "Logged 100 grams of raw white long grain rice",
+    "expected_extraction": {
+      "meal_type": "lunch",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "white rice",
+          "preparation_state": "raw",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 169756,
+        "description": "Rice, white, long-grain, regular, raw",
+        "calories": 365.0,
+        "protein_g": 7.13,
+        "carbs_g": 79.95,
+        "fat_g": 0.66,
+        "fiber_g": 1.3
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "transcript": "Drank 250 ml of whole milk",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "whole milk",
+          "preparation_state": "liquid",
+          "quantity": 250.0,
+          "unit": "ml",
+          "standardized_weight_g": 257.5
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 171265,
+        "description": "Milk, whole, 3.25% milkfat",
+        "calories": 156.0,
+        "protein_g": 8.11,
+        "carbs_g": 12.03,
+        "fat_g": 8.37,
+        "fiber_g": 0.0
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "transcript": "Had 1 medium banana at 4:30 pm",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": "16:30",
+      "items": [
+        {
+          "food_name": "banana",
+          "preparation_state": "raw",
+          "quantity": 1.0,
+          "unit": "medium",
+          "standardized_weight_g": 118.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 173944,
+        "description": "Bananas, raw",
+        "calories": 105.02,
+        "protein_g": 1.29,
+        "carbs_g": 26.95,
+        "fat_g": 0.39,
+        "fiber_g": 3.07
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "transcript": "Ate 32 grams of creamy peanut butter",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "peanut butter",
+          "preparation_state": "paste",
+          "quantity": 32.0,
+          "unit": "g",
+          "standardized_weight_g": 32.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 172470,
+        "description": "Peanut butter, smooth style, with salt",
+        "calories": 190.72,
+        "protein_g": 7.11,
+        "carbs_g": 7.14,
+        "fat_g": 16.14,
+        "fiber_g": 1.6
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "transcript": "Ate 1 cup of dry rolled oats for breakfast",
+    "expected_extraction": {
+      "meal_type": "breakfast",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "rolled oats",
+          "preparation_state": "raw",
+          "quantity": 1.0,
+          "unit": "cup",
+          "standardized_weight_g": 81.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 171662,
+        "description": "Cereals, oats, regular and quick, unenriched, dry",
+        "calories": 307.0,
+        "protein_g": 10.74,
+        "carbs_g": 54.84,
+        "fat_g": 5.29,
+        "fiber_g": 8.18
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "transcript": "1 tablespoon of extra virgin olive oil used for cooking",
+    "expected_extraction": {
+      "meal_type": "dinner",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "olive oil",
+          "preparation_state": "liquid",
+          "quantity": 1.0,
+          "unit": "tbsp",
+          "standardized_weight_g": 13.5
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 171413,
+        "description": "Oil, olive, salad or cooking",
+        "calories": 119.34,
+        "protein_g": 0.0,
+        "carbs_g": 0.0,
+        "fat_g": 13.5,
+        "fiber_g": 0.0
+      }
+    ]
+  },
+  {
+    "id": 11,
+    "transcript": "Ate 200 grams of cooked Atlantic salmon fillet",
+    "expected_extraction": {
+      "meal_type": "dinner",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "atlantic salmon",
+          "preparation_state": "cooked",
+          "quantity": 200.0,
+          "unit": "g",
+          "standardized_weight_g": 200.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 175168,
+        "description": "Fish, salmon, Atlantic, wild, cooked, dry heat",
+        "calories": 364.0,
+        "protein_g": 50.84,
+        "carbs_g": 0.0,
+        "fat_g": 16.28,
+        "fiber_g": 0.0
+      }
+    ]
+  },
+  {
+    "id": 12,
+    "transcript": "Had 150 grams of baked sweet potato with skin",
+    "expected_extraction": {
+      "meal_type": "dinner",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "sweet potato",
+          "preparation_state": "baked",
+          "quantity": 150.0,
+          "unit": "g",
+          "standardized_weight_g": 150.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 168483,
+        "description": "Sweet potato, cooked, baked in skin, flesh, without salt",
+        "calories": 135.0,
+        "protein_g": 3.02,
+        "carbs_g": 31.07,
+        "fat_g": 0.22,
+        "fiber_g": 4.95
+      }
+    ]
+  },
+  {
+    "id": 13,
+    "transcript": "Ate 150 grams of cooked 90/10 lean ground beef",
+    "expected_extraction": {
+      "meal_type": "dinner",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "ground beef 90/10",
+          "preparation_state": "cooked",
+          "quantity": 150.0,
+          "unit": "g",
+          "standardized_weight_g": 150.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 174032,
+        "description": "Beef, ground, 90% lean meat / 10% fat, loaf, cooked",
+        "calories": 264.0,
+        "protein_g": 36.87,
+        "carbs_g": 0.0,
+        "fat_g": 12.18,
+        "fiber_g": 0.0
+      }
+    ]
+  },
+  {
+    "id": 14,
+    "transcript": "Had 170 grams of plain nonfat Greek yogurt",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "greek yogurt nonfat",
+          "preparation_state": "raw",
+          "quantity": 170.0,
+          "unit": "g",
+          "standardized_weight_g": 170.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 170903,
+        "description": "Yogurt, Greek, plain, nonfat",
+        "calories": 100.3,
+        "protein_g": 17.34,
+        "carbs_g": 6.12,
+        "fat_g": 0.66,
+        "fiber_g": 0.0
+      }
+    ]
+  },
+  {
+    "id": 15,
+    "transcript": "Ate 100 grams of raw baby spinach leaves",
+    "expected_extraction": {
+      "meal_type": "lunch",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "spinach",
+          "preparation_state": "raw",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 168462,
+        "description": "Spinach, raw",
+        "calories": 23.0,
+        "protein_g": 2.86,
+        "carbs_g": 3.63,
+        "fat_g": 0.39,
+        "fiber_g": 2.2
+      }
+    ]
+  },
+  {
+    "id": 16,
+    "transcript": "Had 150 grams of steamed broccoli florets",
+    "expected_extraction": {
+      "meal_type": "dinner",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "broccoli",
+          "preparation_state": "cooked",
+          "quantity": 150.0,
+          "unit": "g",
+          "standardized_weight_g": 150.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 170380,
+        "description": "Broccoli, cooked, boiled, drained, without salt",
+        "calories": 52.5,
+        "protein_g": 3.57,
+        "carbs_g": 10.77,
+        "fat_g": 0.62,
+        "fiber_g": 4.95
+      }
+    ]
+  },
+  {
+    "id": 17,
+    "transcript": "Ate 1 medium Haas avocado",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "avocado",
+          "preparation_state": "raw",
+          "quantity": 1.0,
+          "unit": "medium",
+          "standardized_weight_g": 150.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 171705,
+        "description": "Avocados, raw, California",
+        "calories": 250.5,
+        "protein_g": 3.0,
+        "carbs_g": 12.87,
+        "fat_g": 23.19,
+        "fiber_g": 10.05
+      }
+    ]
+  },
+  {
+    "id": 18,
+    "transcript": "Drank 1 scoop of whey protein powder mixed with 300 ml water at 6 pm",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": "18:00",
+      "items": [
+        {
+          "food_name": "whey protein powder",
+          "preparation_state": "powder",
+          "quantity": 1.0,
+          "unit": "scoop",
+          "standardized_weight_g": 30.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 173177,
+        "description": "Beverages, Whey protein powder isolate",
+        "calories": 113.7,
+        "protein_g": 24.3,
+        "carbs_g": 1.49,
+        "fat_g": 0.96,
+        "fiber_g": 0.0
+      }
+    ]
+  },
+  {
+    "id": 19,
+    "transcript": "Ate 100 grams of raw blueberries",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "blueberries",
+          "preparation_state": "raw",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 171711,
+        "description": "Blueberries, raw",
+        "calories": 57.0,
+        "protein_g": 0.74,
+        "carbs_g": 14.49,
+        "fat_g": 0.33,
+        "fiber_g": 2.4
+      }
+    ]
+  },
+  {
+    "id": 20,
+    "transcript": "Had 1 medium Gala apple with skin at 11 am",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": "11:00",
+      "items": [
+        {
+          "food_name": "apple",
+          "preparation_state": "raw",
+          "quantity": 1.0,
+          "unit": "medium",
+          "standardized_weight_g": 182.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 171688,
+        "description": "Apples, raw, with skin",
+        "calories": 94.64,
+        "protein_g": 0.47,
+        "carbs_g": 25.13,
+        "fat_g": 0.31,
+        "fiber_g": 4.37
+      }
+    ]
+  },
+  {
+    "id": 21,
+    "transcript": "Ate 28 grams of raw almonds",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "almonds",
+          "preparation_state": "raw",
+          "quantity": 28.0,
+          "unit": "g",
+          "standardized_weight_g": 28.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 170567,
+        "description": "Nuts, almonds, raw",
+        "calories": 162.12,
+        "protein_g": 5.94,
+        "carbs_g": 6.06,
+        "fat_g": 13.97,
+        "fiber_g": 3.5
+      }
+    ]
+  },
+  {
+    "id": 22,
+    "transcript": "Had 150 grams of cooked quinoa for lunch",
+    "expected_extraction": {
+      "meal_type": "lunch",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "quinoa",
+          "preparation_state": "cooked",
+          "quantity": 150.0,
+          "unit": "g",
+          "standardized_weight_g": 150.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 168917,
+        "description": "Quinoa, cooked",
+        "calories": 180.0,
+        "protein_g": 6.6,
+        "carbs_g": 31.95,
+        "fat_g": 2.88,
+        "fiber_g": 4.2
+      }
+    ]
+  },
+  {
+    "id": 23,
+    "transcript": "Ate 100 grams of canned tuna drained in water",
+    "expected_extraction": {
+      "meal_type": "lunch",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "canned tuna",
+          "preparation_state": "cooked",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 171986,
+        "description": "Fish, tuna, light, canned in water, drained solids",
+        "calories": 116.0,
+        "protein_g": 25.51,
+        "carbs_g": 0.0,
+        "fat_g": 0.82,
+        "fiber_g": 0.0
+      }
+    ]
+  },
+  {
+    "id": 24,
+    "transcript": "Had 200 grams of cooked brown long grain rice",
+    "expected_extraction": {
+      "meal_type": "dinner",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "brown rice",
+          "preparation_state": "cooked",
+          "quantity": 200.0,
+          "unit": "g",
+          "standardized_weight_g": 200.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 169704,
+        "description": "Rice, brown, long-grain, cooked",
+        "calories": 246.0,
+        "protein_g": 5.48,
+        "carbs_g": 51.54,
+        "fat_g": 1.94,
+        "fiber_g": 3.2
+      }
+    ]
+  },
+  {
+    "id": 25,
+    "transcript": "Ate 150 grams of cooked chicken thighs without skin",
+    "expected_extraction": {
+      "meal_type": "dinner",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "chicken thigh",
+          "preparation_state": "cooked",
+          "quantity": 150.0,
+          "unit": "g",
+          "standardized_weight_g": 150.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 172389,
+        "description": "Chicken, meat only, thigh, cooked, roasted",
+        "calories": 268.5,
+        "protein_g": 36.36,
+        "carbs_g": 0.0,
+        "fat_g": 12.63,
+        "fiber_g": 0.0
+      }
+    ]
+  },
+  {
+    "id": 26,
+    "transcript": "Had 200 grams of baked russet potato without skin",
+    "expected_extraction": {
+      "meal_type": "dinner",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "russet potato",
+          "preparation_state": "baked",
+          "quantity": 200.0,
+          "unit": "g",
+          "standardized_weight_g": 200.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 170030,
+        "description": "Potatoes, baked, flesh, without salt",
+        "calories": 186.0,
+        "protein_g": 4.28,
+        "carbs_g": 42.88,
+        "fat_g": 0.2,
+        "fiber_g": 3.0
+      }
+    ]
+  },
+  {
+    "id": 27,
+    "transcript": "Had 100 grams of raw strawberries at 3 pm",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": "15:00",
+      "items": [
+        {
+          "food_name": "strawberries",
+          "preparation_state": "raw",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 167762,
+        "description": "Strawberries, raw",
+        "calories": 32.0,
+        "protein_g": 0.67,
+        "carbs_g": 7.68,
+        "fat_g": 0.3,
+        "fiber_g": 2.0
+      }
+    ]
+  },
+  {
+    "id": 28,
+    "transcript": "Ate 200 grams of low fat 2% cottage cheese",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "cottage cheese 2%",
+          "preparation_state": "raw",
+          "quantity": 200.0,
+          "unit": "g",
+          "standardized_weight_g": 200.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 173418,
+        "description": "Cheese, cottage, lowfat, 2% milkfat",
+        "calories": 162.0,
+        "protein_g": 22.08,
+        "carbs_g": 9.44,
+        "fat_g": 4.54,
+        "fiber_g": 0.0
+      }
+    ]
+  },
+  {
+    "id": 29,
+    "transcript": "Had 100 grams of cooked black beans",
+    "expected_extraction": {
+      "meal_type": "lunch",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "black beans",
+          "preparation_state": "cooked",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 173735,
+        "description": "Beans, black, mature seeds, cooked, boiled, without salt",
+        "calories": 132.0,
+        "protein_g": 8.86,
+        "carbs_g": 23.71,
+        "fat_g": 0.54,
+        "fiber_g": 8.7
+      }
+    ]
+  },
+  {
+    "id": 30,
+    "transcript": "Ate 100 grams of cooked brown lentils",
+    "expected_extraction": {
+      "meal_type": "dinner",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "lentils",
+          "preparation_state": "cooked",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 172421,
+        "description": "Lentils, mature seeds, cooked, boiled, without salt",
+        "calories": 116.0,
+        "protein_g": 9.02,
+        "carbs_g": 20.13,
+        "fat_g": 0.38,
+        "fiber_g": 7.9
+      }
+    ]
+  },
+  {
+    "id": 31,
+    "transcript": "Had 100 grams of firm raw tofu",
+    "expected_extraction": {
+      "meal_type": "lunch",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "firm tofu",
+          "preparation_state": "raw",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 172448,
+        "description": "Tofu, firm, prepared with calcium sulfate and magnesium chloride",
+        "calories": 83.0,
+        "protein_g": 9.98,
+        "carbs_g": 2.69,
+        "fat_g": 5.26,
+        "fiber_g": 0.9
+      }
+    ]
+  },
+  {
+    "id": 32,
+    "transcript": "Ate 100 grams of raw carrots",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "carrots",
+          "preparation_state": "raw",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 170393,
+        "description": "Carrots, raw",
+        "calories": 41.0,
+        "protein_g": 0.93,
+        "carbs_g": 9.58,
+        "fat_g": 0.24,
+        "fiber_g": 2.8
+      }
+    ]
+  },
+  {
+    "id": 33,
+    "transcript": "Had 100 grams of raw cucumber with peel",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "cucumber",
+          "preparation_state": "raw",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 169225,
+        "description": "Cucumber, with peel, raw",
+        "calories": 15.0,
+        "protein_g": 0.65,
+        "carbs_g": 3.63,
+        "fat_g": 0.11,
+        "fiber_g": 0.5
+      }
+    ]
+  },
+  {
+    "id": 34,
+    "transcript": "Ate 28 grams of raw chia seeds",
+    "expected_extraction": {
+      "meal_type": "breakfast",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "chia seeds",
+          "preparation_state": "raw",
+          "quantity": 28.0,
+          "unit": "g",
+          "standardized_weight_g": 28.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 170554,
+        "description": "Seeds, chia seeds, dried",
+        "calories": 136.08,
+        "protein_g": 4.63,
+        "carbs_g": 11.79,
+        "fat_g": 8.59,
+        "fiber_g": 9.63
+      }
+    ]
+  },
+  {
+    "id": 35,
+    "transcript": "Had 14 grams of unsalted butter at breakfast",
+    "expected_extraction": {
+      "meal_type": "breakfast",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "butter",
+          "preparation_state": "solid",
+          "quantity": 14.0,
+          "unit": "g",
+          "standardized_weight_g": 14.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 173410,
+        "description": "Butter, without salt",
+        "calories": 100.38,
+        "protein_g": 0.12,
+        "carbs_g": 0.01,
+        "fat_g": 11.35,
+        "fiber_g": 0.0
+      }
+    ]
+  },
+  {
+    "id": 36,
+    "transcript": "Ate 28 grams of cheddar cheese",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "cheddar cheese",
+          "preparation_state": "solid",
+          "quantity": 28.0,
+          "unit": "g",
+          "standardized_weight_g": 28.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 173414,
+        "description": "Cheese, cheddar",
+        "calories": 113.12,
+        "protein_g": 6.41,
+        "carbs_g": 0.36,
+        "fat_g": 9.35,
+        "fiber_g": 0.0
+      }
+    ]
+  },
+  {
+    "id": 37,
+    "transcript": "Had 28 grams of 70% dark chocolate",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "dark chocolate 70%",
+          "preparation_state": "solid",
+          "quantity": 28.0,
+          "unit": "g",
+          "standardized_weight_g": 28.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 170273,
+        "description": "Chocolate, dark, 70-85% cacao solids",
+        "calories": 167.44,
+        "protein_g": 2.18,
+        "carbs_g": 12.85,
+        "fat_g": 12.06,
+        "fiber_g": 3.05
+      }
+    ]
+  },
+  {
+    "id": 38,
+    "transcript": "Ate 100 grams of cooked shrimp",
+    "expected_extraction": {
+      "meal_type": "dinner",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "shrimp",
+          "preparation_state": "cooked",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 175180,
+        "description": "Crustaceans, shrimp, cooked",
+        "calories": 99.0,
+        "protein_g": 24.0,
+        "carbs_g": 0.2,
+        "fat_g": 0.28,
+        "fiber_g": 0.0
+      }
+    ]
+  },
+  {
+    "id": 39,
+    "transcript": "Had 150 grams of cooked pork loin chop without bone",
+    "expected_extraction": {
+      "meal_type": "dinner",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "pork loin",
+          "preparation_state": "cooked",
+          "quantity": 150.0,
+          "unit": "g",
+          "standardized_weight_g": 150.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 168250,
+        "description": "Pork, fresh, loin, center loin (chops), boneless, cooked, pan-broiled",
+        "calories": 315.0,
+        "protein_g": 43.8,
+        "carbs_g": 0.0,
+        "fat_g": 14.55,
+        "fiber_g": 0.0
+      }
+    ]
+  },
+  {
+    "id": 40,
+    "transcript": "Ate 100 grams of raw turkey breast meat",
+    "expected_extraction": {
+      "meal_type": "lunch",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "turkey breast",
+          "preparation_state": "raw",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 171542,
+        "description": "Turkey, whole, meat only, raw",
+        "calories": 114.0,
+        "protein_g": 23.66,
+        "carbs_g": 0.0,
+        "fat_g": 1.58,
+        "fiber_g": 0.0
+      }
+    ]
+  },
+  {
+    "id": 41,
+    "transcript": "Had 100 grams of cooked green peas",
+    "expected_extraction": {
+      "meal_type": "dinner",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "green peas",
+          "preparation_state": "cooked",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 170420,
+        "description": "Peas, green, cooked, boiled, drained, without salt",
+        "calories": 84.0,
+        "protein_g": 5.36,
+        "carbs_g": 15.63,
+        "fat_g": 0.22,
+        "fiber_g": 5.5
+      }
+    ]
+  },
+  {
+    "id": 42,
+    "transcript": "Ate 28 grams of raw walnuts",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "walnuts",
+          "preparation_state": "raw",
+          "quantity": 28.0,
+          "unit": "g",
+          "standardized_weight_g": 28.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 170187,
+        "description": "Nuts, walnuts, English",
+        "calories": 183.12,
+        "protein_g": 4.26,
+        "carbs_g": 3.84,
+        "fat_g": 18.26,
+        "fiber_g": 1.88
+      }
+    ]
+  },
+  {
+    "id": 43,
+    "transcript": "Had 20 grams of pure honey in tea",
+    "expected_extraction": {
+      "meal_type": "breakfast",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "honey",
+          "preparation_state": "liquid",
+          "quantity": 20.0,
+          "unit": "g",
+          "standardized_weight_g": 20.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 169640,
+        "description": "Honey",
+        "calories": 60.8,
+        "protein_g": 0.06,
+        "carbs_g": 16.48,
+        "fat_g": 0.0,
+        "fiber_g": 0.04
+      }
+    ]
+  },
+  {
+    "id": 44,
+    "transcript": "Drank 240 ml of 100% orange juice at 9 am",
+    "expected_extraction": {
+      "meal_type": "breakfast",
+      "logged_time": "09:00",
+      "items": [
+        {
+          "food_name": "orange juice",
+          "preparation_state": "liquid",
+          "quantity": 240.0,
+          "unit": "ml",
+          "standardized_weight_g": 249.6
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 169098,
+        "description": "Orange juice, raw",
+        "calories": 112.32,
+        "protein_g": 1.75,
+        "carbs_g": 25.96,
+        "fat_g": 0.5,
+        "fiber_g": 0.5
+      }
+    ]
+  },
+  {
+    "id": 45,
+    "transcript": "Ate 100 grams of raw red bell pepper",
+    "expected_extraction": {
+      "meal_type": "lunch",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "red bell pepper",
+          "preparation_state": "raw",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 170108,
+        "description": "Peppers, sweet, red, raw",
+        "calories": 31.0,
+        "protein_g": 0.99,
+        "carbs_g": 6.03,
+        "fat_g": 0.3,
+        "fiber_g": 2.1
+      }
+    ]
+  },
+  {
+    "id": 46,
+    "transcript": "Had 100 grams of cooked asparagus spears",
+    "expected_extraction": {
+      "meal_type": "dinner",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "asparagus",
+          "preparation_state": "cooked",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 169966,
+        "description": "Asparagus, cooked, boiled, drained",
+        "calories": 22.0,
+        "protein_g": 2.4,
+        "carbs_g": 4.11,
+        "fat_g": 0.22,
+        "fiber_g": 2.0
+      }
+    ]
+  },
+  {
+    "id": 47,
+    "transcript": "Ate 100 grams of raw white mushrooms",
+    "expected_extraction": {
+      "meal_type": "lunch",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "mushrooms",
+          "preparation_state": "raw",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 169251,
+        "description": "Mushrooms, white, raw",
+        "calories": 22.0,
+        "protein_g": 3.09,
+        "carbs_g": 3.26,
+        "fat_g": 0.34,
+        "fiber_g": 1.0
+      }
+    ]
+  },
+  {
+    "id": 48,
+    "transcript": "Had 100 grams of cooked regular pasta noodles",
+    "expected_extraction": {
+      "meal_type": "dinner",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "pasta",
+          "preparation_state": "cooked",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 168936,
+        "description": "Pasta, cooked, enriched, without added salt",
+        "calories": 158.0,
+        "protein_g": 5.8,
+        "carbs_g": 30.86,
+        "fat_g": 0.93,
+        "fiber_g": 1.8
+      }
+    ]
+  },
+  {
+    "id": 49,
+    "transcript": "Ate 28 grams of raw pumpkin seeds pepitas",
+    "expected_extraction": {
+      "meal_type": "snack",
+      "logged_time": null,
+      "items": [
+        {
+          "food_name": "pumpkin seeds",
+          "preparation_state": "raw",
+          "quantity": 28.0,
+          "unit": "g",
+          "standardized_weight_g": 28.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 170188,
+        "description": "Seeds, pumpkin and squash seed kernels, dried",
+        "calories": 156.52,
+        "protein_g": 8.48,
+        "carbs_g": 3.0,
+        "fat_g": 13.75,
+        "fiber_g": 1.82
+      }
+    ]
+  },
+  {
+    "id": 50,
+    "transcript": "Had 150 grams of cooked chicken breast and 100 grams of cooked white rice at 7:30 pm",
+    "expected_extraction": {
+      "meal_type": "dinner",
+      "logged_time": "19:30",
+      "items": [
+        {
+          "food_name": "chicken breast",
+          "preparation_state": "cooked",
+          "quantity": 150.0,
+          "unit": "g",
+          "standardized_weight_g": 150.0
+        },
+        {
+          "food_name": "white rice",
+          "preparation_state": "cooked",
+          "quantity": 100.0,
+          "unit": "g",
+          "standardized_weight_g": 100.0
+        }
+      ]
+    },
+    "expected_macros": [
+      {
+        "fdc_id": 171077,
+        "description": "Chicken, breast, meat only, cooked, roasted",
+        "calories": 247.5,
+        "protein_g": 46.53,
+        "carbs_g": 0.0,
+        "fat_g": 5.36,
+        "fiber_g": 0.0
+      },
+      {
+        "fdc_id": 169757,
+        "description": "Rice, white, long-grain, regular, enriched, cooked",
+        "calories": 130.0,
+        "protein_g": 2.69,
+        "carbs_g": 28.17,
+        "fat_g": 0.28,
+        "fiber_g": 0.4
+      }
+    ]
+  }
+]

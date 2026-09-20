@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Voice Macro AI - Speak & Track Macros</title>
+  
+  <meta name="description" content="Voice-first AI macro and calorie tracker powered by Google Gemini. Tap, speak your meal, and automatically log nutrition.">
+  <meta name="theme-color" content="#0a0e1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="styles.css?v=2.0">
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand-wrapper">
+        <img src="icons/icon.svg" alt="Voice Macro Logo" class="brand-icon">
+        <div class="brand-title">VoiceMacro AI</div>
+      </div>
+      <div class="header-right">
+        <div class="streak-pill" id="streak-badge">🔥 0 Days</div>
+        <button class="icon-btn" onclick="toggleLogConsole()" title="View Live AI Execution Logs">📜</button>
+        <button class="icon-btn" onclick="window.location.href='../';" title="Switch to Checklist View">📋</button>
+        <button class="icon-btn" onclick="openSettingsModal()" title="Settings & Targets">⚙️</button>
+      </div>
+    </header>
+
+    <!-- Multimodal Engine Status Banner -->
+    <div id="model-status-banner" class="model-status-banner ready">
+      <div class="model-status-header">
+        <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+          <span id="model-status-icon">✨</span>
+          <span id="model-status-text">Gemini 2.0 Multimodal Voice AI (Direct 0MB Cloud Engine)</span>
+        </div>
+        <button class="action-btn" onclick="document.getElementById('model-status-banner').classList.add('hidden')" title="Dismiss" style="padding: 2px 6px; font-size: 0.9rem;">✕</button>
+      </div>
+    </div>
+
+    <!-- Date Navigation -->
+    <div class="date-bar">
+      <button class="date-nav-btn" onclick="changeDateOffset(-1)">◀</button>
+      <div class="date-display" id="date-display">Today</div>
+      <button class="date-nav-btn" onclick="changeDateOffset(1)">▶</button>
+    </div>
+
+    <!-- Macro Circular Rings Card -->
+    <section class="rings-card">
+      <div class="rings-grid">
+        <!-- Calories -->
+        <div class="ring-item">
+          <div class="ring-svg-wrapper">
+            <svg class="ring-svg" viewBox="0 0 36 36">
+              <path class="ring-bg" stroke-width="3.5" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="ring-cal" class="ring-progress" stroke="var(--cal-color)" stroke-width="3.5" stroke-linecap="round" fill="none" stroke-dasharray="100, 100" stroke-dashoffset="100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div class="ring-center-val" id="val-cal">0</div>
+          </div>
+          <span class="ring-label">Calories</span>
+          <span class="ring-target" id="tgt-cal">/ 2000 kcal</span>
+        </div>
+
+        <!-- Protein -->
+        <div class="ring-item">
+          <div class="ring-svg-wrapper">
+            <svg class="ring-svg" viewBox="0 0 36 36">
+              <path class="ring-bg" stroke-width="3.5" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="ring-prot" class="ring-progress" stroke="var(--prot-color)" stroke-width="3.5" stroke-linecap="round" fill="none" stroke-dasharray="100, 100" stroke-dashoffset="100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div class="ring-center-val" id="val-prot">0g</div>
+          </div>
+          <span class="ring-label">Protein</span>
+          <span class="ring-target" id="tgt-prot">/ 140g</span>
+        </div>
+
+        <!-- Carbs -->
+        <div class="ring-item">
+          <div class="ring-svg-wrapper">
+            <svg class="ring-svg" viewBox="0 0 36 36">
+              <path class="ring-bg" stroke-width="3.5" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="ring-carb" class="ring-progress" stroke="var(--carb-color)" stroke-width="3.5" stroke-linecap="round" fill="none" stroke-dasharray="100, 100" stroke-dashoffset="100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div class="ring-center-val" id="val-carb">0g</div>
+          </div>
+          <span class="ring-label">Carbs</span>
+          <span class="ring-target" id="tgt-carb">/ 220g</span>
+        </div>
+
+        <!-- Fiber -->
+        <div class="ring-item">
+          <div class="ring-svg-wrapper">
+            <svg class="ring-svg" viewBox="0 0 36 36">
+              <path class="ring-bg" stroke-width="3.5" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="ring-fib" class="ring-progress" stroke="var(--fib-color)" stroke-width="3.5" stroke-linecap="round" fill="none" stroke-dasharray="100, 100" stroke-dashoffset="100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div class="ring-center-val" id="val-fib">0g</div>
+          </div>
+          <span class="ring-label">Fiber</span>
+          <span class="ring-target" id="tgt-fib">/ 30g</span>
+        </div>
+
+        <!-- Fat -->
+        <div class="ring-item">
+          <div class="ring-svg-wrapper">
+            <svg class="ring-svg" viewBox="0 0 36 36">
+              <path class="ring-bg" stroke-width="3.5" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="ring-fat" class="ring-progress" stroke="var(--fat-color)" stroke-width="3.5" stroke-linecap="round" fill="none" stroke-dasharray="100, 100" stroke-dashoffset="100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <div class="ring-center-val" id="val-fat">0g</div>
+          </div>
+          <span class="ring-label">Fat</span>
+          <span class="ring-target" id="tgt-fat">/ 60g</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Frequent Meals -->
+    <section class="quick-chips-wrapper" id="frequent-chips-section">
+      <div class="section-subtitle">
+        <span>⚡ Quick Log Favorites</span>
+        <span style="font-size: 0.7rem; font-weight: normal; color: var(--primary);">0ms Cache</span>
+      </div>
+      <div class="chips-scroll" id="frequent-chips-container">
+        <!-- Injected via app.js -->
+      </div>
+    </section>
+
+    <!-- Meal Groups (Breakfast, Lunch, Snacks, Dinner) -->
+    <main id="meals-container">
+      <!-- Injected via app.js -->
+    </main>
+
+    <!-- 7-Day Trend Chart -->
+    <section class="trend-card">
+      <div class="section-subtitle">
+        <span>📊 7-Day Intake History</span>
+      </div>
+      <div class="trend-bars" id="trend-bars-container">
+        <!-- Injected via app.js -->
+      </div>
+    </section>
+
+    <!-- Concise AI Execution Logs & Pipeline Status -->
+    <section class="log-card" id="execution-log-card">
+      <div class="log-header">
+        <div class="log-title">
+          <span>⚡ Live Execution Logs</span>
+          <span class="log-live-dot"></span>
+        </div>
+        <div class="log-controls">
+          <button class="log-btn" onclick="clearExecutionLogs()" title="Clear Logs">Clear</button>
+          <button class="log-btn" id="toggle-logs-btn" onclick="toggleLogConsole()" title="Collapse/Expand">Hide</button>
+        </div>
+      </div>
+      <div class="log-entries-scroll" id="execution-log-entries">
+        <div class="log-entry sys">
+          <div class="log-time-msg">
+            <span class="log-time">System</span>
+            <span class="log-badge sys">READY</span>
+            <span class="log-msg">Tap the mic button below to speak your meal...</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Voice Meal Confirmation Modal -->
+  <div class="modal-overlay hidden" id="confirm-modal" onclick="closeConfirmModal(event)">
+    <div class="modal-card confirm-modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>✨ Confirm Logged Meal</h3>
+        <button class="modal-close" onclick="closeConfirmModal()">✕</button>
+      </div>
+
+      <!-- Spoken Speech Quote -->
+      <div class="spoken-quote-box" id="confirm-spoken-text">
+        "I had 2 boiled eggs and black coffee"
+      </div>
+
+      <!-- Meal Category Selector -->
+      <div class="form-group" style="margin-top: 14px;">
+        <label for="confirm-meal-select">Meal Category</label>
+        <select id="confirm-meal-select" class="form-select">
+          <option value="Breakfast">🥣 Breakfast</option>
+          <option value="Lunch">🍳 Lunch</option>
+          <option value="Snacks">☕ Snacks</option>
+          <option value="Dinner">🍽️ Dinner</option>
+        </select>
+      </div>
+
+      <!-- Itemized Food Items List -->
+      <div class="confirm-items-list" id="confirm-items-container">
+        <!-- Injected dynamically -->
+      </div>
+
+      <!-- Total Meal Summary Header/Footer -->
+      <div class="confirm-totals-box" id="confirm-totals-box">
+        <!-- Total Calories & Macros -->
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="confirm-actions-row">
+        <button class="btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+        <button class="btn-primary" onclick="commitConfirmedMeal()">✅ Confirm & Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero Bottom Floating Voice Action Bar -->
+  <div class="voice-hero-bar">
+    <button class="mic-action-btn" id="hero-mic-btn" onclick="toggleVoiceRecording()" title="Tap to Track">
+      🎙️
+    </button>
+    <div class="mic-hint" id="hero-mic-hint">Tap to Track</div>
+  </div>
+
+  <!-- Trial Limit / API Key Modal -->
+  <div class="modal-overlay hidden" id="trial-modal" onclick="closeTrialModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>🎉 Trial Period Complete</h3>
+        <button class="modal-close" onclick="closeTrialModal()">✕</button>
+      </div>
+      <div class="trial-banner">
+        <div class="trial-counter">You've logged 15 voice meals with our trial key!</div>
+      </div>
+      <p class="hint-text" style="margin-bottom: 14px; font-size: 0.85rem; color: var(--text-main);">
+        To continue unlimited voice logging, please enter your free Google Gemini API Key. It takes 10 seconds to generate one and is stored securely on your device.
+      </p>
+      <div class="form-group">
+        <label for="trial-api-key-input">Gemini API Key 🔑</label>
+        <input type="password" id="trial-api-key-input" class="form-input" placeholder="AIzaSy...">
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="hint-text" style="color: var(--primary); display: block; margin-top: 6px;">
+          Get your free key at Google AI Studio →
+        </a>
+      </div>
+      <button class="btn-primary" onclick="saveTrialApiKey()">Save Key & Continue</button>
+    </div>
+  </div>
+
+  <!-- Settings & Targets Modal -->
+  <div class="modal-overlay hidden" id="settings-modal" onclick="closeSettingsModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>⚙️ Settings & Targets</h3>
+        <button class="modal-close" onclick="closeSettingsModal()">✕</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="set-tgt-cal">Target Calories</label>
+          <input type="number" id="set-tgt-cal" class="form-input" value="2000">
+        </div>
+        <div class="form-group">
+          <label for="set-tgt-prot">Target Protein (g)</label>
+          <input type="number" id="set-tgt-prot" class="form-input" value="140">
+        </div>
+        <div class="form-group">
+          <label for="set-tgt-carb">Target Carbs (g)</label>
+          <input type="number" id="set-tgt-carb" class="form-input" value="220">
+        </div>
+        <div class="form-group">
+          <label for="set-tgt-fib">Target Fiber (g)</label>
+          <input type="number" id="set-tgt-fib" class="form-input" value="30">
+        </div>
+        <div class="form-group">
+          <label for="set-tgt-fat">Target Fat (g)</label>
+          <input type="number" id="set-tgt-fat" class="form-input" value="60">
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top: 10px;">
+        <label for="set-speech-engine">Speech Recognition Engine 🎙️</label>
+        <select id="set-speech-engine" class="form-select">
+          <option value="gemini_audio">✨ Gemini 2.0 Multimodal Voice (Direct Audio - Recommended)</option>
+          <option value="webspeech">⚡ Browser Native Web Speech API</option>
+        </select>
+        <span class="hint-text">Gemini Multimodal Voice streams raw audio directly for 100% accurate food extraction.</span>
+      </div>
+
+      <div class="form-group" style="margin-top: 10px;">
+        <label for="custom-gemini-key">Custom Gemini API Key 🔑</label>
+        <input type="password" id="custom-gemini-key" class="form-input" placeholder="AIzaSy... (leave blank for trial)">
+        <span class="hint-text">Allows unlimited voice queries using your own Google AI key.</span>
+      </div>
+
+      <button class="btn-primary" onclick="saveSettingsModal()" style="margin-top: 10px;">Save Changes</button>
+    </div>
+  </div>
+
+  <!-- Manual Food Edit Modal -->
+  <div class="modal-overlay hidden" id="edit-modal" onclick="closeEditModal(event)">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h3>✏️ Edit Food Item</h3>
+        <button class="modal-close" onclick="closeEditModal()">✕</button>
+      </div>
+      <input type="hidden" id="edit-item-id">
+      <input type="hidden" id="edit-meal-key">
+
+      <div class="form-group">
+        <label for="edit-food-name">Food Name</label>
+        <input type="text" id="edit-food-name" class="form-input" required>
+      </div>
+      <div class="form-group">
+        <label for="edit-food-portion">Portion Description</label>
+        <input type="text" id="edit-food-portion" class="form-input" required>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="edit-food-prot">Protein (g)</label>
+          <input type="number" step="0.1" id="edit-food-prot" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="edit-food-carb">Carbs (g)</label>
+          <input type="number" step="0.1" id="edit-food-carb" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="edit-food-fat">Fat (g)</label>
+          <input type="number" step="0.1" id="edit-food-fat" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="edit-food-fib">Fiber (g)</label>
+          <input type="number" step="0.1" id="edit-food-fib" class="form-input">
+        </div>
+      </div>
+      <button class="btn-primary" onclick="saveEditedFoodItem()" style="margin-top: 10px;">Update Item</button>
+    </div>
+  </div>
+
+  <script src="app.js?v=2.0"></script>
+</body>
+</html>

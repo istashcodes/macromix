@@ -1,0 +1,30 @@
+# Environments
+.venv/
+env/
+venv/
+ENV/
+
+# Python & Caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local databases & test files
+*.db
+*.sqlite3
+backend/macronomics_test.db
+scratch/
+
+# Firebase & Deployment caches
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
