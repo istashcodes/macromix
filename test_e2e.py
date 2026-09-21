@@ -117,9 +117,10 @@ def test_e2e_macronomics_app(app_server):
         assert "Protected by your device biometrics" not in page.content(), "Biometrics subtext line must be removed"
         print(f"[Playwright] Verified onboarding screen with headline: '{intro_headline}'")
 
-        # Claim handle via 1-tap passkey button
+        # Claim handle via 1-tap passkey button (using fresh dynamic test handle)
+        test_handle = f"t_{PORT % 100000}"
         handle_input = page.locator("#onboarding-handle-input")
-        handle_input.fill("satish")
+        handle_input.fill(test_handle)
         page.locator("#btn-onboard-passkey").click()
 
         # Wait for onboarding to dismiss and main app to become active
@@ -275,7 +276,8 @@ def test_e2e_macronomics_app(app_server):
         assert page.locator(".empty-state").is_visible() or page.locator(".meal-group").count() == 0
         print("[Playwright] Navigated to YESTERDAY: circles show 0 kcal, timeline empty, next arrow enabled.")
 
-        # Log a meal for Yesterday to test 2 consecutive days streak
+        # Log a meal for Yesterday to test 2 consecutive days streak (pause to prevent API rate limit)
+        time.sleep(5)
         input_box.fill("100g cooked chicken breast")
         submit_btn = page.locator("#btn-submit-log")
         assert not submit_btn.is_disabled()
@@ -342,9 +344,8 @@ def test_e2e_macronomics_app(app_server):
         assert page.locator("#gemini-badge").count() == 0, "Gemini Unlimited badge must be completely removed"
         assert page.locator("#btn-ptt").count() == 0, "Push & Hold button must be removed"
         assert page.locator(".timeline-header .refresh-btn").count() == 0, "Refresh icon must be removed from timeline header"
-        print("[Playwright] Verified Gemini badge, Push & Hold button, and refresh button are removed.")
-
-        # Test logging in Gemini mode
+        # Test logging in Gemini mode (pause briefly to avoid rate limiting)
+        time.sleep(3)
         input_box.fill("1 banana")
         page.locator("#btn-submit-log").click()
         page.wait_for_selector(".meal-item-row:has-text('banana')", timeout=30000)
@@ -415,7 +416,8 @@ def test_e2e_macronomics_app(app_server):
         dup_transcript = "no sorry that's that I had chicken Thai bonders around 200 grams and biryani rice of around 200 gram for lunch"
         input_box.fill(dup_transcript)
         
-        # Rapid double-click on submit
+        # Rapid double-click on submit (pause briefly for rate limit reset)
+        time.sleep(3)
         submit_btn = page.locator("#btn-submit-log")
         submit_btn.click()
 
@@ -447,6 +449,7 @@ def test_e2e_macronomics_app(app_server):
         assert meal_groups_count == 1, f"Expected exactly 1 meal group, got {meal_groups_count}"
         print("[Playwright] Verified Log CTA button disabled state, visual feedback, and 2nd click prevention!")
         # 13. Test 'evening snack 200 grams of Greek yogurt'
+        time.sleep(3)
         yogurt_text = "evening snack 200 grams of Greek yogurt"
         input_box.fill(yogurt_text)
         page.locator("#btn-submit-log").click()
@@ -552,7 +555,8 @@ def test_e2e_macronomics_app(app_server):
         assert main_container.locator(".timeline-box").is_visible(), "Expected .timeline-box inside main container"
         print("[Playwright] Verified unified container nesting voice, text input, and logged meals.")
 
-        # Log a meal within the redesigned layout
+        # Log a meal within the redesigned layout (pause to prevent API rate limit)
+        time.sleep(4)
         input_box.fill("100g grilled salmon")
         submit_btn = page.locator("#btn-submit-log")
         assert not submit_btn.is_disabled()
@@ -565,6 +569,7 @@ def test_e2e_macronomics_app(app_server):
         print("[Playwright] Captured screenshot of redesigned UI: ui_redesign_verified.png")
 
         # 16. Test Strict LLM Gate & Non-Food Rejection (RCA Verification)
+        time.sleep(3)
         movie_text = "we will not take one hour to search for a movie"
         input_box.fill(movie_text)
         page.locator("#btn-submit-log").click()

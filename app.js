@@ -336,9 +336,19 @@ function setupInputListeners() {
   updateLogButtonState();
 }
 
+// Helper to await Firebase DB module initialization
+async function waitForFirebaseDB(timeoutMs = 3000) {
+  const start = Date.now();
+  while (!window.MacromixFirebase && Date.now() - start < timeoutMs) {
+    await new Promise(r => setTimeout(r, 50));
+  }
+  return window.MacromixFirebase;
+}
+
 // Initialize on DOM Ready
 window.addEventListener('DOMContentLoaded', async () => {
   AppLogger.init();
+  await waitForFirebaseDB();
   await checkUserProfileOnboarding();
   updateDateLabel();
   renderStreak();
@@ -433,10 +443,35 @@ async function loadTargets() {
       userTargets = await res.json();
       localStorage.setItem('macronomics_targets', JSON.stringify(userTargets));
       applyTargetsToUI();
-      AppLogger.log('UI', 'Daily nutritional targets loaded', userTargets);
+      AppLogger.log('UI', 'Daily nutritional targets loaded from backend', userTargets);
       return;
     }
   } catch (e) {}
+
+  // Production Firestore sync across devices
+  if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.getFirestoreUserProfile === 'function') {
+    try {
+      const profile = await window.MacromixFirebase.getFirestoreUserProfile(currentUserHandle);
+      console.log(`[loadTargets] Fetched profile for @${currentUserHandle}:`, profile);
+      const raw = profile?.dailyTargets || profile?.targets;
+      if (raw) {
+        userTargets = {
+          calories: Number(raw.calories) || 2000,
+          protein_g: Number(raw.protein_g ?? raw.protein ?? raw.prot) || 150,
+          carbs_g: Number(raw.carbs_g ?? raw.carbs ?? raw.carb) || 200,
+          fiber_g: Number(raw.fiber_g ?? raw.fiber ?? raw.fib) || 30,
+          fat_g: Number(raw.fat_g ?? raw.fat) || 65
+        };
+        localStorage.setItem('macronomics_targets', JSON.stringify(userTargets));
+        applyTargetsToUI();
+        updateCirclesProgress();
+        AppLogger.log('UI', `Daily nutritional targets loaded from Firestore for @${currentUserHandle}`, userTargets);
+        return;
+      }
+    } catch (err) {
+      console.warn("[macromix] Could not load targets from Firestore:", err);
+    }
+  }
 
   const stored = localStorage.getItem('macronomics_targets');
   if (stored) {
@@ -730,19 +765,92 @@ function setCircleOffset(elementId, current, target) {
   el.style.strokeDashoffset = offset;
 }
 
+let unsubscribeMealsListener = null;
+
+function setupRealtimeMealsSync() {
+  if (!currentUserHandle || !window.MacromixFirebase || typeof window.MacromixFirebase.subscribeMealsFromFirestore !== 'function') return;
+  if (unsubscribeMealsListener) {
+    try { unsubscribeMealsListener(); } catch (e) {}
+    unsubscribeMealsListener = null;
+  }
+  unsubscribeMealsListener = window.MacromixFirebase.subscribeMealsFromFirestore(currentUserHandle, (remoteMeals) => {
+    if (Array.isArray(remoteMeals)) {
+      currentLogs = remoteMeals;
+      filterAndRenderSelectedDate();
+      renderStreak();
+      console.log(`[macromix] Real-time sync: ${remoteMeals.length} meals updated across devices.`);
+    }
+  });
+}
+
+let unsubscribeProfileListener = null;
+
+function setupRealtimeProfileSync() {
+  if (!currentUserHandle || !window.MacromixFirebase || typeof window.MacromixFirebase.subscribeProfileFromFirestore !== 'function') return;
+  if (unsubscribeProfileListener) {
+    try { unsubscribeProfileListener(); } catch (e) {}
+    unsubscribeProfileListener = null;
+  }
+  unsubscribeProfileListener = window.MacromixFirebase.subscribeProfileFromFirestore(currentUserHandle, (remoteProfile) => {
+    if (remoteProfile) {
+      const raw = remoteProfile.dailyTargets || remoteProfile.targets;
+      if (raw) {
+        userTargets = {
+          calories: Number(raw.calories) || 2000,
+          protein_g: Number(raw.protein_g ?? raw.protein ?? raw.prot) || 150,
+          carbs_g: Number(raw.carbs_g ?? raw.carbs ?? raw.carb) || 200,
+          fiber_g: Number(raw.fiber_g ?? raw.fiber ?? raw.fib) || 30,
+          fat_g: Number(raw.fat_g ?? raw.fat) || 65
+        };
+        localStorage.setItem('macronomics_targets', JSON.stringify(userTargets));
+        applyTargetsToUI();
+        updateCirclesProgress();
+        console.log(`[macromix] Real-time sync: daily targets updated across devices for @${currentUserHandle}.`, userTargets);
+      }
+      if (typeof remoteProfile.streak === 'number') {
+        const streakBadge = document.getElementById('streak-badge');
+        if (streakBadge) {
+          streakBadge.textContent = `🔥 ${remoteProfile.streak}d`;
+        }
+      }
+    }
+  });
+}
+
 // --- Meal Logs & Timeline ---
 async function loadMealLogs() {
+  // 1. Local FastAPI backend if available (local development / tests)
   try {
     const res = await fetch('/api/logs');
     if (res.ok) {
       currentLogs = await res.json();
       localStorage.setItem('macronomics_meals', JSON.stringify(currentLogs));
+      if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.syncLocalMealsWithFirestore === 'function') {
+        try {
+          await window.MacromixFirebase.syncLocalMealsWithFirestore(currentUserHandle);
+        } catch (sErr) {}
+      }
       filterAndRenderSelectedDate();
       AppLogger.log('UI', `Timeline updated: ${currentLogs.length} total meal logs loaded`, { count: currentLogs.length });
       return;
     }
   } catch (e) {
-    // Backend unavailable or network error (e.g. static hosting on Firebase)
+    // Backend unavailable or static hosting on Firebase
+  }
+
+  // 2. If user is logged in, sync with Cloud Firestore across all devices (Firebase Hosting production)
+  if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.syncLocalMealsWithFirestore === 'function') {
+    try {
+      const fireMeals = await window.MacromixFirebase.syncLocalMealsWithFirestore(currentUserHandle);
+      if (Array.isArray(fireMeals)) {
+        currentLogs = fireMeals;
+        filterAndRenderSelectedDate();
+        AppLogger.log('UI', `Timeline updated from Cloud Firestore: ${currentLogs.length} total meals`, { count: currentLogs.length });
+        return;
+      }
+    } catch (fErr) {
+      console.warn('[macromix] Firestore meal sync notice:', fErr);
+    }
   }
 
   const stored = localStorage.getItem('macronomics_meals');
@@ -939,28 +1047,43 @@ function setupTimelineDelegation() {
 async function deleteFoodItem(itemId) {
   if (!confirm("Are you sure you want to delete this food item?")) return;
   AppLogger.log('UI', `User initiated deletion of food item #${itemId}`);
-  let backendDeleted = false;
   try {
     const res = await fetch(`/api/logs/items/${itemId}`, { method: 'DELETE' });
     if (res.ok) {
-      backendDeleted = true;
       await AppLogger.fetchBackendLogs();
     }
   } catch (e) {}
 
-  if (!backendDeleted) {
-    let stored = localStorage.getItem('macronomics_meals');
-    if (stored) {
-      try {
-        let meals = JSON.parse(stored);
-        meals.forEach(m => {
-          m.items = (m.items || []).filter(it => it.id !== itemId);
-        });
-        meals = meals.filter(m => m.items && m.items.length > 0);
-        localStorage.setItem('macronomics_meals', JSON.stringify(meals));
-        currentLogs = meals;
-      } catch (err) {}
-    }
+  let stored = localStorage.getItem('macronomics_meals');
+  if (stored) {
+    try {
+      let meals = JSON.parse(stored);
+      let parentMealId = null;
+      let updatedParentMeal = null;
+      meals.forEach(m => {
+        if ((m.items || []).some(it => it.id === itemId)) {
+          parentMealId = m.id;
+          m.items = m.items.filter(it => it.id !== itemId);
+          m.total_calories = Math.round((m.items || []).reduce((s, i) => s + (Number(i.calories) || 0), 0) * 10) / 10;
+          m.total_protein_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.protein_g) || 0), 0) * 10) / 10;
+          m.total_carbs_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.carbs_g) || 0), 0) * 10) / 10;
+          m.total_fiber_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.fiber_g) || 0), 0) * 10) / 10;
+          m.total_fat_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.fat_g) || 0), 0) * 10) / 10;
+          if (m.items.length > 0) updatedParentMeal = m;
+        }
+      });
+      meals = meals.filter(m => m.items && m.items.length > 0);
+      localStorage.setItem('macronomics_meals', JSON.stringify(meals));
+      currentLogs = meals;
+
+      if (currentUserHandle && window.MacromixFirebase && parentMealId) {
+        if (updatedParentMeal) {
+          window.MacromixFirebase.saveMealToFirestore(currentUserHandle, updatedParentMeal);
+        } else {
+          window.MacromixFirebase.deleteMealFromFirestore(currentUserHandle, parentMealId);
+        }
+      }
+    } catch (err) {}
   }
   await loadMealLogs();
   AppLogger.log('UI', `Food item #${itemId} deleted successfully`);
@@ -969,25 +1092,26 @@ async function deleteFoodItem(itemId) {
 async function deleteMealLog(logId) {
   if (!confirm("Are you sure you want to delete this meal log?")) return;
   AppLogger.log('UI', `User initiated deletion of meal log #${logId}`);
-  let backendDeleted = false;
   try {
     const res = await fetch(`/api/logs/${logId}`, { method: 'DELETE' });
     if (res.ok) {
-      backendDeleted = true;
       await AppLogger.fetchBackendLogs();
     }
   } catch (e) {}
 
-  if (!backendDeleted) {
-    let stored = localStorage.getItem('macronomics_meals');
-    if (stored) {
-      try {
-        let meals = JSON.parse(stored).filter(m => m.id !== logId);
-        localStorage.setItem('macronomics_meals', JSON.stringify(meals));
-        currentLogs = meals;
-      } catch (err) {}
-    }
+  let stored = localStorage.getItem('macronomics_meals');
+  if (stored) {
+    try {
+      let meals = JSON.parse(stored).filter(m => m.id !== logId);
+      localStorage.setItem('macronomics_meals', JSON.stringify(meals));
+      currentLogs = meals;
+    } catch (err) {}
   }
+
+  if (currentUserHandle && window.MacromixFirebase) {
+    window.MacromixFirebase.deleteMealFromFirestore(currentUserHandle, logId);
+  }
+
   await loadMealLogs();
   AppLogger.log('UI', `Meal log #${logId} deleted successfully`);
 }
@@ -1299,6 +1423,20 @@ async function processTranscript(transcript, audioBase64 = null) {
 
       if (saveRes.ok) {
         savedToBackend = true;
+        try {
+          const savedMeal = await saveRes.json();
+          if (savedMeal && savedMeal.id) {
+            const stored = localStorage.getItem('macronomics_meals');
+            let meals = stored ? JSON.parse(stored) : [];
+            meals = meals.filter(m => String(m.id) !== String(savedMeal.id));
+            meals.unshift(savedMeal);
+            localStorage.setItem('macronomics_meals', JSON.stringify(meals));
+            currentLogs = meals;
+            if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.saveMealToFirestore === 'function') {
+              window.MacromixFirebase.saveMealToFirestore(currentUserHandle, savedMeal);
+            }
+          }
+        } catch (jErr) {}
         await AppLogger.fetchBackendLogs();
       }
     } catch (e) {}
@@ -1348,6 +1486,10 @@ async function processTranscript(transcript, audioBase64 = null) {
       currentLogs = meals;
       filterAndRenderSelectedDate();
       AppLogger.log('UI', 'Meal saved to client storage', newMeal);
+
+      if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.saveMealToFirestore === 'function') {
+        window.MacromixFirebase.saveMealToFirestore(currentUserHandle, newMeal);
+      }
     }
 
     // Ensure selectedDate stays on targetDate so user immediately sees their logged meal
@@ -1752,8 +1894,6 @@ async function saveItemEdit() {
   }
 
   AppLogger.log('UI', `User saving portion edit for item #${itemId}`, { quantity: qty, standardized_weight_g: weightG });
-  let backendUpdated = false;
-
   try {
     const res = await fetch(`/api/logs/items/${itemId}`, {
       method: 'PUT',
@@ -1762,12 +1902,9 @@ async function saveItemEdit() {
     });
 
     if (res.ok) {
-      backendUpdated = true;
       await AppLogger.fetchBackendLogs();
     }
   } catch (e) {}
-
-  if (!backendUpdated) {
     let stored = localStorage.getItem('macronomics_meals');
     if (stored) {
       try {
@@ -1798,9 +1935,15 @@ async function saveItemEdit() {
         });
         localStorage.setItem('macronomics_meals', JSON.stringify(meals));
         currentLogs = meals;
+
+        if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.saveMealToFirestore === 'function') {
+          const editedMeal = meals.find(m => (m.items || []).some(it => it.id === itemId));
+          if (editedMeal) {
+            window.MacromixFirebase.saveMealToFirestore(currentUserHandle, editedMeal);
+          }
+        }
       } catch (err) {}
     }
-  }
 
   closeEditModal();
   await loadMealLogs();
@@ -1830,6 +1973,8 @@ async function checkUserProfileOnboarding() {
         window.MacromixFirebase.syncStreakToFirestore(cachedHandle, calculateStreak());
       } catch (e) {}
     }
+    setupRealtimeMealsSync();
+    setupRealtimeProfileSync();
     return;
   }
 
@@ -1846,6 +1991,8 @@ async function checkUserProfileOnboarding() {
           badgeEl.style.display = 'flex';
         }
         if (onboardingEl) onboardingEl.classList.add('hidden');
+        setupRealtimeMealsSync();
+        setupRealtimeProfileSync();
         return;
       }
     }
@@ -1950,10 +2097,15 @@ async function registerHandleOnboarding(handle, authMethod = 'passkey') {
 
   const actionType = fireRes?.isLogin ? 'Logged in' : 'Successfully onboarded';
   AppLogger.log('AUTH', `${actionType} user via ${authMethod}: @${clean}`, { handle: clean, authMethod, isLogin: fireRes?.isLogin }, 'SUCCESS');
+
+  setupRealtimeMealsSync();
+  setupRealtimeProfileSync();
+  await loadMealLogs();
   return true;
 }
 
 async function handlePasskeyAuth() {
+  await waitForFirebaseDB();
   const input = document.getElementById('onboarding-handle-input');
   const handleVal = input ? input.value : '';
   if (!handleVal.trim()) {

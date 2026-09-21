@@ -37,6 +37,11 @@ service cloud.firestore {
 
       // Delete: Disallow direct client delete
       allow delete: if false;
+
+      // Subcollection for real-time meal entries across all devices
+      match /meals/{mealId} {
+        allow read, write, delete: if true;
+      }
     }
   }
 }

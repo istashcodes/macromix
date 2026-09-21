@@ -67,9 +67,7 @@ def process_gemini_multimodal(
     if api_key and api_key != "PRECONFIGURED_FREE_TIER_KEY" and not api_key.startswith("mock_"):
         models_to_try = [
             "gemini-flash-latest",
-            "gemini-flash-lite-latest",
-            "gemini-3.5-flash-lite",
-            "gemini-3.1-flash-lite"
+            "gemini-flash-lite-latest"
         ]
         
         parts = []
@@ -98,10 +96,10 @@ def process_gemini_multimodal(
         for model_name in models_to_try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
             
-            # Retry up to 3 times on transient network failures or demand spikes
-            for attempt in range(1, 4):
+            # Retry on transient network failures
+            for attempt in range(1, 3):
                 try:
-                    resp = requests.post(url, json=payload, timeout=10.0)
+                    resp = requests.post(url, json=payload, timeout=8.0)
                     if resp.status_code == 200:
                         data = resp.json()
                         candidates = data.get("candidates", [])
