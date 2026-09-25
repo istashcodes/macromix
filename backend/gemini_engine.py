@@ -66,6 +66,8 @@ def process_gemini_multimodal(
 
     if api_key and api_key != "PRECONFIGURED_FREE_TIER_KEY" and not api_key.startswith("mock_"):
         models_to_try = [
+            "gemini-3.6-flash",
+            "gemini-3.1-flash-lite",
             "gemini-flash-latest",
             "gemini-flash-lite-latest"
         ]
@@ -95,50 +97,36 @@ def process_gemini_multimodal(
 
         for model_name in models_to_try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
-            
-            # Retry on transient network failures
-            for attempt in range(1, 3):
-                try:
-                    resp = requests.post(url, json=payload, timeout=8.0)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        candidates = data.get("candidates", [])
-                        if candidates and "content" in candidates[0]:
-                            parts_list = candidates[0]["content"].get("parts", [])
-                            for p in parts_list:
-                                if "text" in p and p["text"]:
-                                    clean_json = p["text"].strip()
-                                    if clean_json.startswith("```"):
-                                        clean_json = re.sub(r'^```(?:json)?\s*', '', clean_json, flags=re.IGNORECASE)
-                                        clean_json = re.sub(r'\s*```$', '', clean_json)
-                                    gemini_result = json.loads(clean_json)
-                                    break
-                        if gemini_result:
-                            log_event("GEMINI", f"Gemini ({model_name}) evaluated input", {
-                                "is_food": gemini_result.get("is_food", True),
-                                "items_count": len(gemini_result.get("items", []))
-                            })
-                            break
-                        else:
-                            last_error_message = "Empty candidate response from Gemini"
-                    elif resp.status_code in (503, 429, 500) and attempt < 3:
-                        log_event("GEMINI", f"Gemini ({model_name}) returned HTTP {resp.status_code}, retrying attempt {attempt}/3...", level="WARN")
-                        import time
-                        time.sleep(0.8 * attempt)
-                        continue
-                    else:
-                        last_error_message = f"HTTP {resp.status_code}: {resp.text[:150]}"
-                        log_event("GEMINI", f"Gemini API ({model_name}) returned {last_error_message}", level="WARN")
+            try:
+                resp = requests.post(url, json=payload, timeout=4.5)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    candidates = data.get("candidates", [])
+                    if candidates and "content" in candidates[0]:
+                        parts_list = candidates[0]["content"].get("parts", [])
+                        for p in parts_list:
+                            if "text" in p and p["text"]:
+                                clean_json = p["text"].strip()
+                                if clean_json.startswith("```"):
+                                    clean_json = re.sub(r'^```(?:json)?\s*', '', clean_json, flags=re.IGNORECASE)
+                                    clean_json = re.sub(r'\s*```$', '', clean_json)
+                                gemini_result = json.loads(clean_json)
+                                break
+                    if gemini_result:
+                        log_event("GEMINI", f"Gemini ({model_name}) evaluated input", {
+                            "is_food": gemini_result.get("is_food", True),
+                            "items_count": len(gemini_result.get("items", []))
+                        })
                         break
-                except (requests.exceptions.RequestException, Exception) as e:
-                    network_error_occurred = True
-                    last_error_message = str(e)
-                    if attempt < 3:
-                        log_event("GEMINI", f"Gemini network error on attempt {attempt}/3 ({str(e)}), retrying...", level="WARN")
-                        import time
-                        time.sleep(1.0 * attempt)
                     else:
-                        log_event("GEMINI", f"Gemini connection failed after 3 attempts on {model_name}: {str(e)}", level="WARN")
+                        last_error_message = "Empty candidate response from Gemini"
+                else:
+                    last_error_message = f"HTTP {resp.status_code}: {resp.text[:150]}"
+                    log_event("GEMINI", f"Gemini API ({model_name}) returned {last_error_message}", level="WARN")
+            except (requests.exceptions.RequestException, Exception) as e:
+                network_error_occurred = True
+                last_error_message = str(e)
+                log_event("GEMINI", f"Gemini connection failed on {model_name}: {str(e)}", level="WARN")
 
             if gemini_result:
                 break
@@ -156,24 +144,24 @@ def process_gemini_multimodal(
                 "items": []
             }
 
-    # If Gemini could not be reached after all retries
+    # If Gemini could not be reached after all retries, return a user-friendly error
     if not gemini_result:
         lower_err = last_error_message.lower()
         if network_error_occurred or "policy" in lower_err or "connection" in lower_err or "timeout" in lower_err:
             return {
-                "error": "GEMINI_NETWORK_ERROR",
-                "message": f"Connection to Gemini AI failed ({last_error_message}). Please check server network connection or firewall settings.",
+                "error": "GEMINI_UNAVAILABLE",
+                "message": "Gemini AI is currently busy. Please wait a few minutes and try again.",
                 "items": []
             }
         if "api_key" in lower_err or "invalid" in lower_err or "unauthenticated" in lower_err or "key not valid" in lower_err:
             return {
                 "error": "GEMINI_UNAVAILABLE",
-                "message": f"Gemini API authentication failed ({last_error_message}). Please try again later.",
+                "message": "Gemini AI is currently busy. Please wait a few minutes and try again.",
                 "items": []
             }
         return {
             "error": "GEMINI_UNAVAILABLE",
-            "message": f"Gemini AI could not retrieve nutritional information ({last_error_message}). Please try again.",
+            "message": "Gemini AI is currently busy. Please wait a few minutes and try again.",
             "items": []
         }
 

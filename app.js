@@ -369,14 +369,21 @@ window.changeDate = changeDate;
 window.resetToToday = resetToToday;
 window.updateLogButtonState = updateLogButtonState;
 
-function setMicStatus(text) {
+function setMicStatus(text, isError = false) {
   const el = document.getElementById('mic-status-text');
   if (el) {
     el.textContent = text;
     if (text && text !== 'Mic Idle • Ready to Record') {
       el.classList.add('visible');
+      const lower = text.toLowerCase();
+      if (isError || lower.includes('error') || lower.includes('failed') || lower.includes('could not') || lower.includes('no food') || lower.includes('required')) {
+        el.classList.add('status-error');
+      } else {
+        el.classList.remove('status-error');
+      }
     } else {
       el.classList.remove('visible');
+      el.classList.remove('status-error');
     }
   }
 }
@@ -1357,7 +1364,7 @@ async function handleTextLog(e) {
   }
   const text = manualTextInput.value.trim();
   if (!text) {
-    micStatusText.textContent = "Please enter what you ate (e.g. '100g chicken').";
+    setMicStatus("Please enter what you ate (e.g. '100g chicken').", true);
     manualTextInput.focus();
     return;
   }
@@ -1386,7 +1393,7 @@ async function handleTextLog(e) {
 
   try {
     const success = await processTranscript(text);
-    if (success) {
+    if (success && manualTextInput && manualTextInput.value === text) {
       manualTextInput.value = '';
     }
   } catch (err) {
@@ -1449,10 +1456,10 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
   const apiKey = GLOBAL_GEMINI_API_KEY;
 
   const modelsToTry = [
-    'gemini-flash-latest',
-    'gemini-flash-lite-latest',
     'gemini-3.6-flash',
-    'gemini-3.5-flash-lite'
+    'gemini-3.1-flash-lite',
+    'gemini-flash-latest',
+    'gemini-flash-lite-latest'
   ];
 
   const parts = [];
@@ -1482,13 +1489,24 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
   let lastErr = null;
 
   for (const model of modelsToTry) {
+    let controller = null;
+    let timeoutId = null;
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const res = await fetch(url, {
+      if (typeof AbortController !== 'undefined') {
+        controller = new AbortController();
+        timeoutId = setTimeout(() => controller.abort(), 8000);
+      }
+      const fetchOpts = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      });
+      };
+      if (controller) fetchOpts.signal = controller.signal;
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const res = await fetch(url, fetchOpts);
+      if (timeoutId) clearTimeout(timeoutId);
+
       if (res.ok) {
         const data = await res.json();
         const candidate = data.candidates?.[0];
@@ -1516,12 +1534,13 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
         lastErr = new Error(`HTTP ${res.status}: ${errText.slice(0, 100)}`);
       }
     } catch (e) {
+      if (timeoutId) clearTimeout(timeoutId);
       lastErr = e;
     }
   }
 
   if (!geminiResult) {
-    throw lastErr || new Error("Failed to contact Gemini AI from browser client.");
+    throw lastErr || new Error("Gemini AI is currently busy. Please wait a few minutes and try again.");
   }
 
   return geminiResult;
@@ -1530,9 +1549,9 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
 async function processTranscript(transcript, audioBase64 = null) {
   if (isVisitorMode) return;
   if ((!transcript || !transcript.trim()) && !audioBase64) {
-    micStatusText.textContent = "Please speak or enter what you ate.";
+    setMicStatus("Please speak or enter what you ate.", true);
     AppLogger.log('UI', 'Log request cancelled: transcript and audio were empty');
-    return;
+    return false;
   }
 
   const submitBtn = document.getElementById('btn-submit-log');
@@ -1553,7 +1572,7 @@ async function processTranscript(transcript, audioBase64 = null) {
     manualTextInput.disabled = true;
   }
 
-  micStatusText.textContent = "Analyzing meal with Gemini AI...";
+  setMicStatus("Analyzing meal with Gemini AI...");
   AppLogger.log('UI', 'Starting pipeline via Gemini AI', {
     transcript: transcript || '',
     hasAudio: !!audioBase64,
@@ -1591,15 +1610,19 @@ async function processTranscript(transcript, audioBase64 = null) {
           const errData = await res.json().catch(() => ({}));
           AppLogger.log('GEMINI', 'API key required (403). Prompting for custom API key', errData, 'WARN');
           openGeminiModal();
-          alert(errData.message || "Please provide your Gemini API key to continue.");
-          micStatusText.textContent = "Gemini API key required. Click Gemini badge to configure.";
+          setMicStatus(errData.message || "Gemini API key required. Click Gemini badge to configure.", true);
           return false;
         } else if (res.status === 422) {
           const errData = await res.json().catch(() => ({}));
           AppLogger.log('GEMINI', 'Non-food input rejected by LLM gate (422)', errData, 'WARN');
-          micStatusText.textContent = errData.message || "No food items detected. Please specify what you ate.";
+          setMicStatus(errData.message || "No food items detected. Please specify what you ate.", true);
           return false;
-        } else if (res.status === 404 || res.status === 502 || res.status === 503 || !res.ok) {
+        } else if (res.status === 502 || res.status === 503) {
+          const errData = await res.json().catch(() => ({}));
+          AppLogger.log('GEMINI', `Gemini unavailable (${res.status})`, errData, 'WARN');
+          setMicStatus(errData.message || "Gemini AI is currently busy. Please wait a few minutes and try again. 🙏", true);
+          return false;
+        } else if (res.status === 404 || !res.ok) {
           fallbackToClient = true;
         } else {
           geminiData = await res.json().catch(() => null);
@@ -1612,14 +1635,20 @@ async function processTranscript(transcript, audioBase64 = null) {
 
     if (fallbackToClient) {
       AppLogger.log('GEMINI', 'Running client-side Gemini AI direct inference.');
-      geminiData = await callClientGeminiDirect(transcript, audioBase64);
+      try {
+        geminiData = await callClientGeminiDirect(transcript, audioBase64);
+      } catch (clientErr) {
+        AppLogger.log('GEMINI', `Client-side Gemini failed: ${clientErr.message}`, null, 'WARN');
+        setMicStatus(`Could not analyze meal: ${clientErr.message || 'Gemini service unavailable'}`, true);
+        return false;
+      }
       if (!geminiData) return false;
     }
 
     AppLogger.log('GEMINI', `Gemini returned ${geminiData.items ? geminiData.items.length : 0} items for meal`, geminiData);
 
     if (geminiData.is_food === false || !geminiData.items || geminiData.items.length === 0) {
-      micStatusText.textContent = geminiData.message || "No food items detected. Please specify what you ate.";
+      setMicStatus(geminiData.message || "No food items detected. Please specify what you ate.", true);
       return false;
     }
 
@@ -1748,30 +1777,27 @@ async function processTranscript(transcript, audioBase64 = null) {
   } catch (err) {
     console.error("Logging error:", err);
     let msg = err.message || "Error logging meal. Please try again.";
-    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("abort")) {
       msg = "Could not connect to Gemini AI or server. Please verify your connection or Gemini API key.";
     }
-    setMicStatus(`Error: ${msg}`);
+    setMicStatus(`Error: ${msg}`, true);
     AppLogger.log('ERROR', `Pipeline error: ${msg}`, { error: String(err) }, 'ERROR');
     await AppLogger.fetchBackendLogs().catch(() => {});
-    alert(`Could not log meal: ${msg}`);
     return false;
   } finally {
-    if (!alreadyLocked) {
-      isProcessingLog = false;
-      if (manualTextInput) {
-        manualTextInput.disabled = false;
-        manualTextInput.placeholder = 'Or type e.g. 100g cooked chicken breast at 1 pm...';
-      }
-      if (submitBtn) {
-        submitBtn.innerHTML = 'Log ⚡';
-      }
-      updateLogButtonState();
-      if (btnTapRecord) {
-        btnTapRecord.disabled = false;
-        btnTapRecord.classList.remove('btn-disabled');
-        btnTapRecord.style.pointerEvents = 'auto';
-      }
+    isProcessingLog = false;
+    if (manualTextInput) {
+      manualTextInput.disabled = false;
+      manualTextInput.placeholder = 'Or type e.g. 100g cooked chicken breast at 1 pm...';
+    }
+    if (submitBtn) {
+      submitBtn.innerHTML = 'Log ⚡';
+    }
+    updateLogButtonState();
+    if (btnTapRecord) {
+      btnTapRecord.disabled = false;
+      btnTapRecord.classList.remove('btn-disabled');
+      btnTapRecord.style.pointerEvents = 'auto';
     }
   }
 }
@@ -1829,7 +1855,7 @@ function initSpeechRecognition() {
 
     const combined = (liveTranscript + (interim ? ' ' + interim : '')).trim();
     if (combined && !isProcessingLog) {
-      micStatusText.textContent = `🗣️ "${combined}"`;
+      setMicStatus(`🗣️ "${combined}"`);
       if (liveTranscript) {
         AppLogger.log('UI', `Speech recognition transcript (accumulated): "${liveTranscript}"`, { accumulated: liveTranscript, interim: interim.trim() });
       }
@@ -1988,7 +2014,7 @@ function resetSilenceTimer() {
   if (silenceTimer) clearTimeout(silenceTimer);
   silenceTimer = setTimeout(() => {
     if (isRecording) {
-      micStatusText.textContent = "Auto-silence cut-off (5s)";
+      setMicStatus("Auto-silence cut-off (5s)");
       stopRecording();
     }
   }, 5000);
