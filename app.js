@@ -18,6 +18,60 @@ let allFirestoreUsersCacheTime = 0;
 const USERS_CACHE_TTL_MS = 30000;
 let followingListCache = new Set();
 
+function getMealsStorageKey(handle) {
+  const h = handle || currentUserHandle;
+  const clean = h ? h.trim().toLowerCase().replace(/^@+/, '') : '';
+  return clean ? `macronomics_meals_${clean}` : 'macronomics_meals';
+}
+
+function cleanContaminatedMealsFromLocalStorage() {
+  const kataraIds = new Set([
+    '1790328742293', '1790328719098', '1790318658237', '1790318617484',
+    '1790269604326', '1790269533945', '1790269387538', '1790248978776',
+    '1790173967281', '1790173734081', '1790150441677', '1790150385355'
+  ]);
+
+  // Clean legacy key
+  const legacy = localStorage.getItem('macronomics_meals');
+  if (legacy) {
+    try {
+      const parsed = JSON.parse(legacy);
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed.filter(m => {
+          if (!m || !m.id) return false;
+          if (kataraIds.has(String(m.id))) return false;
+          if (m.owner_handle && currentUserHandle && m.owner_handle.toLowerCase() !== currentUserHandle.toLowerCase()) return false;
+          return true;
+        });
+        if (currentUserHandle) {
+          localStorage.setItem(getMealsStorageKey(currentUserHandle), JSON.stringify(cleaned));
+        }
+      }
+    } catch (e) {}
+    localStorage.removeItem('macronomics_meals');
+  }
+
+  // Clean namespaced key
+  if (currentUserHandle) {
+    const key = getMealsStorageKey(currentUserHandle);
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter(m => {
+            if (!m || !m.id) return false;
+            if (kataraIds.has(String(m.id))) return false;
+            if (m.owner_handle && currentUserHandle && m.owner_handle.toLowerCase() !== currentUserHandle.toLowerCase()) return false;
+            return true;
+          });
+          localStorage.setItem(key, JSON.stringify(cleaned));
+        }
+      } catch (e) {}
+    }
+  }
+}
+
 // Web Audio API State
 let mediaRecorder = null;
 let audioChunks = [];
@@ -357,6 +411,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   AppLogger.init();
   await waitForFirebaseDB();
   await checkUserProfileOnboarding();
+  cleanContaminatedMealsFromLocalStorage();
   await checkUrlRoute();
   updateDateLabel();
   renderStreak();
@@ -842,6 +897,9 @@ function setupRealtimeMealsSync() {
       filterAndRenderSelectedDate();
       if (!isVisitorMode) {
         renderStreak();
+        if (currentUserHandle && currentUserHandle.toLowerCase() === targetHandle.toLowerCase()) {
+          localStorage.setItem(getMealsStorageKey(currentUserHandle), JSON.stringify(remoteMeals));
+        }
       }
       console.log(`[macromix] Real-time sync: ${remoteMeals.length} meals updated for @${targetHandle}.`);
     }
@@ -902,12 +960,17 @@ async function loadMealLogs() {
     return;
   }
 
+  cleanContaminatedMealsFromLocalStorage();
+  const storageKey = getMealsStorageKey(currentUserHandle);
+
   // 1. Local FastAPI backend if available (local development / tests)
   try {
     const res = await fetch('/api/logs');
     if (res.ok) {
       currentLogs = await res.json();
-      localStorage.setItem('macronomics_meals', JSON.stringify(currentLogs));
+      if (!isVisitorMode) {
+        localStorage.setItem(storageKey, JSON.stringify(currentLogs));
+      }
       if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.syncLocalMealsWithFirestore === 'function') {
         try {
           await window.MacromixFirebase.syncLocalMealsWithFirestore(currentUserHandle);
@@ -936,7 +999,7 @@ async function loadMealLogs() {
     }
   }
 
-  const stored = localStorage.getItem('macronomics_meals');
+  const stored = localStorage.getItem(storageKey);
   if (stored) {
     try {
       currentLogs = JSON.parse(stored);
@@ -957,8 +1020,8 @@ async function loadMealLogs() {
           }
         }
       });
-      if (needsSave) {
-        localStorage.setItem('macronomics_meals', JSON.stringify(currentLogs));
+      if (needsSave && !isVisitorMode) {
+        localStorage.setItem(storageKey, JSON.stringify(currentLogs));
       }
     } catch (e) {
       currentLogs = [];
@@ -1129,6 +1192,7 @@ function setupTimelineDelegation() {
 }
 
 async function deleteFoodItem(itemId) {
+  if (isVisitorMode) return;
   if (!confirm("Are you sure you want to delete this food item?")) return;
   AppLogger.log('UI', `User initiated deletion of food item #${itemId}`);
   try {
@@ -1138,7 +1202,8 @@ async function deleteFoodItem(itemId) {
     }
   } catch (e) {}
 
-  let stored = localStorage.getItem('macronomics_meals');
+  const storageKey = getMealsStorageKey(currentUserHandle);
+  let stored = localStorage.getItem(storageKey);
   if (stored) {
     try {
       let meals = JSON.parse(stored);
@@ -1157,7 +1222,7 @@ async function deleteFoodItem(itemId) {
         }
       });
       meals = meals.filter(m => m.items && m.items.length > 0);
-      localStorage.setItem('macronomics_meals', JSON.stringify(meals));
+      localStorage.setItem(storageKey, JSON.stringify(meals));
       currentLogs = meals;
 
       if (currentUserHandle && window.MacromixFirebase && parentMealId) {
@@ -1174,6 +1239,7 @@ async function deleteFoodItem(itemId) {
 }
 
 async function deleteMealLog(logId) {
+  if (isVisitorMode) return;
   if (!confirm("Are you sure you want to delete this meal log?")) return;
   AppLogger.log('UI', `User initiated deletion of meal log #${logId}`);
   try {
@@ -1183,11 +1249,12 @@ async function deleteMealLog(logId) {
     }
   } catch (e) {}
 
-  let stored = localStorage.getItem('macronomics_meals');
+  const storageKey = getMealsStorageKey(currentUserHandle);
+  let stored = localStorage.getItem(storageKey);
   if (stored) {
     try {
       let meals = JSON.parse(stored).filter(m => m.id !== logId);
-      localStorage.setItem('macronomics_meals', JSON.stringify(meals));
+      localStorage.setItem(storageKey, JSON.stringify(meals));
       currentLogs = meals;
     } catch (err) {}
   }
@@ -1381,6 +1448,7 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
 }
 
 async function processTranscript(transcript, audioBase64 = null) {
+  if (isVisitorMode) return;
   if ((!transcript || !transcript.trim()) && !audioBase64) {
     micStatusText.textContent = "Please speak or enter what you ate.";
     AppLogger.log('UI', 'Log request cancelled: transcript and audio were empty');
@@ -1510,11 +1578,12 @@ async function processTranscript(transcript, audioBase64 = null) {
         try {
           const savedMeal = await saveRes.json();
           if (savedMeal && savedMeal.id) {
-            const stored = localStorage.getItem('macronomics_meals');
+            const storageKey = getMealsStorageKey(currentUserHandle);
+            const stored = localStorage.getItem(storageKey);
             let meals = stored ? JSON.parse(stored) : [];
             meals = meals.filter(m => String(m.id) !== String(savedMeal.id));
             meals.unshift(savedMeal);
-            localStorage.setItem('macronomics_meals', JSON.stringify(meals));
+            localStorage.setItem(storageKey, JSON.stringify(meals));
             currentLogs = meals;
             if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.saveMealToFirestore === 'function') {
               window.MacromixFirebase.saveMealToFirestore(currentUserHandle, savedMeal);
@@ -1527,7 +1596,8 @@ async function processTranscript(transcript, audioBase64 = null) {
 
     if (!savedToBackend) {
       // Direct client-side save to localStorage
-      const stored = localStorage.getItem('macronomics_meals');
+      const storageKey = getMealsStorageKey(currentUserHandle);
+      const stored = localStorage.getItem(storageKey);
       let meals = stored ? JSON.parse(stored) : [];
       const newId = Date.now();
       const itemsWithIds = (geminiData.items || []).map((it, idx) => ({
@@ -1552,6 +1622,7 @@ async function processTranscript(transcript, audioBase64 = null) {
 
       const newMeal = {
         id: newId,
+        owner_handle: currentUserHandle || '',
         meal_type: geminiData.meal_type || 'snack',
         logged_date: targetDate,
         created_at: targetDate === getTodayDateString() ? now.toISOString() : `${targetDate}T12:00:00.000Z`,
@@ -1566,7 +1637,7 @@ async function processTranscript(transcript, audioBase64 = null) {
         total_fat_g: Math.round(mealTotalFat * 10) / 10
       };
       meals.unshift(newMeal);
-      localStorage.setItem('macronomics_meals', JSON.stringify(meals));
+      localStorage.setItem(storageKey, JSON.stringify(meals));
       currentLogs = meals;
       filterAndRenderSelectedDate();
       AppLogger.log('UI', 'Meal saved to client storage', newMeal);
@@ -1972,6 +2043,7 @@ function closeEditModal() {
 }
 
 async function saveItemEdit() {
+  if (isVisitorMode) return;
   const itemId = parseInt(document.getElementById('edit-item-id').value, 10);
   const qty = parseFloat(document.getElementById('edit-quantity').value);
   const weightG = parseFloat(document.getElementById('edit-weight-g').value);
@@ -1993,45 +2065,47 @@ async function saveItemEdit() {
       await AppLogger.fetchBackendLogs();
     }
   } catch (e) {}
-    let stored = localStorage.getItem('macronomics_meals');
-    if (stored) {
-      try {
-        let meals = JSON.parse(stored);
-        meals.forEach(m => {
-          let hasEdit = false;
-          (m.items || []).forEach(it => {
-            if (it.id === itemId) {
-              const oldWeight = (it.standardized_weight_g && it.standardized_weight_g > 0) ? it.standardized_weight_g : weightG;
-              const ratio = weightG / oldWeight;
-              it.quantity = qty;
-              it.standardized_weight_g = weightG;
-              it.calories = Math.round((it.calories || 0) * ratio * 10) / 10;
-              it.protein_g = Math.round((it.protein_g || 0) * ratio * 10) / 10;
-              it.carbs_g = Math.round((it.carbs_g || 0) * ratio * 10) / 10;
-              it.fiber_g = Math.round((it.fiber_g || 0) * ratio * 10) / 10;
-              it.fat_g = Math.round((it.fat_g || 0) * ratio * 10) / 10;
-              hasEdit = true;
-            }
-          });
-          if (hasEdit) {
-            m.total_calories = Math.round((m.items || []).reduce((s, i) => s + (Number(i.calories) || 0), 0) * 10) / 10;
-            m.total_protein_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.protein_g) || 0), 0) * 10) / 10;
-            m.total_carbs_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.carbs_g) || 0), 0) * 10) / 10;
-            m.total_fiber_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.fiber_g) || 0), 0) * 10) / 10;
-            m.total_fat_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.fat_g) || 0), 0) * 10) / 10;
+
+  const storageKey = getMealsStorageKey(currentUserHandle);
+  let stored = localStorage.getItem(storageKey);
+  if (stored) {
+    try {
+      let meals = JSON.parse(stored);
+      meals.forEach(m => {
+        let hasEdit = false;
+        (m.items || []).forEach(it => {
+          if (it.id === itemId) {
+            const oldWeight = (it.standardized_weight_g && it.standardized_weight_g > 0) ? it.standardized_weight_g : weightG;
+            const ratio = weightG / oldWeight;
+            it.quantity = qty;
+            it.standardized_weight_g = weightG;
+            it.calories = Math.round((it.calories || 0) * ratio * 10) / 10;
+            it.protein_g = Math.round((it.protein_g || 0) * ratio * 10) / 10;
+            it.carbs_g = Math.round((it.carbs_g || 0) * ratio * 10) / 10;
+            it.fiber_g = Math.round((it.fiber_g || 0) * ratio * 10) / 10;
+            it.fat_g = Math.round((it.fat_g || 0) * ratio * 10) / 10;
+            hasEdit = true;
           }
         });
-        localStorage.setItem('macronomics_meals', JSON.stringify(meals));
-        currentLogs = meals;
-
-        if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.saveMealToFirestore === 'function') {
-          const editedMeal = meals.find(m => (m.items || []).some(it => it.id === itemId));
-          if (editedMeal) {
-            window.MacromixFirebase.saveMealToFirestore(currentUserHandle, editedMeal);
-          }
+        if (hasEdit) {
+          m.total_calories = Math.round((m.items || []).reduce((s, i) => s + (Number(i.calories) || 0), 0) * 10) / 10;
+          m.total_protein_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.protein_g) || 0), 0) * 10) / 10;
+          m.total_carbs_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.carbs_g) || 0), 0) * 10) / 10;
+          m.total_fiber_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.fiber_g) || 0), 0) * 10) / 10;
+          m.total_fat_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.fat_g) || 0), 0) * 10) / 10;
         }
-      } catch (err) {}
-    }
+      });
+      localStorage.setItem(storageKey, JSON.stringify(meals));
+      currentLogs = meals;
+
+      if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.saveMealToFirestore === 'function') {
+        const editedMeal = meals.find(m => (m.items || []).some(it => it.id === itemId));
+        if (editedMeal) {
+          window.MacromixFirebase.saveMealToFirestore(currentUserHandle, editedMeal);
+        }
+      }
+    } catch (err) {}
+  }
 
   closeEditModal();
   await loadMealLogs();
@@ -2070,6 +2144,8 @@ function setVisitorMode(isVisitor, targetHandle = null) {
   const handleBadge = document.getElementById('header-handle-badge');
 
   if (isVisitorMode && viewedHandle) {
+    currentLogs = [];
+    filterAndRenderSelectedDate();
     if (visitorBanner) visitorBanner.classList.remove('hidden');
     if (targetHandleEl) targetHandleEl.textContent = '@' + viewedHandle;
     if (voiceRow) voiceRow.classList.add('hidden');
@@ -2711,5 +2787,7 @@ window.toggleFollowUser = toggleFollowUser;
 window.loadMealLogs = loadMealLogs;
 window.loadTargets = loadTargets;
 window.clearRealtimeListeners = clearRealtimeListeners;
+window.getCurrentLogs = () => currentLogs;
+window.getMealsStorageKey = getMealsStorageKey;
 
 

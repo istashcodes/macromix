@@ -394,6 +394,7 @@ export async function saveMealToFirestore(handle, meal) {
     const mealRef = doc(database, 'users', clean, 'meals', mealId);
     const mealPayload = sanitizeForFirestore({
       id: meal.id,
+      owner_handle: clean,
       meal_type: meal.meal_type || 'snack',
       logged_date: meal.logged_date || (meal.created_at ? String(meal.created_at).split('T')[0] : new Date().toISOString().split('T')[0]),
       logged_time: meal.logged_time || (meal.created_at && String(meal.created_at).includes('T') ? String(meal.created_at).split('T')[1].substring(0, 5) : ''),
@@ -466,21 +467,27 @@ export async function fetchMealsFromFirestore(handle) {
   }
 }
 
+export function getMealsStorageKey(handle) {
+  const clean = handle ? handle.trim().toLowerCase().replace(/^@+/, '') : '';
+  return clean ? `macronomics_meals_${clean}` : 'macronomics_meals';
+}
+
 /**
  * Sync local meals with Firestore:
- * 1. Read existing local meals from localStorage.
+ * 1. Read existing local meals from handle-specific localStorage.
  * 2. Upload any local meals to Firestore that aren't there yet (e.g. from mobile).
- * 3. Pull latest meals from Firestore and save them in localStorage.
+ * 3. Pull latest meals from Firestore and save them in handle-specific localStorage.
  * @param {string} handle
  * @returns {Promise<Array<object>>}
  */
 export async function syncLocalMealsWithFirestore(handle) {
   const database = initFirebaseDB();
-  if (!database || !handle) {
-    const stored = localStorage.getItem('macronomics_meals');
+  const clean = handle ? handle.trim().toLowerCase().replace(/^@+/, '') : '';
+  const storageKey = getMealsStorageKey(clean);
+  if (!database || !clean) {
+    const stored = localStorage.getItem(storageKey) || localStorage.getItem('macronomics_meals');
     return stored ? JSON.parse(stored) : [];
   }
-  const clean = handle.trim().toLowerCase().replace(/^@+/, '');
 
   try {
     // 1. Fetch remote meals from Firestore
@@ -488,15 +495,30 @@ export async function syncLocalMealsWithFirestore(handle) {
     const remoteMap = new Map();
     remoteMeals.forEach(m => remoteMap.set(String(m.id), m));
 
-    // 2. Read local meals
-    const stored = localStorage.getItem('macronomics_meals');
-    const localMeals = stored ? JSON.parse(stored) : [];
+    // 2. Read local meals from handle-isolated storage key
+    let stored = localStorage.getItem(storageKey);
+    let isLegacyMigrate = false;
+    if (!stored) {
+      stored = localStorage.getItem('macronomics_meals');
+      isLegacyMigrate = true;
+    }
+    const rawLocalMeals = stored ? JSON.parse(stored) : [];
 
-    // 3. Upload any local meals that don't exist remotely (e.g. from mobile)
+    // Filter out foreign meals owned by another handle
+    const localMeals = rawLocalMeals.filter(m => {
+      if (!m || !m.id) return false;
+      if (m.owner_handle && m.owner_handle.toLowerCase() !== clean) return false;
+      return true;
+    });
+
+    // 3. Upload only genuinely unsynced local meals belonging to this handle
     for (const localMeal of localMeals) {
       if (localMeal && localMeal.id && !remoteMap.has(String(localMeal.id))) {
-        await saveMealToFirestore(clean, localMeal);
-        remoteMap.set(String(localMeal.id), localMeal);
+        if (!localMeal.owner_handle || localMeal.owner_handle.toLowerCase() === clean) {
+          localMeal.owner_handle = clean;
+          await saveMealToFirestore(clean, localMeal);
+          remoteMap.set(String(localMeal.id), localMeal);
+        }
       }
     }
 
@@ -504,13 +526,16 @@ export async function syncLocalMealsWithFirestore(handle) {
     const combined = Array.from(remoteMap.values());
     combined.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
-    // 5. Update localStorage
-    localStorage.setItem('macronomics_meals', JSON.stringify(combined));
+    // 5. Update handle-specific localStorage
+    localStorage.setItem(storageKey, JSON.stringify(combined));
+    if (isLegacyMigrate) {
+      localStorage.removeItem('macronomics_meals');
+    }
     console.log(`[Macromix Firebase] Synchronized ${combined.length} meals between local and Firestore for @${clean}.`);
     return combined;
   } catch (err) {
     console.warn('[Macromix Firebase] Meal sync fallback to local storage:', err);
-    const stored = localStorage.getItem('macronomics_meals');
+    const stored = localStorage.getItem(storageKey);
     return stored ? JSON.parse(stored) : [];
   }
 }
@@ -532,7 +557,7 @@ export function subscribeMealsFromFirestore(handle, callback) {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const meals = [];
       snapshot.forEach(d => meals.push(d.data()));
-      localStorage.setItem('macronomics_meals', JSON.stringify(meals));
+      // Notice: Do NOT write to localStorage here to prevent cross-profile contamination
       callback(meals);
     }, (err) => {
       console.warn('[Macromix Firebase] Real-time meals subscription warning:', err);
@@ -567,6 +592,7 @@ if (typeof window !== 'undefined') {
     followUser,
     unfollowUser,
     getFollowingList,
-    subscribeFollowing
+    subscribeFollowing,
+    getMealsStorageKey
   };
 }
