@@ -356,7 +356,7 @@ def test_e2e_macronomics_app(app_server):
 
         # Clean up banana test meal so subsequent steps remain isolated
         page.locator(".meal-item-row:has-text('banana') .item-action-btn:has-text('🗑️')").first.click()
-        time.sleep(0.5)
+        page.wait_for_selector(".meal-item-row:has-text('banana')", state="detached", timeout=10000)
 
         # 8. Test Inline Edit Portion
         page.locator(".item-action-btn:has-text('✏️')").first.click()
