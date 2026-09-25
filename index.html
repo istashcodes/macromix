@@ -70,11 +70,15 @@
   <div class="app-container">
     <!-- Header -->
     <header class="app-header">
-      <div class="brand-wrapper">
+      <div class="brand-wrapper" onclick="switchTab('me')" style="cursor: pointer;" title="Back to My Tracker">
         <img src="icons/logo.png" alt="macromix logo" class="brand-logo-img">
         <h1 class="brand-title">macro<span>mix</span></h1>
       </div>
       <div class="header-actions">
+        <button type="button" class="btn-header-friends" id="btn-header-friends" onclick="handleHeaderFriendsClick()" title="Friends">
+          <span class="friends-btn-icon">👥</span>
+          <span class="friends-btn-label">Friends</span>
+        </button>
         <div class="header-handle-badge" id="header-handle-badge" onclick="openSettingsModal()" title="Daily Macro Targets" style="display: none;">
           <span id="header-handle-text">@you</span>
         </div>
@@ -88,6 +92,7 @@
       <div class="visitor-profile-pill">
         <span class="visitor-live-dot"></span>
         <span class="visitor-banner-text" id="visitor-banner-text"><strong id="visitor-target-handle">@friend</strong>'s macromix</span>
+        <span class="visitor-streak-pill hidden" id="visitor-streak-pill"></span>
       </div>
     </div>
 
@@ -206,6 +211,14 @@
     <!-- TAB 2: MY FRIENDS (Social Accountability & Discovery) -->
     <section id="view-friends" class="app-tab-view hidden">
       <div class="friends-view-card">
+        <!-- Friends Top Navigation Bar -->
+        <div class="friends-top-bar">
+          <button type="button" class="btn-friends-back-me" onclick="switchTab('me')" title="Back to My Tracker">
+            ← Back to Tracker
+          </button>
+          <span class="friends-top-title">My Friends</span>
+        </div>
+
         <!-- Share Profile Card -->
         <div class="friends-share-card">
           <div class="friends-share-info">
@@ -233,18 +246,6 @@
         </div>
       </div>
     </section>
-
-    <!-- 2-Tab Bottom Navigation Bar -->
-    <nav class="bottom-tab-bar" id="bottom-tab-bar">
-      <button type="button" class="tab-btn active" id="tab-btn-me" onclick="switchTab('me')">
-        <span class="tab-icon">🏠</span>
-        <span>Me</span>
-      </button>
-      <button type="button" class="tab-btn" id="tab-btn-friends" onclick="switchTab('friends')">
-        <span class="tab-icon">👥</span>
-        <span>My Friends</span>
-      </button>
-    </nav>
   </div>
 
   <!-- Daily Macro Targets Modal -->
@@ -310,6 +311,6 @@
   <script type="module" src="firebase-db.js?v=1.6"></script>
 
   <!-- Frontend Controller -->
-  <script src="app.js?v=4.3"></script>
+  <script src="app.js?v=4.5"></script>
 </body>
 </html>

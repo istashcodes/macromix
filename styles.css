@@ -55,7 +55,7 @@ body {
   min-height: 100vh;
   display: flex;
   justify-content: center;
-  padding: 16px 12px 90px;
+  padding: 16px 12px 32px;
 }
 
 .app-container {
@@ -1619,70 +1619,84 @@ body {
   display: none !important;
 }
 
-/* Bottom Tab Bar (Neobrutalism Design) */
-.bottom-tab-bar {
-  position: fixed;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 24px);
-  max-width: 516px;
-  height: 60px;
-  background: #FFFFFF;
-  border: 3px solid #000000;
-  border-radius: 16px;
-  box-shadow: 4px 4px 0px #000000;
-  display: flex;
+/* Header Friends CTA Button (Neobrutalism Design) */
+.btn-header-friends {
+  display: inline-flex;
   align-items: center;
-  padding: 5px;
-  gap: 8px;
-  z-index: 999;
-}
-
-.tab-btn {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: #FBF8F1;
-  border: 2px solid transparent;
-  border-radius: 11px;
-  font-size: 0.92rem;
-  font-weight: 900;
-  letter-spacing: -0.01em;
+  gap: 5px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  border: var(--border-thick);
+  box-shadow: var(--shadow-sm);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 800;
   cursor: pointer;
-  color: #555555;
-  position: relative;
-  transition: all 0.1s ease;
+  white-space: nowrap;
   user-select: none;
+  transition: transform 0.05s ease, background 0.1s ease, box-shadow 0.05s ease;
 }
 
-.tab-btn:hover {
-  background: #F4EEDF;
-  color: #111111;
+.btn-header-friends:hover {
+  background: #FFF9E6;
 }
 
-.tab-btn:active {
-  transform: translate(2px, 2px);
+.btn-header-friends:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #000;
 }
 
-.tab-btn.active {
+.btn-header-friends.active {
   background: var(--cal-color);
-  color: #000000;
-  border: 2px solid #000000;
-  box-shadow: 2px 2px 0px #000000;
+  color: #000;
 }
 
-.tab-icon {
-  font-size: 1.25rem;
+.friends-btn-icon {
+  font-size: 0.85rem;
   line-height: 1;
 }
 
-/* Adjust app-container bottom padding so bottom tab bar doesn't overlay cards */
-.app-container {
-  padding-bottom: 84px !important;
+.friends-btn-label {
+  font-weight: 800;
+}
+
+/* Friends View Top Navigation Bar */
+.friends-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 2px dashed #E2E8F0;
+  margin-bottom: 4px;
+}
+
+.btn-friends-back-me {
+  background: #FFFFFF;
+  color: #000000;
+  border: var(--border-thick);
+  box-shadow: var(--shadow-sm);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
+}
+
+.btn-friends-back-me:hover {
+  background: #F8FAFC;
+}
+
+.btn-friends-back-me:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #000;
+}
+
+.friends-top-title {
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
 }
 
 /* ==========================================================================
@@ -1762,6 +1776,25 @@ body {
 .visitor-banner-text strong {
   color: var(--cal-color);
   font-weight: 900;
+}
+
+.visitor-streak-pill {
+  display: inline-flex;
+  align-items: center;
+  background: var(--cal-color);
+  color: #000000;
+  border: 1.5px solid #000000;
+  border-radius: 12px;
+  padding: 1px 7px;
+  font-size: 0.74rem;
+  font-weight: 900;
+  box-shadow: 1px 1px 0 #000000;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.visitor-streak-pill.hidden {
+  display: none !important;
 }
 
 /* ==========================================================================
@@ -1967,5 +2000,28 @@ body {
   background: #2EE59D;
   color: #111;
 }
+
+@media (max-width: 420px) {
+  .app-header {
+    padding: 10px 12px;
+  }
+  .brand-title {
+    font-size: 1.22rem;
+  }
+  .brand-logo-img {
+    width: 30px;
+    height: 30px;
+  }
+  .header-actions {
+    gap: 4px;
+  }
+  .btn-header-friends,
+  .header-handle-badge,
+  .streak-badge {
+    padding: 3px 7px;
+    font-size: 0.75rem;
+  }
+}
+
 
 

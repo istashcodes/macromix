@@ -13,10 +13,16 @@ let currentUserHandle = null;
 let currentTab = 'me';
 let isVisitorMode = false;
 let viewedHandle = null;
+let currentUserStreak = 0;
+let unsubscribeCurrentUserListener = null;
 let allFirestoreUsersCache = null;
 let allFirestoreUsersCacheTime = 0;
 const USERS_CACHE_TTL_MS = 30000;
 let followingListCache = new Set();
+
+function isLocalBackend() {
+  return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+}
 
 function getMealsStorageKey(handle) {
   const h = handle || currentUserHandle;
@@ -204,11 +210,13 @@ const AppLogger = {
   },
 
   async fetchBackendLogs() {
+    if (!isLocalBackend()) return;
     if (this.isPolling) return;
     this.isPolling = true;
     try {
       const res = await fetch(`/api/debug/logs?since_id=${this.lastBackendLogId}`);
-      if (res.ok) {
+      const ct = res.headers.get('content-type') || '';
+      if (res.ok && ct.includes('application/json')) {
         const data = await res.json();
         if (data.logs && data.logs.length > 0) {
           for (const bLog of data.logs) {
@@ -463,12 +471,15 @@ function setEngineMode(mode) {
 }
 
 async function loadGeminiStatus() {
-  try {
-    const res = await fetch('/api/user/gemini');
-    if (res.ok) {
-      userGeminiInfo = await res.json();
-    }
-  } catch (e) {}
+  if (isLocalBackend()) {
+    try {
+      const res = await fetch('/api/user/gemini');
+      const ct = res.headers.get('content-type') || '';
+      if (res.ok && ct.includes('application/json')) {
+        userGeminiInfo = await res.json();
+      }
+    } catch (e) {}
+  }
 
   userGeminiInfo.gemini_api_key = GLOBAL_GEMINI_API_KEY;
   userGeminiInfo.has_custom_key = true;
@@ -537,16 +548,19 @@ async function loadTargets() {
     return;
   }
 
-  try {
-    const res = await fetch('/api/targets');
-    if (res.ok) {
-      userTargets = await res.json();
-      localStorage.setItem('macronomics_targets', JSON.stringify(userTargets));
-      applyTargetsToUI();
-      AppLogger.log('UI', 'Daily nutritional targets loaded from backend', userTargets);
-      return;
-    }
-  } catch (e) {}
+  if (isLocalBackend()) {
+    try {
+      const res = await fetch('/api/targets');
+      const ct = res.headers.get('content-type') || '';
+      if (res.ok && ct.includes('application/json')) {
+        userTargets = await res.json();
+        localStorage.setItem('macronomics_targets', JSON.stringify(userTargets));
+        applyTargetsToUI();
+        AppLogger.log('UI', 'Daily nutritional targets loaded from backend', userTargets);
+        return;
+      }
+    } catch (e) {}
+  }
 
   // Production Firestore sync across devices
   if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.getFirestoreUserProfile === 'function') {
@@ -606,16 +620,18 @@ async function saveTargets() {
   localStorage.setItem('macronomics_targets', JSON.stringify({ calories: c, protein_g: p, carbs_g: cb, fiber_g: fib, fat_g: f }));
   userTargets = { calories: c, protein_g: p, carbs_g: cb, fiber_g: fib, fat_g: f };
 
-  try {
-    const res = await fetch('/api/targets', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ calories: c, protein_g: p, carbs_g: cb, fiber_g: fib, fat_g: f })
-    });
-    if (res.ok) {
-      await AppLogger.fetchBackendLogs();
-    }
-  } catch (e) {}
+  if (isLocalBackend()) {
+    try {
+      const res = await fetch('/api/targets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ calories: c, protein_g: p, carbs_g: cb, fiber_g: fib, fat_g: f })
+      });
+      if (res.ok) {
+        await AppLogger.fetchBackendLogs();
+      }
+    } catch (e) {}
+  }
 
   applyTargetsToUI();
   updateCirclesProgress();
@@ -748,13 +764,12 @@ function hasMacrosEntered(log) {
   return false;
 }
 
-function calculateStreak() {
+function calculateStreakForLogs(logs) {
   const todayStr = getTodayDateString();
   const yesterdayStr = getYesterdayDateString();
 
-  // Collect all unique dates with macros entered in the user device's local timezone
   const activeDays = new Set();
-  (currentLogs || []).forEach(log => {
+  (logs || []).forEach(log => {
     if (hasMacrosEntered(log)) {
       activeDays.add(getLogDate(log));
     }
@@ -762,7 +777,6 @@ function calculateStreak() {
 
   let streak = 0;
   if (activeDays.has(todayStr)) {
-    // Streak includes today and continues backward consecutive days
     streak = 1;
     let check = new Date();
     check.setDate(check.getDate() - 1);
@@ -771,7 +785,6 @@ function calculateStreak() {
       check.setDate(check.getDate() - 1);
     }
   } else if (activeDays.has(yesterdayStr)) {
-    // User hasn't logged today yet, but streak from yesterday is still active
     streak = 1;
     let check = new Date();
     check.setDate(check.getDate() - 2);
@@ -780,19 +793,39 @@ function calculateStreak() {
       check.setDate(check.getDate() - 1);
     }
   } else {
-    // No logs today or yesterday -> streak broken
     streak = 0;
   }
 
   return streak;
 }
 
+function calculateStreak() {
+  if (isVisitorMode) {
+    return currentUserStreak;
+  }
+  return calculateStreakForLogs(currentLogs);
+}
+
+function renderCurrentUserStreak() {
+  const streakBadge = document.getElementById('streak-badge');
+  if (!streakBadge) return;
+  streakBadge.textContent = `🔥 ${currentUserStreak}d`;
+  streakBadge.setAttribute('title', `${currentUserStreak} consecutive day${currentUserStreak === 1 ? '' : 's'} logging macros`);
+}
+
 function renderStreak() {
   const streakBadge = document.getElementById('streak-badge');
   if (!streakBadge) return;
+
+  // In visitor mode, header streak MUST ALWAYS remain the logged-in user's streak
+  if (isVisitorMode) {
+    renderCurrentUserStreak();
+    return;
+  }
+
   const streak = calculateStreak();
-  streakBadge.textContent = `🔥 ${streak}d`;
-  streakBadge.setAttribute('title', `${streak} consecutive day${streak === 1 ? '' : 's'} logging macros`);
+  currentUserStreak = streak;
+  renderCurrentUserStreak();
 
   if (window.MacromixFirebase && currentUserHandle) {
     window.MacromixFirebase.syncStreakToFirestore(currentUserHandle, streak);
@@ -907,6 +940,37 @@ function setupRealtimeMealsSync() {
 }
 
 
+function setupCurrentUserProfileSync() {
+  if (!currentUserHandle || !window.MacromixFirebase || typeof window.MacromixFirebase.subscribeProfileFromFirestore !== 'function') return;
+  if (unsubscribeCurrentUserListener) {
+    try { unsubscribeCurrentUserListener(); } catch (e) {}
+    unsubscribeCurrentUserListener = null;
+  }
+  unsubscribeCurrentUserListener = window.MacromixFirebase.subscribeProfileFromFirestore(currentUserHandle, (remoteProfile) => {
+    if (remoteProfile) {
+      if (typeof remoteProfile.streak === 'number') {
+        currentUserStreak = remoteProfile.streak;
+        renderCurrentUserStreak();
+      }
+      if (!isVisitorMode) {
+        const raw = remoteProfile.dailyTargets || remoteProfile.targets;
+        if (raw) {
+          userTargets = {
+            calories: Number(raw.calories) || 2000,
+            protein_g: Number(raw.protein_g ?? raw.protein ?? raw.prot) || 150,
+            carbs_g: Number(raw.carbs_g ?? raw.carbs ?? raw.carb) || 200,
+            fiber_g: Number(raw.fiber_g ?? raw.fiber ?? raw.fib) || 30,
+            fat_g: Number(raw.fat_g ?? raw.fat) || 65
+          };
+          localStorage.setItem('macronomics_targets', JSON.stringify(userTargets));
+          applyTargetsToUI();
+          updateCirclesProgress();
+        }
+      }
+    }
+  });
+}
+
 function setupRealtimeProfileSync() {
   const targetHandle = (isVisitorMode && viewedHandle) ? viewedHandle : currentUserHandle;
   if (!targetHandle || !window.MacromixFirebase || typeof window.MacromixFirebase.subscribeProfileFromFirestore !== 'function') return;
@@ -932,10 +996,19 @@ function setupRealtimeProfileSync() {
         updateCirclesProgress();
         console.log(`[macromix] Real-time sync: daily targets updated for @${targetHandle}.`, userTargets);
       }
-      if (typeof remoteProfile.streak === 'number') {
-        const streakBadge = document.getElementById('streak-badge');
-        if (streakBadge) {
-          streakBadge.textContent = `🔥 ${remoteProfile.streak}d`;
+      if (isVisitorMode) {
+        // Friend's streak goes to the visitor streak pill in the visitor banner, NOT the app header!
+        if (typeof remoteProfile.streak === 'number') {
+          const visitorStreakPill = document.getElementById('visitor-streak-pill');
+          if (visitorStreakPill) {
+            visitorStreakPill.textContent = `🔥 ${remoteProfile.streak}d`;
+            visitorStreakPill.classList.remove('hidden');
+          }
+        }
+      } else {
+        if (typeof remoteProfile.streak === 'number') {
+          currentUserStreak = remoteProfile.streak;
+          renderCurrentUserStreak();
         }
       }
     }
@@ -964,24 +1037,27 @@ async function loadMealLogs() {
   const storageKey = getMealsStorageKey(currentUserHandle);
 
   // 1. Local FastAPI backend if available (local development / tests)
-  try {
-    const res = await fetch('/api/logs');
-    if (res.ok) {
-      currentLogs = await res.json();
-      if (!isVisitorMode) {
-        localStorage.setItem(storageKey, JSON.stringify(currentLogs));
+  if (isLocalBackend()) {
+    try {
+      const res = await fetch('/api/logs');
+      const ct = res.headers.get('content-type') || '';
+      if (res.ok && ct.includes('application/json')) {
+        currentLogs = await res.json();
+        if (!isVisitorMode) {
+          localStorage.setItem(storageKey, JSON.stringify(currentLogs));
+        }
+        if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.syncLocalMealsWithFirestore === 'function') {
+          try {
+            await window.MacromixFirebase.syncLocalMealsWithFirestore(currentUserHandle);
+          } catch (sErr) {}
+        }
+        filterAndRenderSelectedDate();
+        AppLogger.log('UI', `Timeline updated: ${currentLogs.length} total meal logs loaded`, { count: currentLogs.length });
+        return;
       }
-      if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.syncLocalMealsWithFirestore === 'function') {
-        try {
-          await window.MacromixFirebase.syncLocalMealsWithFirestore(currentUserHandle);
-        } catch (sErr) {}
-      }
-      filterAndRenderSelectedDate();
-      AppLogger.log('UI', `Timeline updated: ${currentLogs.length} total meal logs loaded`, { count: currentLogs.length });
-      return;
+    } catch (e) {
+      // Backend unavailable or static hosting on Firebase
     }
-  } catch (e) {
-    // Backend unavailable or static hosting on Firebase
   }
 
   // 2. If user is logged in, sync with Cloud Firestore across all devices (Firebase Hosting production)
@@ -1195,12 +1271,14 @@ async function deleteFoodItem(itemId) {
   if (isVisitorMode) return;
   if (!confirm("Are you sure you want to delete this food item?")) return;
   AppLogger.log('UI', `User initiated deletion of food item #${itemId}`);
-  try {
-    const res = await fetch(`/api/logs/items/${itemId}`, { method: 'DELETE' });
-    if (res.ok) {
-      await AppLogger.fetchBackendLogs();
-    }
-  } catch (e) {}
+  if (isLocalBackend()) {
+    try {
+      const res = await fetch(`/api/logs/items/${itemId}`, { method: 'DELETE' });
+      if (res.ok) {
+        await AppLogger.fetchBackendLogs();
+      }
+    } catch (e) {}
+  }
 
   const storageKey = getMealsStorageKey(currentUserHandle);
   let stored = localStorage.getItem(storageKey);
@@ -1242,12 +1320,14 @@ async function deleteMealLog(logId) {
   if (isVisitorMode) return;
   if (!confirm("Are you sure you want to delete this meal log?")) return;
   AppLogger.log('UI', `User initiated deletion of meal log #${logId}`);
-  try {
-    const res = await fetch(`/api/logs/${logId}`, { method: 'DELETE' });
-    if (res.ok) {
-      await AppLogger.fetchBackendLogs();
-    }
-  } catch (e) {}
+  if (isLocalBackend()) {
+    try {
+      const res = await fetch(`/api/logs/${logId}`, { method: 'DELETE' });
+      if (res.ok) {
+        await AppLogger.fetchBackendLogs();
+      }
+    } catch (e) {}
+  }
 
   const storageKey = getMealsStorageKey(currentUserHandle);
   let stored = localStorage.getItem(storageKey);
@@ -1482,62 +1562,56 @@ async function processTranscript(transcript, audioBase64 = null) {
 
   try {
     let geminiData = null;
-    let fallbackToClient = false;
+    let fallbackToClient = !isLocalBackend();
 
-    try {
-      AppLogger.log('GEMINI', 'Sending request to POST /api/gemini/multimodal', {
-        prompt: transcript,
-        audio_included: !!audioBase64,
-        user_id: 1
-      });
-
-      const res = await fetch('/api/gemini/multimodal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          audio_base64: audioBase64,
-          text_prompt: transcript,
+    if (isLocalBackend()) {
+      try {
+        AppLogger.log('GEMINI', 'Sending request to POST /api/gemini/multimodal', {
+          prompt: transcript,
+          audio_included: !!audioBase64,
           user_id: 1
-        })
-      });
+        });
 
-      await AppLogger.fetchBackendLogs();
+        const res = await fetch('/api/gemini/multimodal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            audio_base64: audioBase64,
+            text_prompt: transcript,
+            user_id: 1
+          })
+        });
 
-      if (res.status === 403) {
-        const errData = await res.json();
-        AppLogger.log('GEMINI', 'API key required (403). Prompting for custom API key', errData, 'WARN');
-        openGeminiModal();
-        alert(errData.message || "Please provide your Gemini API key to continue.");
-        micStatusText.textContent = "Gemini API key required. Click Gemini badge to configure.";
-        return false;
-      }
+        await AppLogger.fetchBackendLogs();
 
-      if (res.status === 422) {
-        const errData = await res.json().catch(() => ({}));
-        AppLogger.log('GEMINI', 'Non-food input rejected by LLM gate (422)', errData, 'WARN');
-        micStatusText.textContent = errData.message || "No food items detected. Please specify what you ate.";
-        return false;
-      }
-
-      if (res.status === 404 || res.status === 502 || res.status === 503) {
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          fallbackToClient = true;
+        } else if (res.status === 403) {
+          const errData = await res.json().catch(() => ({}));
+          AppLogger.log('GEMINI', 'API key required (403). Prompting for custom API key', errData, 'WARN');
+          openGeminiModal();
+          alert(errData.message || "Please provide your Gemini API key to continue.");
+          micStatusText.textContent = "Gemini API key required. Click Gemini badge to configure.";
+          return false;
+        } else if (res.status === 422) {
+          const errData = await res.json().catch(() => ({}));
+          AppLogger.log('GEMINI', 'Non-food input rejected by LLM gate (422)', errData, 'WARN');
+          micStatusText.textContent = errData.message || "No food items detected. Please specify what you ate.";
+          return false;
+        } else if (res.status === 404 || res.status === 502 || res.status === 503 || !res.ok) {
+          fallbackToClient = true;
+        } else {
+          geminiData = await res.json().catch(() => null);
+          if (!geminiData) fallbackToClient = true;
+        }
+      } catch (fetchErr) {
         fallbackToClient = true;
-      } else if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        AppLogger.log('GEMINI', 'Gemini multimodal API error (' + res.status + ')', errData, 'ERROR');
-        throw new Error(errData.detail || errData.message || "Gemini processing failed");
-      } else {
-        geminiData = await res.json();
-      }
-    } catch (fetchErr) {
-      if (fetchErr.message && (fetchErr.message.includes('Failed to fetch') || fetchErr.message.includes('NetworkError') || fetchErr.message.includes('Load failed'))) {
-        fallbackToClient = true;
-      } else {
-        throw fetchErr;
       }
     }
 
     if (fallbackToClient) {
-      AppLogger.log('GEMINI', 'Backend API unavailable. Calling Gemini API directly from client browser.');
+      AppLogger.log('GEMINI', 'Running client-side Gemini AI direct inference.');
       geminiData = await callClientGeminiDirect(transcript, audioBase64);
       if (!geminiData) return false;
     }
@@ -1551,48 +1625,51 @@ async function processTranscript(transcript, audioBase64 = null) {
 
     const targetDate = (selectedDate && selectedDate <= getTodayDateString()) ? selectedDate : getTodayDateString();
 
-    // Save meal via backend POST /api/logs or localStorage
+    // Save meal via backend POST /api/logs if local server is active, else directly via client storage & Firestore
     let savedToBackend = false;
-    try {
-      AppLogger.log('SQL', 'Saving Gemini meal via POST /api/logs', {
-        meal_type: geminiData.meal_type || 'snack',
-        item_count: geminiData.items.length,
-        logged_date: targetDate
-      });
-
-      const saveRes = await fetch('/api/logs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    if (isLocalBackend()) {
+      try {
+        AppLogger.log('SQL', 'Saving Gemini meal via POST /api/logs', {
           meal_type: geminiData.meal_type || 'snack',
-          logged_time: geminiData.logged_time,
-          raw_transcript: geminiData.raw_transcript || transcript || "",
-          engine_used: 'gemini_multimodal_ai',
-          logged_date: targetDate,
-          items: geminiData.items
-        })
-      });
+          item_count: geminiData.items.length,
+          logged_date: targetDate
+        });
 
-      if (saveRes.ok) {
-        savedToBackend = true;
-        try {
-          const savedMeal = await saveRes.json();
-          if (savedMeal && savedMeal.id) {
-            const storageKey = getMealsStorageKey(currentUserHandle);
-            const stored = localStorage.getItem(storageKey);
-            let meals = stored ? JSON.parse(stored) : [];
-            meals = meals.filter(m => String(m.id) !== String(savedMeal.id));
-            meals.unshift(savedMeal);
-            localStorage.setItem(storageKey, JSON.stringify(meals));
-            currentLogs = meals;
-            if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.saveMealToFirestore === 'function') {
-              window.MacromixFirebase.saveMealToFirestore(currentUserHandle, savedMeal);
+        const saveRes = await fetch('/api/logs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            meal_type: geminiData.meal_type || 'snack',
+            logged_time: geminiData.logged_time,
+            raw_transcript: geminiData.raw_transcript || transcript || "",
+            engine_used: 'gemini_multimodal_ai',
+            logged_date: targetDate,
+            items: geminiData.items
+          })
+        });
+
+        const saveContentType = saveRes.headers.get('content-type') || '';
+        if (saveRes.ok && saveContentType.includes('application/json')) {
+          savedToBackend = true;
+          try {
+            const savedMeal = await saveRes.json();
+            if (savedMeal && savedMeal.id) {
+              const storageKey = getMealsStorageKey(currentUserHandle);
+              const stored = localStorage.getItem(storageKey);
+              let meals = stored ? JSON.parse(stored) : [];
+              meals = meals.filter(m => String(m.id) !== String(savedMeal.id));
+              meals.unshift(savedMeal);
+              localStorage.setItem(storageKey, JSON.stringify(meals));
+              currentLogs = meals;
+              if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.saveMealToFirestore === 'function') {
+                window.MacromixFirebase.saveMealToFirestore(currentUserHandle, savedMeal);
+              }
             }
-          }
-        } catch (jErr) {}
-        await AppLogger.fetchBackendLogs();
-      }
-    } catch (e) {}
+          } catch (jErr) {}
+          await AppLogger.fetchBackendLogs();
+        }
+      } catch (e) {}
+    }
 
     if (!savedToBackend) {
       // Direct client-side save to localStorage
@@ -2054,17 +2131,19 @@ async function saveItemEdit() {
   }
 
   AppLogger.log('UI', `User saving portion edit for item #${itemId}`, { quantity: qty, standardized_weight_g: weightG });
-  try {
-    const res = await fetch(`/api/logs/items/${itemId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quantity: qty, standardized_weight_g: weightG })
-    });
+  if (isLocalBackend()) {
+    try {
+      const res = await fetch(`/api/logs/items/${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity: qty, standardized_weight_g: weightG })
+      });
 
-    if (res.ok) {
-      await AppLogger.fetchBackendLogs();
-    }
-  } catch (e) {}
+      if (res.ok) {
+        await AppLogger.fetchBackendLogs();
+      }
+    } catch (e) {}
+  }
 
   const storageKey = getMealsStorageKey(currentUserHandle);
   let stored = localStorage.getItem(storageKey);
@@ -2130,6 +2209,40 @@ function parseUrlHandle() {
   return null;
 }
 
+function updateHeaderFriendsBtn() {
+  const btn = document.getElementById('btn-header-friends');
+  if (!btn) return;
+  const label = btn.querySelector('.friends-btn-label');
+  const icon = btn.querySelector('.friends-btn-icon');
+
+  if (isVisitorMode) {
+    btn.classList.remove('active');
+    if (label) label.textContent = 'Friends';
+    if (icon) icon.textContent = '👥';
+    btn.title = 'Back to Friends list';
+  } else if (currentTab === 'friends') {
+    btn.classList.add('active');
+    if (label) label.textContent = 'Me';
+    if (icon) icon.textContent = '🏠';
+    btn.title = 'Back to My Tracker';
+  } else {
+    btn.classList.remove('active');
+    if (label) label.textContent = 'Friends';
+    if (icon) icon.textContent = '👥';
+    btn.title = 'Friends & Follows';
+  }
+}
+
+function handleHeaderFriendsClick() {
+  if (isVisitorMode) {
+    backToFriendsList();
+  } else if (currentTab === 'friends') {
+    switchTab('me');
+  } else {
+    switchTab('friends');
+  }
+}
+
 function setVisitorMode(isVisitor, targetHandle = null) {
   clearRealtimeListeners();
   isVisitorMode = !!isVisitor;
@@ -2137,6 +2250,7 @@ function setVisitorMode(isVisitor, targetHandle = null) {
 
   const visitorBanner = document.getElementById('visitor-banner');
   const targetHandleEl = document.getElementById('visitor-target-handle');
+  const visitorStreakPill = document.getElementById('visitor-streak-pill');
   const voiceRow = document.querySelector('.voice-buttons-row');
   const micBanner = document.getElementById('mic-status-text');
   const textLogForm = document.getElementById('text-log-form');
@@ -2148,17 +2262,30 @@ function setVisitorMode(isVisitor, targetHandle = null) {
     filterAndRenderSelectedDate();
     if (visitorBanner) visitorBanner.classList.remove('hidden');
     if (targetHandleEl) targetHandleEl.textContent = '@' + viewedHandle;
+    if (visitorStreakPill) {
+      visitorStreakPill.textContent = '';
+      visitorStreakPill.classList.add('hidden');
+    }
     if (voiceRow) voiceRow.classList.add('hidden');
     if (micBanner) micBanner.classList.add('hidden');
     if (textLogForm) textLogForm.classList.add('hidden');
+
+    // Header handle badge ALWAYS stays the logged-in user:
     if (handleBadge && handleText) {
-      handleText.textContent = '@' + viewedHandle;
-      handleBadge.style.display = 'flex';
-      handleBadge.style.cursor = 'default';
-      handleBadge.title = `@${viewedHandle}'s Macro Targets (Read-only)`;
+      if (currentUserHandle) {
+        handleText.textContent = '@' + currentUserHandle;
+        handleBadge.style.display = 'flex';
+        handleBadge.style.cursor = 'pointer';
+        handleBadge.title = 'Daily Macro Targets (Click to edit)';
+      } else {
+        handleBadge.style.display = 'none';
+      }
     }
+    // Header streak ALWAYS displays the logged-in user's streak:
+    renderCurrentUserStreak();
   } else {
     if (visitorBanner) visitorBanner.classList.add('hidden');
+    if (visitorStreakPill) visitorStreakPill.classList.add('hidden');
     if (voiceRow) voiceRow.classList.remove('hidden');
     if (micBanner) micBanner.classList.remove('hidden');
     if (textLogForm) textLogForm.classList.remove('hidden');
@@ -2175,7 +2302,9 @@ function setVisitorMode(isVisitor, targetHandle = null) {
     // Clear visitor meals so they don't linger before owner's logs finish loading
     currentLogs = [];
     filterAndRenderSelectedDate();
+    renderCurrentUserStreak();
   }
+  updateHeaderFriendsBtn();
 }
 
 async function checkUrlRoute() {
@@ -2184,68 +2313,56 @@ async function checkUrlRoute() {
     if (currentUserHandle && currentUserHandle.toLowerCase() === routeHandle.toLowerCase()) {
       setVisitorMode(false);
       currentTab = 'me';
-      const tabMe = document.getElementById('tab-btn-me');
-      const tabFriends = document.getElementById('tab-btn-friends');
       const viewMe = document.getElementById('view-me');
       const viewFriends = document.getElementById('view-friends');
-      if (tabMe) tabMe.classList.add('active');
-      if (tabFriends) tabFriends.classList.remove('active');
       if (viewMe) viewMe.classList.remove('hidden');
       if (viewFriends) viewFriends.classList.add('hidden');
     } else {
       setVisitorMode(true, routeHandle);
-      // Stay in 'friends' tab when viewing someone else's profile!
       currentTab = 'friends';
-      const tabMe = document.getElementById('tab-btn-me');
-      const tabFriends = document.getElementById('tab-btn-friends');
       const viewMe = document.getElementById('view-me');
       const viewFriends = document.getElementById('view-friends');
-      if (tabMe) tabMe.classList.remove('active');
-      if (tabFriends) tabFriends.classList.add('active');
       if (viewMe) viewMe.classList.remove('hidden');
       if (viewFriends) viewFriends.classList.add('hidden');
     }
   } else {
     setVisitorMode(false);
   }
+  updateHeaderFriendsBtn();
 }
 
 async function switchTab(tabName, updateUrl = true) {
-  const tabMe = document.getElementById('tab-btn-me');
-  const tabFriends = document.getElementById('tab-btn-friends');
   const viewMe = document.getElementById('view-me');
   const viewFriends = document.getElementById('view-friends');
 
   if (tabName === 'friends') {
     currentTab = 'friends';
-    if (tabMe) tabMe.classList.remove('active');
-    if (tabFriends) tabFriends.classList.add('active');
 
-    // If user clicks "My Friends" while viewing a friend's profile, go back to friends list!
+    // If user clicks Friends while viewing a friend's profile, go back to friends list!
     if (isVisitorMode) {
       window.history.pushState(null, '', '/');
       setVisitorMode(false);
       if (viewMe) viewMe.classList.add('hidden');
       if (viewFriends) viewFriends.classList.remove('hidden');
       refreshFriendsView();
+      updateHeaderFriendsBtn();
       return;
     }
 
     if (viewMe) viewMe.classList.add('hidden');
     if (viewFriends) viewFriends.classList.remove('hidden');
     refreshFriendsView();
+    updateHeaderFriendsBtn();
   } else {
     // Switching to 'me'
     currentTab = 'me';
-    if (tabMe) tabMe.classList.add('active');
-    if (tabFriends) tabFriends.classList.remove('active');
 
     if (isVisitorMode) {
       window.history.pushState(null, '', '/');
       setVisitorMode(false);
       if (currentUserHandle) {
         setupRealtimeMealsSync();
-        setupRealtimeProfileSync();
+        setupCurrentUserProfileSync();
         await loadTargets();
         await loadMealLogs();
         renderStreak();
@@ -2254,6 +2371,7 @@ async function switchTab(tabName, updateUrl = true) {
 
     if (viewMe) viewMe.classList.remove('hidden');
     if (viewFriends) viewFriends.classList.add('hidden');
+    updateHeaderFriendsBtn();
   }
 }
 
@@ -2270,13 +2388,9 @@ async function viewFriendProfile(friendHandle) {
     // Viewing a friend -> stay in 'friends' tab!
     setVisitorMode(true, clean);
     currentTab = 'friends';
-    const tabMe = document.getElementById('tab-btn-me');
-    const tabFriends = document.getElementById('tab-btn-friends');
     const viewMe = document.getElementById('view-me');
     const viewFriends = document.getElementById('view-friends');
 
-    if (tabMe) tabMe.classList.remove('active');
-    if (tabFriends) tabFriends.classList.add('active');
     if (viewMe) viewMe.classList.remove('hidden');
     if (viewFriends) viewFriends.classList.add('hidden');
   }
@@ -2285,6 +2399,7 @@ async function viewFriendProfile(friendHandle) {
   await loadMealLogs();
   setupRealtimeMealsSync();
   setupRealtimeProfileSync();
+  updateHeaderFriendsBtn();
 }
 
 async function exitVisitorMode() {
@@ -2293,7 +2408,7 @@ async function exitVisitorMode() {
   await switchTab('me', false);
   if (currentUserHandle) {
     setupRealtimeMealsSync();
-    setupRealtimeProfileSync();
+    setupCurrentUserProfileSync();
     await loadTargets();
     await loadMealLogs();
     renderStreak();
@@ -2304,12 +2419,14 @@ async function exitVisitorMode() {
       document.body.style.overflow = 'hidden';
     }
   }
+  updateHeaderFriendsBtn();
 }
 
 async function backToFriendsList() {
   window.history.pushState(null, '', '/');
   setVisitorMode(false);
   await switchTab('friends', false);
+  updateHeaderFriendsBtn();
 }
 
 async function triggerProfileShare() {
@@ -2522,53 +2639,84 @@ async function checkUserProfileOnboarding() {
   const badgeEl = document.getElementById('header-handle-badge');
   const badgeText = document.getElementById('header-handle-text');
 
-  // Check if visitor viewing another user's public profile directly from URL
-  const routeHandle = parseUrlHandle();
-  const cachedHandle = localStorage.getItem('macromix_user_handle');
-  if (routeHandle && (!cachedHandle || cachedHandle.toLowerCase() !== routeHandle.toLowerCase())) {
-    if (onboardingEl) onboardingEl.classList.add('hidden');
-    document.body.style.overflow = '';
-    return;
-  }
-
   // Check local cache first
+  const cachedHandle = localStorage.getItem('macromix_user_handle');
   if (cachedHandle) {
     currentUserHandle = cachedHandle;
     if (badgeEl && badgeText) {
       badgeText.textContent = '@' + cachedHandle;
       badgeEl.style.display = 'flex';
+      badgeEl.style.cursor = 'pointer';
+      badgeEl.title = 'Daily Macro Targets (Click to edit)';
     }
     if (onboardingEl) onboardingEl.classList.add('hidden');
+    document.body.style.overflow = '';
+
+    // Calculate streak from local cached meals
+    try {
+      const rawMeals = localStorage.getItem(getMealsStorageKey(cachedHandle));
+      if (rawMeals) {
+        currentUserStreak = calculateStreakForLogs(JSON.parse(rawMeals));
+      }
+    } catch (e) {}
+    renderCurrentUserStreak();
+
     if (window.MacromixFirebase) {
       try {
-        window.MacromixFirebase.syncStreakToFirestore(cachedHandle, calculateStreak());
+        window.MacromixFirebase.syncStreakToFirestore(cachedHandle, currentUserStreak);
       } catch (e) {}
     }
     setupRealtimeMealsSync();
-    setupRealtimeProfileSync();
+    setupCurrentUserProfileSync();
+    updateHeaderFriendsBtn();
     return;
   }
 
-  // Check backend profile
-  try {
-    const res = await fetch('/api/user/profile');
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.handle) {
-        currentUserHandle = data.handle;
-        localStorage.setItem('macromix_user_handle', data.handle);
-        if (badgeEl && badgeText) {
-          badgeText.textContent = '@' + data.handle;
-          badgeEl.style.display = 'flex';
+  // Check if visitor viewing another user's public profile directly without an account
+  const routeHandle = parseUrlHandle();
+  if (routeHandle) {
+    if (onboardingEl) onboardingEl.classList.add('hidden');
+    document.body.style.overflow = '';
+    if (badgeEl) badgeEl.style.display = 'none';
+    const streakBadge = document.getElementById('streak-badge');
+    if (streakBadge) streakBadge.style.display = 'none';
+    updateHeaderFriendsBtn();
+    return;
+  }
+
+  // Check backend profile if local server is active
+  if (isLocalBackend()) {
+    try {
+      const res = await fetch('/api/user/profile');
+      const ct = res.headers.get('content-type') || '';
+      if (res.ok && ct.includes('application/json')) {
+        const data = await res.json();
+        if (data && data.handle) {
+          currentUserHandle = data.handle;
+          localStorage.setItem('macromix_user_handle', data.handle);
+          if (badgeEl && badgeText) {
+            badgeText.textContent = '@' + data.handle;
+            badgeEl.style.display = 'flex';
+            badgeEl.style.cursor = 'pointer';
+          }
+          if (onboardingEl) onboardingEl.classList.add('hidden');
+          document.body.style.overflow = '';
+          try {
+            const rawMeals = localStorage.getItem(getMealsStorageKey(data.handle));
+            if (rawMeals) {
+              currentUserStreak = calculateStreakForLogs(JSON.parse(rawMeals));
+            }
+          } catch (e) {}
+          renderCurrentUserStreak();
+          setupRealtimeMealsSync();
+          setupCurrentUserProfileSync();
+          updateHeaderFriendsBtn();
+          return;
         }
-        if (onboardingEl) onboardingEl.classList.add('hidden');
-        setupRealtimeMealsSync();
-        setupRealtimeProfileSync();
-        return;
       }
+    } catch (err) {
+      console.warn("[macromix] Could not fetch user profile:", err);
     }
-  } catch (err) {
-    console.warn("[macromix] Could not fetch user profile:", err);
   }
 
   // If no handle is found, reveal dedicated onboarding screen
@@ -2631,23 +2779,28 @@ async function registerHandleOnboarding(handle, authMethod = 'passkey') {
     }
   }
 
-  // 2. Also persist to local FastAPI server if available
-  try {
-    const res = await fetch('/api/user/profile', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ handle: clean, user_id: 1 })
-    });
+  // 2. Also persist to local FastAPI server if running locally
+  if (isLocalBackend()) {
+    try {
+      const res = await fetch('/api/user/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handle: clean, user_id: 1 })
+      });
 
-    if (!res.ok) {
-      const err = await res.json();
-      if (res.status === 409 && !fireRes?.isLogin) {
-        showOnboardingError(err.detail || "Could not claim handle. Please try another.");
-        return false;
+      if (!res.ok) {
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          const err = await res.json();
+          if (res.status === 409 && !fireRes?.isLogin) {
+            showOnboardingError(err.detail || "Could not claim handle. Please try another.");
+            return false;
+          }
+        }
       }
+    } catch (e) {
+      // Local server offline; client Firestore handles persistence
     }
-  } catch (e) {
-    // Local server offline; client Firestore handles persistence
   }
 
   currentUserHandle = clean;
@@ -2670,8 +2823,12 @@ async function registerHandleOnboarding(handle, authMethod = 'passkey') {
   AppLogger.log('AUTH', `${actionType} user via ${authMethod}: @${clean}`, { handle: clean, authMethod, isLogin: fireRes?.isLogin }, 'SUCCESS');
 
   setupRealtimeMealsSync();
+  setupCurrentUserProfileSync();
   setupRealtimeProfileSync();
   await loadMealLogs();
+  currentUserStreak = calculateStreak();
+  renderCurrentUserStreak();
+  updateHeaderFriendsBtn();
   return true;
 }
 
@@ -2789,5 +2946,8 @@ window.loadTargets = loadTargets;
 window.clearRealtimeListeners = clearRealtimeListeners;
 window.getCurrentLogs = () => currentLogs;
 window.getMealsStorageKey = getMealsStorageKey;
+window.handleHeaderFriendsClick = handleHeaderFriendsClick;
+window.updateHeaderFriendsBtn = updateHeaderFriendsBtn;
+window.renderCurrentUserStreak = renderCurrentUserStreak;
 
 
