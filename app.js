@@ -2075,6 +2075,9 @@ function setVisitorMode(isVisitor, targetHandle = null) {
         handleBadge.style.display = 'none';
       }
     }
+    // Clear visitor meals so they don't linger before owner's logs finish loading
+    currentLogs = [];
+    filterAndRenderSelectedDate();
   }
 }
 
@@ -2083,30 +2086,75 @@ async function checkUrlRoute() {
   if (routeHandle) {
     if (currentUserHandle && currentUserHandle.toLowerCase() === routeHandle.toLowerCase()) {
       setVisitorMode(false);
+      currentTab = 'me';
+      const tabMe = document.getElementById('tab-btn-me');
+      const tabFriends = document.getElementById('tab-btn-friends');
+      const viewMe = document.getElementById('view-me');
+      const viewFriends = document.getElementById('view-friends');
+      if (tabMe) tabMe.classList.add('active');
+      if (tabFriends) tabFriends.classList.remove('active');
+      if (viewMe) viewMe.classList.remove('hidden');
+      if (viewFriends) viewFriends.classList.add('hidden');
     } else {
       setVisitorMode(true, routeHandle);
+      // Stay in 'friends' tab when viewing someone else's profile!
+      currentTab = 'friends';
+      const tabMe = document.getElementById('tab-btn-me');
+      const tabFriends = document.getElementById('tab-btn-friends');
+      const viewMe = document.getElementById('view-me');
+      const viewFriends = document.getElementById('view-friends');
+      if (tabMe) tabMe.classList.remove('active');
+      if (tabFriends) tabFriends.classList.add('active');
+      if (viewMe) viewMe.classList.remove('hidden');
+      if (viewFriends) viewFriends.classList.add('hidden');
     }
   } else {
     setVisitorMode(false);
   }
 }
 
-function switchTab(tabName, updateUrl = true) {
-  currentTab = tabName;
+async function switchTab(tabName, updateUrl = true) {
   const tabMe = document.getElementById('tab-btn-me');
   const tabFriends = document.getElementById('tab-btn-friends');
   const viewMe = document.getElementById('view-me');
   const viewFriends = document.getElementById('view-friends');
 
   if (tabName === 'friends') {
+    currentTab = 'friends';
     if (tabMe) tabMe.classList.remove('active');
     if (tabFriends) tabFriends.classList.add('active');
+
+    // If user clicks "My Friends" while viewing a friend's profile, go back to friends list!
+    if (isVisitorMode) {
+      window.history.pushState(null, '', '/');
+      setVisitorMode(false);
+      if (viewMe) viewMe.classList.add('hidden');
+      if (viewFriends) viewFriends.classList.remove('hidden');
+      refreshFriendsView();
+      return;
+    }
+
     if (viewMe) viewMe.classList.add('hidden');
     if (viewFriends) viewFriends.classList.remove('hidden');
     refreshFriendsView();
   } else {
+    // Switching to 'me'
+    currentTab = 'me';
     if (tabMe) tabMe.classList.add('active');
     if (tabFriends) tabFriends.classList.remove('active');
+
+    if (isVisitorMode) {
+      window.history.pushState(null, '', '/');
+      setVisitorMode(false);
+      if (currentUserHandle) {
+        setupRealtimeMealsSync();
+        setupRealtimeProfileSync();
+        await loadTargets();
+        await loadMealLogs();
+        renderStreak();
+      }
+    }
+
     if (viewMe) viewMe.classList.remove('hidden');
     if (viewFriends) viewFriends.classList.add('hidden');
   }
@@ -2116,12 +2164,26 @@ async function viewFriendProfile(friendHandle) {
   if (!friendHandle) return;
   const clean = friendHandle.trim().toLowerCase().replace(/^@+/, '');
   window.history.pushState(null, '', '/@' + clean);
+
   if (currentUserHandle && currentUserHandle.toLowerCase() === clean) {
+    // Viewing yourself -> go to 'me' tab
     setVisitorMode(false);
+    await switchTab('me', false);
   } else {
+    // Viewing a friend -> stay in 'friends' tab!
     setVisitorMode(true, clean);
+    currentTab = 'friends';
+    const tabMe = document.getElementById('tab-btn-me');
+    const tabFriends = document.getElementById('tab-btn-friends');
+    const viewMe = document.getElementById('view-me');
+    const viewFriends = document.getElementById('view-friends');
+
+    if (tabMe) tabMe.classList.remove('active');
+    if (tabFriends) tabFriends.classList.add('active');
+    if (viewMe) viewMe.classList.remove('hidden');
+    if (viewFriends) viewFriends.classList.add('hidden');
   }
-  switchTab('me', false);
+
   await loadTargets();
   await loadMealLogs();
   setupRealtimeMealsSync();
@@ -2131,6 +2193,7 @@ async function viewFriendProfile(friendHandle) {
 async function exitVisitorMode() {
   window.history.pushState(null, '', '/');
   setVisitorMode(false);
+  await switchTab('me', false);
   if (currentUserHandle) {
     setupRealtimeMealsSync();
     setupRealtimeProfileSync();
@@ -2144,6 +2207,12 @@ async function exitVisitorMode() {
       document.body.style.overflow = 'hidden';
     }
   }
+}
+
+async function backToFriendsList() {
+  window.history.pushState(null, '', '/');
+  setVisitorMode(false);
+  await switchTab('friends', false);
 }
 
 async function triggerProfileShare() {
@@ -2592,6 +2661,9 @@ window.triggerProfileShare = triggerProfileShare;
 window.handleFriendSearch = handleFriendSearch;
 window.viewFriendProfile = viewFriendProfile;
 window.exitVisitorMode = exitVisitorMode;
+window.backToFriendsList = backToFriendsList;
 window.toggleFollowUser = toggleFollowUser;
+window.loadMealLogs = loadMealLogs;
+window.loadTargets = loadTargets;
 
 

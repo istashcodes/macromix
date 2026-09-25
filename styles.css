@@ -55,7 +55,7 @@ body {
   min-height: 100vh;
   display: flex;
   justify-content: center;
-  padding: 16px 12px 60px;
+  padding: 16px 12px 90px;
 }
 
 .app-container {
@@ -1619,60 +1619,60 @@ body {
   display: none !important;
 }
 
-/* Bottom Tab Bar */
+/* Bottom Tab Bar (Neobrutalism Design) */
 .bottom-tab-bar {
   position: fixed;
-  bottom: 0;
+  bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
-  width: 100%;
-  max-width: 520px;
-  height: 64px;
-  background: var(--bg-card);
-  border-top: var(--border-thick);
-  border-left: var(--border-thick);
-  border-right: var(--border-thick);
+  width: calc(100% - 24px);
+  max-width: 516px;
+  height: 60px;
+  background: #FFFFFF;
+  border: 3px solid #000000;
+  border-radius: 16px;
+  box-shadow: 4px 4px 0px #000000;
   display: flex;
-  align-items: stretch;
-  z-index: 99;
-  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.08);
+  align-items: center;
+  padding: 5px;
+  gap: 8px;
+  z-index: 999;
 }
 
 .tab-btn {
   flex: 1;
+  height: 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: transparent;
-  border: none;
-  font-size: 0.82rem;
-  font-weight: 800;
+  gap: 8px;
+  background: #FBF8F1;
+  border: 2px solid transparent;
+  border-radius: 11px;
+  font-size: 0.92rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  gap: 2px;
-  color: #718096;
+  color: #555555;
   position: relative;
-  transition: all 0.15s ease;
+  transition: all 0.1s ease;
+  user-select: none;
+}
+
+.tab-btn:hover {
+  background: #F4EEDF;
+  color: #111111;
+}
+
+.tab-btn:active {
+  transform: translate(2px, 2px);
 }
 
 .tab-btn.active {
-  color: #000;
-  background: #FFFDF7;
-}
-
-.tab-btn.active::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 20%;
-  right: 20%;
-  height: 4px;
   background: var(--cal-color);
-  border-bottom: 2px solid #000;
-  border-left: 2px solid #000;
-  border-right: 2px solid #000;
-  border-bottom-left-radius: 4px;
-  border-bottom-right-radius: 4px;
+  color: #000000;
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px #000000;
 }
 
 .tab-icon {
@@ -1726,17 +1726,37 @@ body {
   font-weight: 900;
 }
 
+.btn-visitor-back {
+  background: #FFFFFF;
+  color: #000000;
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px #000000;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.05s ease;
+}
+
+.btn-visitor-back:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px #000000;
+}
+
 .btn-visitor-exit {
   background: var(--cal-color);
   color: #000;
   border: 2px solid #000;
   box-shadow: 2px 2px 0 #000;
-  border-radius: 20px;
+  border-radius: 8px;
   padding: 4px 12px;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 900;
   cursor: pointer;
   white-space: nowrap;
+  transition: transform 0.05s ease;
 }
 
 .btn-visitor-exit:active {

@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=2.2">
+  <link rel="stylesheet" href="styles.css?v=2.3">
 </head>
 <body>
 
@@ -85,8 +85,9 @@
     <!-- Public Profile Visitor Banner -->
     <div id="visitor-banner" class="visitor-banner hidden">
       <div class="visitor-banner-content">
+        <button type="button" class="btn-visitor-back" id="btn-visitor-back" onclick="backToFriendsList()" title="Back to Friends list">← Friends</button>
         <span class="visitor-banner-text" id="visitor-banner-text">👁️ Viewing <strong id="visitor-target-handle">@friend</strong>'s macromix</span>
-        <button type="button" class="btn-visitor-exit" onclick="exitVisitorMode()">Track your own macros →</button>
+        <button type="button" class="btn-visitor-exit" id="btn-visitor-exit" onclick="exitVisitorMode()">Track your own macros →</button>
       </div>
     </div>
 
@@ -309,6 +310,6 @@
   <script type="module" src="firebase-db.js?v=1.5"></script>
 
   <!-- Frontend Controller -->
-  <script src="app.js?v=4.0"></script>
+  <script src="app.js?v=4.1"></script>
 </body>
 </html>
