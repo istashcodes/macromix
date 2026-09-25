@@ -273,7 +273,7 @@ def test_e2e_macronomics_app(app_server):
         assert not next_date_btn.is_disabled(), "Next arrow must be enabled when displaying YESTERDAY"
         # Calories for yesterday should be 0 because biryani was logged for today
         assert int(page.locator("#val-cal").inner_text()) == 0
-        assert page.locator(".empty-state").is_visible() or page.locator(".meal-group").count() == 0
+        assert page.locator("#meal-timeline-content .empty-state").is_visible() or page.locator(".meal-group").count() == 0
         print("[Playwright] Navigated to YESTERDAY: circles show 0 kcal, timeline empty, next arrow enabled.")
 
         # Log a meal for Yesterday to test 2 consecutive days streak (pause to prevent API rate limit)
@@ -373,7 +373,7 @@ def test_e2e_macronomics_app(app_server):
         # 9. Test Individual Item Deletion
         initial_items_count = page.locator(".meal-item-row").count()
         page.locator(".meal-item-row .item-action-btn:has-text('🗑️')").first.click()
-        time.sleep(0.5)
+        page.wait_for_function(f"document.querySelectorAll('.meal-item-row').length === {initial_items_count - 1}", timeout=10000)
         assert page.locator(".meal-item-row").count() == initial_items_count - 1
         print("[Playwright] Deleted individual food item; remaining item kept.")
 
@@ -381,7 +381,7 @@ def test_e2e_macronomics_app(app_server):
         while page.locator(".meal-item-row .item-action-btn:has-text('🗑️')").count() > 0:
             page.locator(".meal-item-row .item-action-btn:has-text('🗑️')").first.click()
             time.sleep(0.4)
-        page.wait_for_selector(".empty-state")
+        page.wait_for_selector("#meal-timeline-content .empty-state")
         reset_cal = page.locator("#val-cal").inner_text()
         assert int(reset_cal) == 0
         assert page.locator(".meal-group").count() == 0

@@ -14,6 +14,8 @@ let currentTab = 'me';
 let isVisitorMode = false;
 let viewedHandle = null;
 let allFirestoreUsersCache = null;
+let allFirestoreUsersCacheTime = 0;
+const USERS_CACHE_TTL_MS = 30000;
 let followingListCache = new Set();
 
 // Web Audio API State
@@ -809,6 +811,23 @@ function setCircleOffset(elementId, current, target) {
 }
 
 let unsubscribeMealsListener = null;
+let unsubscribeProfileListener = null;
+let unsubscribeFollowingListener = null;
+
+function clearRealtimeListeners(includeFollowing = false) {
+  if (unsubscribeMealsListener) {
+    try { unsubscribeMealsListener(); } catch (e) {}
+    unsubscribeMealsListener = null;
+  }
+  if (unsubscribeProfileListener) {
+    try { unsubscribeProfileListener(); } catch (e) {}
+    unsubscribeProfileListener = null;
+  }
+  if (includeFollowing && unsubscribeFollowingListener) {
+    try { unsubscribeFollowingListener(); } catch (e) {}
+    unsubscribeFollowingListener = null;
+  }
+}
 
 function setupRealtimeMealsSync() {
   const targetHandle = (isVisitorMode && viewedHandle) ? viewedHandle : currentUserHandle;
@@ -829,7 +848,6 @@ function setupRealtimeMealsSync() {
   });
 }
 
-let unsubscribeProfileListener = null;
 
 function setupRealtimeProfileSync() {
   const targetHandle = (isVisitorMode && viewedHandle) ? viewedHandle : currentUserHandle;
@@ -1898,7 +1916,7 @@ function setupSwipeGestures() {
 
 function openSettingsModal() {
   if (isVisitorMode) {
-    alert(`Viewing @${viewedHandle}'s public macromix targets:\n• Calories: ${Math.round(userTargets.calories)} kcal\n• Protein: ${Math.round(userTargets.protein_g)}g\n• Carbs: ${Math.round(userTargets.carbs_g)}g\n• Fiber: ${Math.round(userTargets.fiber_g !== undefined ? userTargets.fiber_g : 30)}g\n• Fat: ${Math.round(userTargets.fat_g)}g`);
+    // Read-only visitor mode: settings cannot be edited
     return;
   }
   AppLogger.log('UI', 'Opened Daily Macro Targets modal');
@@ -2039,6 +2057,7 @@ function parseUrlHandle() {
 }
 
 function setVisitorMode(isVisitor, targetHandle = null) {
+  clearRealtimeListeners();
   isVisitorMode = !!isVisitor;
   viewedHandle = targetHandle ? targetHandle.toLowerCase().replace(/^@+/, '') : null;
 
@@ -2059,7 +2078,8 @@ function setVisitorMode(isVisitor, targetHandle = null) {
     if (handleBadge && handleText) {
       handleText.textContent = '@' + viewedHandle;
       handleBadge.style.display = 'flex';
-      handleBadge.title = `@${viewedHandle}'s Macro Targets`;
+      handleBadge.style.cursor = 'default';
+      handleBadge.title = `@${viewedHandle}'s Macro Targets (Read-only)`;
     }
   } else {
     if (visitorBanner) visitorBanner.classList.add('hidden');
@@ -2070,7 +2090,8 @@ function setVisitorMode(isVisitor, targetHandle = null) {
       if (currentUserHandle) {
         handleText.textContent = '@' + currentUserHandle;
         handleBadge.style.display = 'flex';
-        handleBadge.title = 'Daily Macro Targets';
+        handleBadge.style.cursor = 'pointer';
+        handleBadge.title = 'Daily Macro Targets (Click to edit)';
       } else {
         handleBadge.style.display = 'none';
       }
@@ -2248,7 +2269,11 @@ async function initFriendsView() {
   }
 
   if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.subscribeFollowing === 'function') {
-    window.MacromixFirebase.subscribeFollowing(currentUserHandle, (handles) => {
+    if (unsubscribeFollowingListener) {
+      try { unsubscribeFollowingListener(); } catch (e) {}
+      unsubscribeFollowingListener = null;
+    }
+    unsubscribeFollowingListener = window.MacromixFirebase.subscribeFollowing(currentUserHandle, (handles) => {
       followingListCache = new Set(handles);
       renderFollowingList();
     });
@@ -2282,12 +2307,30 @@ async function handleFriendSearch(query) {
   resultsContainer.classList.remove('hidden');
   resultsContainer.innerHTML = '<div class="empty-state">Searching...</div>';
 
-  if (!allFirestoreUsersCache && window.MacromixFirebase && typeof window.MacromixFirebase.getAllFirestoreUsers === 'function') {
+  const isCacheExpired = !allFirestoreUsersCache || (Date.now() - allFirestoreUsersCacheTime > USERS_CACHE_TTL_MS);
+  if (isCacheExpired && window.MacromixFirebase && typeof window.MacromixFirebase.getAllFirestoreUsers === 'function') {
     allFirestoreUsersCache = await window.MacromixFirebase.getAllFirestoreUsers();
+    allFirestoreUsersCacheTime = Date.now();
   }
 
   const users = allFirestoreUsersCache || [];
-  const matches = users.filter(u => u && u.handle && u.handle.toLowerCase().includes(q) && u.handle.toLowerCase() !== (currentUserHandle || '').toLowerCase());
+  let matches = users.filter(u => u && u.handle && u.handle.toLowerCase().includes(q) && u.handle.toLowerCase() !== (currentUserHandle || '').toLowerCase());
+
+  // If no matches found in cached list, query Firestore directly for the exact handle
+  if (matches.length === 0 && window.MacromixFirebase && typeof window.MacromixFirebase.getFirestoreUserProfile === 'function') {
+    try {
+      const directUser = await window.MacromixFirebase.getFirestoreUserProfile(q);
+      if (directUser && directUser.handle && directUser.handle.toLowerCase() !== (currentUserHandle || '').toLowerCase()) {
+        matches = [directUser];
+        if (allFirestoreUsersCache) {
+          const exists = allFirestoreUsersCache.some(u => u.handle.toLowerCase() === directUser.handle.toLowerCase());
+          if (!exists) allFirestoreUsersCache.push(directUser);
+        }
+      }
+    } catch (e) {
+      console.warn('[macromix] Direct user lookup notice:', e);
+    }
+  }
 
   if (matches.length === 0) {
     resultsContainer.innerHTML = `<div class="empty-state">No users found matching "@${escapeHtml(q)}"</div>`;
@@ -2330,8 +2373,10 @@ async function renderFollowingList() {
     return;
   }
 
-  if (!allFirestoreUsersCache && window.MacromixFirebase && typeof window.MacromixFirebase.getAllFirestoreUsers === 'function') {
+  const isCacheExpired = !allFirestoreUsersCache || (Date.now() - allFirestoreUsersCacheTime > USERS_CACHE_TTL_MS);
+  if (isCacheExpired && window.MacromixFirebase && typeof window.MacromixFirebase.getAllFirestoreUsers === 'function') {
     allFirestoreUsersCache = await window.MacromixFirebase.getAllFirestoreUsers();
+    allFirestoreUsersCacheTime = Date.now();
   }
 
   const usersMap = new Map();
@@ -2665,5 +2710,6 @@ window.backToFriendsList = backToFriendsList;
 window.toggleFollowUser = toggleFollowUser;
 window.loadMealLogs = loadMealLogs;
 window.loadTargets = loadTargets;
+window.clearRealtimeListeners = clearRealtimeListeners;
 
 
