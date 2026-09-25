@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=2.5">
+  <link rel="stylesheet" href="styles.css?v=2.6">
 </head>
 <body>
 
@@ -75,14 +75,16 @@
         <h1 class="brand-title">macro<span>mix</span></h1>
       </div>
       <div class="header-actions">
-        <button type="button" class="btn-header-friends" id="btn-header-friends" onclick="handleHeaderFriendsClick()" title="Friends">
-          <span class="friends-btn-icon">👥</span>
-          <span class="friends-btn-label">Friends</span>
-        </button>
-        <div class="header-handle-badge" id="header-handle-badge" onclick="openSettingsModal()" title="Daily Macro Targets" style="display: none;">
-          <span id="header-handle-text">@you</span>
+        <!-- Segmented pill toggle: Friends (left) | @handle (right) -->
+        <div class="header-tab-toggle" id="header-tab-toggle">
+          <button type="button" class="tab-pill tab-pill-friends" id="tab-pill-friends" onclick="handleHeaderFriendsClick()" title="Friends">
+            <span>👥 Friends</span>
+          </button>
+          <button type="button" class="tab-pill tab-pill-me" id="tab-pill-me" onclick="switchTab('me')" title="My macromix" style="display:none;">
+            <span id="header-handle-text">@you</span>
+          </button>
         </div>
-        <div class="streak-badge" id="streak-badge">🔥 0d</div>
+        <div class="streak-badge" id="streak-badge" onclick="openSettingsModal()" title="Daily Macro Targets (click to edit)" style="cursor:pointer;">🔥 0d</div>
       </div>
     </header>
 
@@ -192,7 +194,7 @@
       </div>
 
       <form id="text-log-form" onsubmit="handleTextLog(event)" class="text-input-wrap">
-        <input type="text" id="manual-text-input" class="neo-input" placeholder="Or type e.g. 100g cooked chicken breast at 1 pm..." autocomplete="off">
+        <input type="text" id="manual-text-input" class="neo-input" placeholder="Or type e.g. 100g dal with 200g rice and some veggies" autocomplete="off">
         <button type="submit" class="btn-log" id="btn-submit-log" disabled>Log ⚡</button>
       </form>
 
@@ -311,6 +313,6 @@
   <script type="module" src="firebase-db.js?v=1.6"></script>
 
   <!-- Frontend Controller -->
-  <script src="app.js?v=4.7"></script>
+  <script src="app.js?v=4.9"></script>
 </body>
 </html>

@@ -1188,7 +1188,7 @@ function renderTimeline(logsToUse = null) {
     if (selectedDate === getTodayDateString()) {
       container.innerHTML = `<div class="empty-state">${isVisitorMode ? `No meals logged yet today by @${viewedHandle || 'user'}.` : 'No meals logged yet today. Tap the mic or type above!'}</div>`;
     } else {
-      container.innerHTML = `<div class="empty-state">No meals logged on ${formatDateLabel(selectedDate)}.</div>`;
+      container.innerHTML = `<div class="empty-state">No meals logged ${formatDateLabel(selectedDate)}.</div>`;
     }
     return;
   }
@@ -1402,7 +1402,7 @@ async function handleTextLog(e) {
     isProcessingLog = false;
     if (manualTextInput) {
       manualTextInput.disabled = false;
-      manualTextInput.placeholder = 'Or type e.g. 100g cooked chicken breast at 1 pm...';
+      manualTextInput.placeholder = 'Or type e.g. 100g dal with 200g rice and some veggies';
     }
     if (submitBtn) {
       submitBtn.innerHTML = 'Log ⚡';
@@ -1770,7 +1770,7 @@ async function processTranscript(transcript, audioBase64 = null) {
     if (manualTextInput) {
       manualTextInput.value = '';
       manualTextInput.disabled = false;
-      manualTextInput.placeholder = 'Or type e.g. 100g cooked chicken breast at 1 pm...';
+      manualTextInput.placeholder = 'Or type e.g. 100g dal with 200g rice and some veggies';
     }
     updateLogButtonState();
     return true;
@@ -1788,7 +1788,7 @@ async function processTranscript(transcript, audioBase64 = null) {
     isProcessingLog = false;
     if (manualTextInput) {
       manualTextInput.disabled = false;
-      manualTextInput.placeholder = 'Or type e.g. 100g cooked chicken breast at 1 pm...';
+      manualTextInput.placeholder = 'Or type e.g. 100g dal with 200g rice and some veggies';
     }
     if (submitBtn) {
       submitBtn.innerHTML = 'Log ⚡';
@@ -2025,9 +2025,6 @@ function setupSettingsModal() {
   const btn = document.getElementById('open-settings-btn');
   if (btn) btn.onclick = openSettingsModal;
 
-  const handleBadge = document.getElementById('header-handle-badge');
-  if (handleBadge) handleBadge.onclick = openSettingsModal;
-
   // Close modals when clicking outside on backdrop
   window.addEventListener('click', (e) => {
     const settingsModal = document.getElementById('settings-modal');
@@ -2236,26 +2233,18 @@ function parseUrlHandle() {
 }
 
 function updateHeaderFriendsBtn() {
-  const btn = document.getElementById('btn-header-friends');
-  if (!btn) return;
-  const label = btn.querySelector('.friends-btn-label');
-  const icon = btn.querySelector('.friends-btn-icon');
+  const pillFriends = document.getElementById('tab-pill-friends');
+  const pillMe = document.getElementById('tab-pill-me');
+  if (!pillFriends || !pillMe) return;
 
-  if (isVisitorMode) {
-    btn.classList.remove('active');
-    if (label) label.textContent = 'Friends';
-    if (icon) icon.textContent = '👥';
-    btn.title = 'Back to Friends list';
-  } else if (currentTab === 'friends') {
-    btn.classList.add('active');
-    if (label) label.textContent = 'Me';
-    if (icon) icon.textContent = '🏠';
-    btn.title = 'Back to My Tracker';
+  if (currentTab === 'friends' && !isVisitorMode) {
+    // Friends tab active
+    pillFriends.classList.add('tab-active');
+    pillMe.classList.remove('tab-active');
   } else {
-    btn.classList.remove('active');
-    if (label) label.textContent = 'Friends';
-    if (icon) icon.textContent = '👥';
-    btn.title = 'Friends & Follows';
+    // Me tab active (including visitor mode — still showing my handle)
+    pillMe.classList.add('tab-active');
+    pillFriends.classList.remove('tab-active');
   }
 }
 
@@ -2281,7 +2270,15 @@ function setVisitorMode(isVisitor, targetHandle = null) {
   const micBanner = document.getElementById('mic-status-text');
   const textLogForm = document.getElementById('text-log-form');
   const handleText = document.getElementById('header-handle-text');
-  const handleBadge = document.getElementById('header-handle-badge');
+  const pillMe = document.getElementById('tab-pill-me');
+
+  // Always show/update the Me pill with the logged-in handle
+  if (handleText && currentUserHandle) {
+    handleText.textContent = '@' + currentUserHandle;
+  }
+  if (pillMe) {
+    pillMe.style.display = currentUserHandle ? '' : 'none';
+  }
 
   if (isVisitorMode && viewedHandle) {
     currentLogs = [];
@@ -2295,18 +2292,6 @@ function setVisitorMode(isVisitor, targetHandle = null) {
     if (voiceRow) voiceRow.classList.add('hidden');
     if (micBanner) micBanner.classList.add('hidden');
     if (textLogForm) textLogForm.classList.add('hidden');
-
-    // Header handle badge ALWAYS stays the logged-in user:
-    if (handleBadge && handleText) {
-      if (currentUserHandle) {
-        handleText.textContent = '@' + currentUserHandle;
-        handleBadge.style.display = 'flex';
-        handleBadge.style.cursor = 'pointer';
-        handleBadge.title = 'Daily Macro Targets (Click to edit)';
-      } else {
-        handleBadge.style.display = 'none';
-      }
-    }
     // Header streak ALWAYS displays the logged-in user's streak:
     renderCurrentUserStreak();
   } else {
@@ -2315,16 +2300,6 @@ function setVisitorMode(isVisitor, targetHandle = null) {
     if (voiceRow) voiceRow.classList.remove('hidden');
     if (micBanner) micBanner.classList.remove('hidden');
     if (textLogForm) textLogForm.classList.remove('hidden');
-    if (handleBadge && handleText) {
-      if (currentUserHandle) {
-        handleText.textContent = '@' + currentUserHandle;
-        handleBadge.style.display = 'flex';
-        handleBadge.style.cursor = 'pointer';
-        handleBadge.title = 'Daily Macro Targets (Click to edit)';
-      } else {
-        handleBadge.style.display = 'none';
-      }
-    }
     // Clear visitor meals so they don't linger before owner's logs finish loading
     currentLogs = [];
     filterAndRenderSelectedDate();
@@ -2332,6 +2307,7 @@ function setVisitorMode(isVisitor, targetHandle = null) {
   }
   updateHeaderFriendsBtn();
 }
+
 
 async function checkUrlRoute() {
   const routeHandle = parseUrlHandle();
@@ -2357,6 +2333,37 @@ async function checkUrlRoute() {
   updateHeaderFriendsBtn();
 }
 
+
+/** Apply CSS slide animation between tab views.
+ *  direction: 'to-friends' (Me exits right→left, Friends enters from left)
+ *             'to-me'      (Friends exits left→right, Me enters from right)
+ */
+function animateTabSlide(exitEl, enterEl, direction) {
+  if (!exitEl || !enterEl) return;
+  const slideClasses = [
+    'tab-slide-in-left', 'tab-slide-in-right',
+    'tab-slide-out-left', 'tab-slide-out-right'
+  ];
+
+  // Clear any lingering animation classes
+  [exitEl, enterEl].forEach(el => el.classList.remove(...slideClasses));
+
+  if (direction === 'to-friends') {
+    exitEl.classList.add('tab-slide-out-left');
+    enterEl.classList.add('tab-slide-in-left');
+  } else {
+    exitEl.classList.add('tab-slide-out-right');
+    enterEl.classList.add('tab-slide-in-right');
+  }
+
+  // Clean up after animation completes
+  const cleanup = () => {
+    exitEl.classList.remove(...slideClasses);
+    enterEl.classList.remove(...slideClasses);
+  };
+  enterEl.addEventListener('animationend', cleanup, { once: true });
+}
+
 async function switchTab(tabName, updateUrl = true) {
   const viewMe = document.getElementById('view-me');
   const viewFriends = document.getElementById('view-friends');
@@ -2375,8 +2382,9 @@ async function switchTab(tabName, updateUrl = true) {
       return;
     }
 
-    if (viewMe) viewMe.classList.add('hidden');
     if (viewFriends) viewFriends.classList.remove('hidden');
+    animateTabSlide(viewMe, viewFriends, 'to-friends');
+    setTimeout(() => { if (viewMe) viewMe.classList.add('hidden'); }, 220);
     refreshFriendsView();
     updateHeaderFriendsBtn();
   } else {
@@ -2396,10 +2404,12 @@ async function switchTab(tabName, updateUrl = true) {
     }
 
     if (viewMe) viewMe.classList.remove('hidden');
-    if (viewFriends) viewFriends.classList.add('hidden');
+    animateTabSlide(viewFriends, viewMe, 'to-me');
+    setTimeout(() => { if (viewFriends) viewFriends.classList.add('hidden'); }, 220);
     updateHeaderFriendsBtn();
   }
 }
+
 
 async function viewFriendProfile(friendHandle) {
   if (!friendHandle) return;
@@ -2662,19 +2672,15 @@ async function toggleFollowUser(targetHandle, btnEl) {
 
 async function checkUserProfileOnboarding() {
   const onboardingEl = document.getElementById('onboarding-screen');
-  const badgeEl = document.getElementById('header-handle-badge');
+  const pillMe = document.getElementById('tab-pill-me');
   const badgeText = document.getElementById('header-handle-text');
 
   // Check local cache first
   const cachedHandle = localStorage.getItem('macromix_user_handle');
   if (cachedHandle) {
     currentUserHandle = cachedHandle;
-    if (badgeEl && badgeText) {
-      badgeText.textContent = '@' + cachedHandle;
-      badgeEl.style.display = 'flex';
-      badgeEl.style.cursor = 'pointer';
-      badgeEl.title = 'Daily Macro Targets (Click to edit)';
-    }
+    if (badgeText) badgeText.textContent = '@' + cachedHandle;
+    if (pillMe) pillMe.style.display = '';
     if (onboardingEl) onboardingEl.classList.add('hidden');
     document.body.style.overflow = '';
 
@@ -2832,12 +2838,10 @@ async function registerHandleOnboarding(handle, authMethod = 'passkey') {
   currentUserHandle = clean;
   localStorage.setItem('macromix_user_handle', clean);
 
-  const badgeEl = document.getElementById('header-handle-badge');
+  const pillMe = document.getElementById('tab-pill-me');
   const badgeText = document.getElementById('header-handle-text');
-  if (badgeEl && badgeText) {
-    badgeText.textContent = '@' + clean;
-    badgeEl.style.display = 'flex';
-  }
+  if (badgeText) badgeText.textContent = '@' + clean;
+  if (pillMe) pillMe.style.display = '';
 
   const onboardingEl = document.getElementById('onboarding-screen');
   if (onboardingEl) {

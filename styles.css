@@ -116,7 +116,69 @@ body {
   border-radius: 20px;
   font-size: 0.85rem;
   font-weight: 800;
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
 }
+
+.streak-badge:hover {
+  background: #f5d800;
+}
+
+.streak-badge:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #000;
+}
+
+/* ==========================================================================
+   Segmented Header Tab Toggle
+   ========================================================================== */
+
+.header-tab-toggle {
+  display: inline-flex;
+  align-items: center;
+  background: var(--bg-card);
+  border: 2.5px solid #000;
+  box-shadow: 3px 3px 0 #000;
+  border-radius: 24px;
+  overflow: hidden;
+  padding: 2px;
+  gap: 2px;
+}
+
+.tab-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: none;
+  background: transparent;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: background 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease, color 0.15s ease;
+  color: #555;
+}
+
+.tab-pill:hover {
+  background: #FFF9E6;
+  color: #000;
+}
+
+/* Active/selected pill — yellow, depressed */
+.tab-pill.tab-active {
+  background: #FFE600;
+  color: #000;
+  box-shadow: inset 2px 2px 0 rgba(0,0,0,0.18);
+  transform: translateY(1px);
+}
+
+.tab-pill.tab-active:hover {
+  background: #FFE600;
+}
+
+
 
 .icon-btn {
   background: var(--bg-card);
@@ -449,6 +511,12 @@ body {
 
 .mic-status-banner.visible {
   display: block;
+}
+
+.mic-status-banner.status-error {
+  background: #FFE5E5;
+  border-color: #D32F2F;
+  color: #B71C1C;
 }
 
 @keyframes fadeIn {
@@ -1605,8 +1673,32 @@ body {
 }
 
 /* ==========================================================================
-   Bottom Tab Navigation & Social Tab Views
+   Tab Views – slide animation container
    ========================================================================== */
+
+/* Wrap both views so overflow is clipped during animation */
+.tabs-slide-wrapper {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+}
+
+@keyframes slideInFromLeft {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+@keyframes slideInFromRight {
+  from { transform: translateX(100%);  opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+@keyframes slideOutToLeft {
+  from { transform: translateX(0);     opacity: 1; }
+  to   { transform: translateX(-100%); opacity: 0; }
+}
+@keyframes slideOutToRight {
+  from { transform: translateX(0);     opacity: 1; }
+  to   { transform: translateX(100%);  opacity: 0; }
+}
 
 .app-tab-view {
   display: flex;
@@ -1618,6 +1710,14 @@ body {
 .app-tab-view.hidden {
   display: none !important;
 }
+
+/* Slide transition classes applied by JS */
+.tab-slide-in-left  { animation: slideInFromLeft  0.28s cubic-bezier(0.4,0,0.2,1) both; }
+.tab-slide-in-right { animation: slideInFromRight 0.28s cubic-bezier(0.4,0,0.2,1) both; }
+.tab-slide-out-left  { animation: slideOutToLeft  0.22s cubic-bezier(0.4,0,0.2,1) both; }
+.tab-slide-out-right { animation: slideOutToRight 0.22s cubic-bezier(0.4,0,0.2,1) both; }
+
+
 
 /* Header Friends CTA Button (Neobrutalism Design) */
 .btn-header-friends {
@@ -2015,8 +2115,13 @@ body {
   .header-actions {
     gap: 4px;
   }
-  .btn-header-friends,
-  .header-handle-badge,
+  .header-tab-toggle {
+    padding: 1px;
+  }
+  .tab-pill {
+    padding: 3px 8px;
+    font-size: 0.74rem;
+  }
   .streak-badge {
     padding: 3px 7px;
     font-size: 0.75rem;
