@@ -28,3 +28,14 @@ firestore-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Secrets & Environment Variables
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+
+# Mac OS
+.DS_Store
