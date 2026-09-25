@@ -42,6 +42,11 @@ service cloud.firestore {
       match /meals/{mealId} {
         allow read, write, delete: if true;
       }
+
+      // Subcollection for social friend relationships
+      match /following/{targetHandle} {
+        allow read, write, delete: if true;
+      }
     }
   }
 }

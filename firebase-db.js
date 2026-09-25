@@ -283,6 +283,103 @@ export async function getAllFirestoreUsers() {
 }
 
 /**
+ * Follow a user
+ * @param {string} currentHandle
+ * @param {string} targetHandle
+ */
+export async function followUser(currentHandle, targetHandle) {
+  const database = initFirebaseDB();
+  if (!database || !currentHandle || !targetHandle) return false;
+  const cleanCurrent = currentHandle.trim().toLowerCase().replace(/^@+/, '');
+  const cleanTarget = targetHandle.trim().toLowerCase().replace(/^@+/, '');
+  if (!cleanCurrent || !cleanTarget || cleanCurrent === cleanTarget) return false;
+
+  try {
+    const docRef = doc(database, 'users', cleanCurrent, 'following', cleanTarget);
+    await setDoc(docRef, {
+      handle: cleanTarget,
+      followedAt: serverTimestamp()
+    });
+    console.log(`[Macromix Firebase] @${cleanCurrent} followed @${cleanTarget}`);
+    return true;
+  } catch (err) {
+    console.error('[Macromix Firebase] Failed to follow user:', err);
+    return false;
+  }
+}
+
+/**
+ * Unfollow a user
+ * @param {string} currentHandle
+ * @param {string} targetHandle
+ */
+export async function unfollowUser(currentHandle, targetHandle) {
+  const database = initFirebaseDB();
+  if (!database || !currentHandle || !targetHandle) return false;
+  const cleanCurrent = currentHandle.trim().toLowerCase().replace(/^@+/, '');
+  const cleanTarget = targetHandle.trim().toLowerCase().replace(/^@+/, '');
+  if (!cleanCurrent || !cleanTarget) return false;
+
+  try {
+    const docRef = doc(database, 'users', cleanCurrent, 'following', cleanTarget);
+    await deleteDoc(docRef);
+    console.log(`[Macromix Firebase] @${cleanCurrent} unfollowed @${cleanTarget}`);
+    return true;
+  } catch (err) {
+    console.error('[Macromix Firebase] Failed to unfollow user:', err);
+    return false;
+  }
+}
+
+/**
+ * Get list of handles followed by currentHandle
+ * @param {string} currentHandle
+ * @returns {Promise<Array<string>>}
+ */
+export async function getFollowingList(currentHandle) {
+  const database = initFirebaseDB();
+  if (!database || !currentHandle) return [];
+  const cleanCurrent = currentHandle.trim().toLowerCase().replace(/^@+/, '');
+
+  try {
+    const collRef = collection(database, 'users', cleanCurrent, 'following');
+    const snap = await getDocs(collRef);
+    const following = [];
+    snap.forEach(d => following.push(d.id));
+    return following;
+  } catch (err) {
+    console.warn('[Macromix Firebase] Error fetching following list:', err);
+    return [];
+  }
+}
+
+/**
+ * Real-time listener for followed friends list
+ * @param {string} currentHandle
+ * @param {function} callback
+ * @returns {function} unsubscribe
+ */
+export function subscribeFollowing(currentHandle, callback) {
+  const database = initFirebaseDB();
+  if (!database || !currentHandle || typeof callback !== 'function') return () => {};
+  const cleanCurrent = currentHandle.trim().toLowerCase().replace(/^@+/, '');
+
+  try {
+    const collRef = collection(database, 'users', cleanCurrent, 'following');
+    return onSnapshot(collRef, (snapshot) => {
+      const handles = [];
+      snapshot.forEach(d => handles.push(d.id));
+      callback(handles);
+    }, (err) => {
+      console.warn('[Macromix Firebase] Following subscription error:', err);
+    });
+  } catch (err) {
+    console.warn('[Macromix Firebase] Could not subscribe following:', err);
+    return () => {};
+  }
+}
+
+/**
  * Save or update a single meal document in users/{handle}/meals/{mealId}
  * @param {string} handle
  * @param {object} meal
@@ -466,6 +563,10 @@ if (typeof window !== 'undefined') {
     fetchMealsFromFirestore,
     syncLocalMealsWithFirestore,
     subscribeMealsFromFirestore,
-    subscribeProfileFromFirestore
+    subscribeProfileFromFirestore,
+    followUser,
+    unfollowUser,
+    getFollowingList,
+    subscribeFollowing
   };
 }

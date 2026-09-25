@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=2.1">
+  <link rel="stylesheet" href="styles.css?v=2.2">
 </head>
 <body>
 
@@ -82,8 +82,18 @@
       </div>
     </header>
 
-    <!-- Circles Macro Dashboard -->
-    <section class="circles-container">
+    <!-- Public Profile Visitor Banner -->
+    <div id="visitor-banner" class="visitor-banner hidden">
+      <div class="visitor-banner-content">
+        <span class="visitor-banner-text" id="visitor-banner-text">👁️ Viewing <strong id="visitor-target-handle">@friend</strong>'s macromix</span>
+        <button type="button" class="btn-visitor-exit" onclick="exitVisitorMode()">Track your own macros →</button>
+      </div>
+    </div>
+
+    <!-- TAB 1: ME (Personal Macro Tracker) -->
+    <main id="view-me" class="app-tab-view active">
+      <!-- Circles Macro Dashboard -->
+      <section class="circles-container">
       <div class="date-nav-bar">
         <button type="button" class="date-nav-arrow" id="btn-date-prev" onclick="changeDate(-1)" title="Previous Day">◀</button>
         <button type="button" class="date-nav-pill" id="date-label" onclick="resetToToday()" title="Jump to Today">TODAY</button>
@@ -190,6 +200,50 @@
         </div>
       </div>
     </section>
+    </main>
+
+    <!-- TAB 2: MY FRIENDS (Social Accountability & Discovery) -->
+    <section id="view-friends" class="app-tab-view hidden">
+      <div class="friends-view-card">
+        <!-- Share Profile Card -->
+        <div class="friends-share-card">
+          <div class="friends-share-info">
+            <span class="friends-share-label">Share your profile</span>
+            <span class="friends-share-url" id="friends-share-url">macromix.web.app/@you</span>
+          </div>
+          <button type="button" class="btn-share-pill" onclick="triggerProfileShare()">
+            <span>🔗</span> <span>Share link</span>
+          </button>
+        </div>
+
+        <!-- In-App Search -->
+        <div class="friends-search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="friend-search-input" class="neo-input friend-search-input" placeholder="Search friends by @handle..." oninput="handleFriendSearch(this.value)" autocomplete="off">
+        </div>
+
+        <!-- Search Results List -->
+        <div id="friends-search-results" class="friends-list-container hidden"></div>
+
+        <!-- Friends You Follow -->
+        <div class="friends-section-title">FRIENDS YOU FOLLOW</div>
+        <div id="friends-following-list" class="friends-list-container">
+          <div class="empty-state">You aren't following anyone yet. Search handles above to add friends!</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2-Tab Bottom Navigation Bar -->
+    <nav class="bottom-tab-bar" id="bottom-tab-bar">
+      <button type="button" class="tab-btn active" id="tab-btn-me" onclick="switchTab('me')">
+        <span class="tab-icon">🏠</span>
+        <span>Me</span>
+      </button>
+      <button type="button" class="tab-btn" id="tab-btn-friends" onclick="switchTab('friends')">
+        <span class="tab-icon">👥</span>
+        <span>My Friends</span>
+      </button>
+    </nav>
   </div>
 
   <!-- Daily Macro Targets Modal -->
@@ -252,9 +306,9 @@
   </div>
 
   <!-- Firebase Cloud Firestore Integration -->
-  <script type="module" src="firebase-db.js?v=1.4"></script>
+  <script type="module" src="firebase-db.js?v=1.5"></script>
 
   <!-- Frontend Controller -->
-  <script src="app.js?v=3.3"></script>
+  <script src="app.js?v=4.0"></script>
 </body>
 </html>

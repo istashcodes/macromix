@@ -10,6 +10,11 @@ let userTargets = { calories: 2000, protein_g: 150, carbs_g: 200, fat_g: 65, fib
 let userGeminiInfo = { free_remaining: 9999, has_custom_key: true, can_use_gemini: true, gemini_api_key: GLOBAL_GEMINI_API_KEY, masked_key: "...7SKA" };
 let currentLogs = [];
 let currentUserHandle = null;
+let currentTab = 'me';
+let isVisitorMode = false;
+let viewedHandle = null;
+let allFirestoreUsersCache = null;
+let followingListCache = new Set();
 
 // Web Audio API State
 let mediaRecorder = null;
@@ -350,6 +355,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   AppLogger.init();
   await waitForFirebaseDB();
   await checkUserProfileOnboarding();
+  await checkUrlRoute();
   updateDateLabel();
   renderStreak();
   setupInputListeners();
@@ -360,6 +366,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadMealLogs();
   setupSettingsModal();
   setupSwipeGestures();
+  initFriendsView();
+});
+
+window.addEventListener('popstate', async () => {
+  await checkUrlRoute();
+  await loadTargets();
+  await loadMealLogs();
 });
 
 function setupLogButtonCapture() {
@@ -437,6 +450,36 @@ function applyTargetsToUI() {
 }
 
 async function loadTargets() {
+  if (isVisitorMode && viewedHandle) {
+    if (window.MacromixFirebase && typeof window.MacromixFirebase.getFirestoreUserProfile === 'function') {
+      try {
+        const profile = await window.MacromixFirebase.getFirestoreUserProfile(viewedHandle);
+        const raw = profile?.dailyTargets || profile?.targets;
+        if (raw) {
+          userTargets = {
+            calories: Number(raw.calories) || 2000,
+            protein_g: Number(raw.protein_g ?? raw.protein ?? raw.prot) || 150,
+            carbs_g: Number(raw.carbs_g ?? raw.carbs ?? raw.carb) || 200,
+            fiber_g: Number(raw.fiber_g ?? raw.fiber ?? raw.fib) || 30,
+            fat_g: Number(raw.fat_g ?? raw.fat) || 65
+          };
+          applyTargetsToUI();
+          updateCirclesProgress();
+        }
+        if (typeof profile?.streak === 'number') {
+          const streakBadge = document.getElementById('streak-badge');
+          if (streakBadge) {
+            streakBadge.textContent = `🔥 ${profile.streak}d`;
+          }
+        }
+        return;
+      } catch (err) {
+        console.warn("[macromix] Could not load visitor targets:", err);
+      }
+    }
+    return;
+  }
+
   try {
     const res = await fetch('/api/targets');
     if (res.ok) {
@@ -768,17 +811,20 @@ function setCircleOffset(elementId, current, target) {
 let unsubscribeMealsListener = null;
 
 function setupRealtimeMealsSync() {
-  if (!currentUserHandle || !window.MacromixFirebase || typeof window.MacromixFirebase.subscribeMealsFromFirestore !== 'function') return;
+  const targetHandle = (isVisitorMode && viewedHandle) ? viewedHandle : currentUserHandle;
+  if (!targetHandle || !window.MacromixFirebase || typeof window.MacromixFirebase.subscribeMealsFromFirestore !== 'function') return;
   if (unsubscribeMealsListener) {
     try { unsubscribeMealsListener(); } catch (e) {}
     unsubscribeMealsListener = null;
   }
-  unsubscribeMealsListener = window.MacromixFirebase.subscribeMealsFromFirestore(currentUserHandle, (remoteMeals) => {
+  unsubscribeMealsListener = window.MacromixFirebase.subscribeMealsFromFirestore(targetHandle, (remoteMeals) => {
     if (Array.isArray(remoteMeals)) {
       currentLogs = remoteMeals;
       filterAndRenderSelectedDate();
-      renderStreak();
-      console.log(`[macromix] Real-time sync: ${remoteMeals.length} meals updated across devices.`);
+      if (!isVisitorMode) {
+        renderStreak();
+      }
+      console.log(`[macromix] Real-time sync: ${remoteMeals.length} meals updated for @${targetHandle}.`);
     }
   });
 }
@@ -786,12 +832,13 @@ function setupRealtimeMealsSync() {
 let unsubscribeProfileListener = null;
 
 function setupRealtimeProfileSync() {
-  if (!currentUserHandle || !window.MacromixFirebase || typeof window.MacromixFirebase.subscribeProfileFromFirestore !== 'function') return;
+  const targetHandle = (isVisitorMode && viewedHandle) ? viewedHandle : currentUserHandle;
+  if (!targetHandle || !window.MacromixFirebase || typeof window.MacromixFirebase.subscribeProfileFromFirestore !== 'function') return;
   if (unsubscribeProfileListener) {
     try { unsubscribeProfileListener(); } catch (e) {}
     unsubscribeProfileListener = null;
   }
-  unsubscribeProfileListener = window.MacromixFirebase.subscribeProfileFromFirestore(currentUserHandle, (remoteProfile) => {
+  unsubscribeProfileListener = window.MacromixFirebase.subscribeProfileFromFirestore(targetHandle, (remoteProfile) => {
     if (remoteProfile) {
       const raw = remoteProfile.dailyTargets || remoteProfile.targets;
       if (raw) {
@@ -802,10 +849,12 @@ function setupRealtimeProfileSync() {
           fiber_g: Number(raw.fiber_g ?? raw.fiber ?? raw.fib) || 30,
           fat_g: Number(raw.fat_g ?? raw.fat) || 65
         };
-        localStorage.setItem('macronomics_targets', JSON.stringify(userTargets));
+        if (!isVisitorMode) {
+          localStorage.setItem('macronomics_targets', JSON.stringify(userTargets));
+        }
         applyTargetsToUI();
         updateCirclesProgress();
-        console.log(`[macromix] Real-time sync: daily targets updated across devices for @${currentUserHandle}.`, userTargets);
+        console.log(`[macromix] Real-time sync: daily targets updated for @${targetHandle}.`, userTargets);
       }
       if (typeof remoteProfile.streak === 'number') {
         const streakBadge = document.getElementById('streak-badge');
@@ -819,6 +868,22 @@ function setupRealtimeProfileSync() {
 
 // --- Meal Logs & Timeline ---
 async function loadMealLogs() {
+  if (isVisitorMode && viewedHandle) {
+    if (window.MacromixFirebase && typeof window.MacromixFirebase.fetchMealsFromFirestore === 'function') {
+      try {
+        currentLogs = await window.MacromixFirebase.fetchMealsFromFirestore(viewedHandle);
+        filterAndRenderSelectedDate();
+        AppLogger.log('UI', `Visitor mode: loaded ${currentLogs.length} meals for @${viewedHandle}`);
+        return;
+      } catch (err) {
+        console.warn('[macromix] Could not load visitor meals:', err);
+      }
+    }
+    currentLogs = [];
+    filterAndRenderSelectedDate();
+    return;
+  }
+
   // 1. Local FastAPI backend if available (local development / tests)
   try {
     const res = await fetch('/api/logs');
@@ -957,7 +1022,7 @@ function renderTimeline(logsToUse = null) {
   const validLogs = logs.filter(log => log.items && log.items.length > 0);
   if (!validLogs || validLogs.length === 0) {
     if (selectedDate === getTodayDateString()) {
-      container.innerHTML = '<div class="empty-state">No meals logged yet today. Tap the mic or type above!</div>';
+      container.innerHTML = `<div class="empty-state">${isVisitorMode ? `No meals logged yet today by @${viewedHandle || 'user'}.` : 'No meals logged yet today. Tap the mic or type above!'}</div>`;
     } else {
       container.innerHTML = `<div class="empty-state">No meals logged on ${formatDateLabel(selectedDate)}.</div>`;
     }
@@ -983,10 +1048,11 @@ function renderTimeline(logsToUse = null) {
               <span class="meal-item-title">${escapeHtml(it.food_name)}</span>
               <span class="macro-chip cal">${Math.round(it.calories)} kcal</span>
             </div>
+            ${!isVisitorMode ? `
             <div class="item-actions">
               <button type="button" class="item-action-btn edit-item-btn" data-id="${it.id}" data-food="${escapeHtml(it.food_name)}" data-quantity="${it.quantity}" data-unit="${escapeHtml(it.unit)}" data-weight="${it.standardized_weight_g}" title="Edit Portion">✏️</button>
               <button type="button" class="item-action-btn delete-item-btn" data-id="${it.id}" title="Delete Item">🗑️</button>
-            </div>
+            </div>` : ''}
           </div>
           <div class="meal-item-bottom-line">
             <span class="meal-item-sub">${escapeHtml(subText)}</span>
@@ -1831,6 +1897,10 @@ function setupSwipeGestures() {
 }
 
 function openSettingsModal() {
+  if (isVisitorMode) {
+    alert(`Viewing @${viewedHandle}'s public macromix targets:\n• Calories: ${Math.round(userTargets.calories)} kcal\n• Protein: ${Math.round(userTargets.protein_g)}g\n• Carbs: ${Math.round(userTargets.carbs_g)}g\n• Fiber: ${Math.round(userTargets.fiber_g !== undefined ? userTargets.fiber_g : 30)}g\n• Fat: ${Math.round(userTargets.fat_g)}g`);
+    return;
+  }
   AppLogger.log('UI', 'Opened Daily Macro Targets modal');
   if (userTargets) {
     const calEl = document.getElementById('tgt-input-cal');
@@ -1951,6 +2021,309 @@ async function saveItemEdit() {
 }
 
 // ==========================================================================
+// Social, Tab Navigation & Public Profile Sharing Controller
+// ==========================================================================
+
+function parseUrlHandle() {
+  const path = window.location.pathname.replace(/\/+$/, '');
+  if (!path || path === '' || path === '/') return null;
+  const match = path.match(/^\/?@?([a-zA-Z0-9_]{3,16})$/);
+  if (match) {
+    const handle = match[1].toLowerCase();
+    const reserved = ['index', 'styles', 'app', 'sw', 'manifest', 'icons', 'api', 'favicon'];
+    if (!reserved.includes(handle)) {
+      return handle;
+    }
+  }
+  return null;
+}
+
+function setVisitorMode(isVisitor, targetHandle = null) {
+  isVisitorMode = !!isVisitor;
+  viewedHandle = targetHandle ? targetHandle.toLowerCase().replace(/^@+/, '') : null;
+
+  const visitorBanner = document.getElementById('visitor-banner');
+  const targetHandleEl = document.getElementById('visitor-target-handle');
+  const voiceRow = document.querySelector('.voice-buttons-row');
+  const micBanner = document.getElementById('mic-status-text');
+  const textLogForm = document.getElementById('text-log-form');
+  const handleText = document.getElementById('header-handle-text');
+  const handleBadge = document.getElementById('header-handle-badge');
+
+  if (isVisitorMode && viewedHandle) {
+    if (visitorBanner) visitorBanner.classList.remove('hidden');
+    if (targetHandleEl) targetHandleEl.textContent = '@' + viewedHandle;
+    if (voiceRow) voiceRow.classList.add('hidden');
+    if (micBanner) micBanner.classList.add('hidden');
+    if (textLogForm) textLogForm.classList.add('hidden');
+    if (handleBadge && handleText) {
+      handleText.textContent = '@' + viewedHandle;
+      handleBadge.style.display = 'flex';
+      handleBadge.title = `@${viewedHandle}'s Macro Targets`;
+    }
+  } else {
+    if (visitorBanner) visitorBanner.classList.add('hidden');
+    if (voiceRow) voiceRow.classList.remove('hidden');
+    if (micBanner) micBanner.classList.remove('hidden');
+    if (textLogForm) textLogForm.classList.remove('hidden');
+    if (handleBadge && handleText) {
+      if (currentUserHandle) {
+        handleText.textContent = '@' + currentUserHandle;
+        handleBadge.style.display = 'flex';
+        handleBadge.title = 'Daily Macro Targets';
+      } else {
+        handleBadge.style.display = 'none';
+      }
+    }
+  }
+}
+
+async function checkUrlRoute() {
+  const routeHandle = parseUrlHandle();
+  if (routeHandle) {
+    if (currentUserHandle && currentUserHandle.toLowerCase() === routeHandle.toLowerCase()) {
+      setVisitorMode(false);
+    } else {
+      setVisitorMode(true, routeHandle);
+    }
+  } else {
+    setVisitorMode(false);
+  }
+}
+
+function switchTab(tabName, updateUrl = true) {
+  currentTab = tabName;
+  const tabMe = document.getElementById('tab-btn-me');
+  const tabFriends = document.getElementById('tab-btn-friends');
+  const viewMe = document.getElementById('view-me');
+  const viewFriends = document.getElementById('view-friends');
+
+  if (tabName === 'friends') {
+    if (tabMe) tabMe.classList.remove('active');
+    if (tabFriends) tabFriends.classList.add('active');
+    if (viewMe) viewMe.classList.add('hidden');
+    if (viewFriends) viewFriends.classList.remove('hidden');
+    refreshFriendsView();
+  } else {
+    if (tabMe) tabMe.classList.add('active');
+    if (tabFriends) tabFriends.classList.remove('active');
+    if (viewMe) viewMe.classList.remove('hidden');
+    if (viewFriends) viewFriends.classList.add('hidden');
+  }
+}
+
+async function viewFriendProfile(friendHandle) {
+  if (!friendHandle) return;
+  const clean = friendHandle.trim().toLowerCase().replace(/^@+/, '');
+  window.history.pushState(null, '', '/@' + clean);
+  if (currentUserHandle && currentUserHandle.toLowerCase() === clean) {
+    setVisitorMode(false);
+  } else {
+    setVisitorMode(true, clean);
+  }
+  switchTab('me', false);
+  await loadTargets();
+  await loadMealLogs();
+  setupRealtimeMealsSync();
+  setupRealtimeProfileSync();
+}
+
+async function exitVisitorMode() {
+  window.history.pushState(null, '', '/');
+  setVisitorMode(false);
+  if (currentUserHandle) {
+    setupRealtimeMealsSync();
+    setupRealtimeProfileSync();
+    await loadTargets();
+    await loadMealLogs();
+    renderStreak();
+  } else {
+    const onboardingEl = document.getElementById('onboarding-screen');
+    if (onboardingEl) {
+      onboardingEl.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+  }
+}
+
+async function triggerProfileShare() {
+  const handleToShare = currentUserHandle || 'you';
+  const shareUrl = `${window.location.origin}/@${handleToShare}`;
+  const shareData = {
+    title: 'macromix',
+    text: `Check out my daily macros on macromix: @${handleToShare}`,
+    url: shareUrl
+  };
+
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    alert(`Profile link copied to clipboard!\n${shareUrl}`);
+  } catch (err) {
+    prompt("Copy your profile link:", shareUrl);
+  }
+}
+
+async function initFriendsView() {
+  const shareUrlEl = document.getElementById('friends-share-url');
+  if (shareUrlEl) {
+    shareUrlEl.textContent = `${window.location.host}/@${currentUserHandle || 'you'}`;
+  }
+
+  if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.subscribeFollowing === 'function') {
+    window.MacromixFirebase.subscribeFollowing(currentUserHandle, (handles) => {
+      followingListCache = new Set(handles);
+      renderFollowingList();
+    });
+  }
+}
+
+async function refreshFriendsView() {
+  const shareUrlEl = document.getElementById('friends-share-url');
+  if (shareUrlEl) {
+    shareUrlEl.textContent = `${window.location.host}/@${currentUserHandle || 'you'}`;
+  }
+
+  if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.getFollowingList === 'function') {
+    const list = await window.MacromixFirebase.getFollowingList(currentUserHandle);
+    followingListCache = new Set(list);
+    renderFollowingList();
+  }
+}
+
+async function handleFriendSearch(query) {
+  const q = (query || '').trim().toLowerCase().replace(/^@+/, '');
+  const resultsContainer = document.getElementById('friends-search-results');
+  if (!resultsContainer) return;
+
+  if (!q) {
+    resultsContainer.classList.add('hidden');
+    resultsContainer.innerHTML = '';
+    return;
+  }
+
+  resultsContainer.classList.remove('hidden');
+  resultsContainer.innerHTML = '<div class="empty-state">Searching...</div>';
+
+  if (!allFirestoreUsersCache && window.MacromixFirebase && typeof window.MacromixFirebase.getAllFirestoreUsers === 'function') {
+    allFirestoreUsersCache = await window.MacromixFirebase.getAllFirestoreUsers();
+  }
+
+  const users = allFirestoreUsersCache || [];
+  const matches = users.filter(u => u && u.handle && u.handle.toLowerCase().includes(q) && u.handle.toLowerCase() !== (currentUserHandle || '').toLowerCase());
+
+  if (matches.length === 0) {
+    resultsContainer.innerHTML = `<div class="empty-state">No users found matching "@${escapeHtml(q)}"</div>`;
+    return;
+  }
+
+  let html = '';
+  matches.forEach(u => {
+    const isFollowing = followingListCache.has(u.handle);
+    const initial = (u.handle[0] || 'M').toUpperCase();
+    const streak = typeof u.streak === 'number' ? u.streak : 0;
+    html += `
+      <div class="friend-card" id="search-friend-${u.handle}">
+        <div class="friend-card-left" onclick="viewFriendProfile('${escapeHtml(u.handle)}')">
+          <div class="friend-avatar-badge">${initial}</div>
+          <div class="friend-card-meta">
+            <span class="friend-card-handle">@${escapeHtml(u.handle)}</span>
+            <span class="friend-card-streak">🔥 ${streak}d streak</span>
+          </div>
+        </div>
+        <div class="friend-card-actions">
+          <button type="button" class="btn-friend-action btn-macromix" onclick="viewFriendProfile('${escapeHtml(u.handle)}')">Macromix</button>
+          <button type="button" class="btn-friend-action btn-follow ${isFollowing ? 'following' : ''}" onclick="toggleFollowUser('${escapeHtml(u.handle)}', this)">
+            ${isFollowing ? '✓ Following' : '+ Follow'}
+          </button>
+        </div>
+      </div>
+    `;
+  });
+
+  resultsContainer.innerHTML = html;
+}
+
+async function renderFollowingList() {
+  const container = document.getElementById('friends-following-list');
+  if (!container) return;
+
+  if (followingListCache.size === 0) {
+    container.innerHTML = '<div class="empty-state">You aren\'t following anyone yet. Search handles above to add friends!</div>';
+    return;
+  }
+
+  if (!allFirestoreUsersCache && window.MacromixFirebase && typeof window.MacromixFirebase.getAllFirestoreUsers === 'function') {
+    allFirestoreUsersCache = await window.MacromixFirebase.getAllFirestoreUsers();
+  }
+
+  const usersMap = new Map();
+  (allFirestoreUsersCache || []).forEach(u => usersMap.set(u.handle, u));
+
+  let html = '';
+  followingListCache.forEach(friendHandle => {
+    const user = usersMap.get(friendHandle) || { handle: friendHandle, streak: 0 };
+    const initial = (friendHandle[0] || 'M').toUpperCase();
+    const streak = typeof user.streak === 'number' ? user.streak : 0;
+    html += `
+      <div class="friend-card" id="following-friend-${friendHandle}">
+        <div class="friend-card-left" onclick="viewFriendProfile('${escapeHtml(friendHandle)}')">
+          <div class="friend-avatar-badge">${initial}</div>
+          <div class="friend-card-meta">
+            <span class="friend-card-handle">@${escapeHtml(friendHandle)}</span>
+            <span class="friend-card-streak">🔥 ${streak}d streak</span>
+          </div>
+        </div>
+        <div class="friend-card-actions">
+          <button type="button" class="btn-friend-action btn-macromix" onclick="viewFriendProfile('${escapeHtml(friendHandle)}')">Macromix</button>
+          <button type="button" class="btn-friend-action btn-follow following" onclick="toggleFollowUser('${escapeHtml(friendHandle)}', this)">✓ Following</button>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+async function toggleFollowUser(targetHandle, btnEl) {
+  if (!currentUserHandle) {
+    alert("Please log in or claim your handle first to follow friends!");
+    return;
+  }
+  const cleanTarget = targetHandle.trim().toLowerCase().replace(/^@+/, '');
+  const currentlyFollowing = followingListCache.has(cleanTarget);
+
+  if (currentlyFollowing) {
+    followingListCache.delete(cleanTarget);
+    if (btnEl) {
+      btnEl.classList.remove('following');
+      btnEl.textContent = '+ Follow';
+    }
+    if (window.MacromixFirebase && typeof window.MacromixFirebase.unfollowUser === 'function') {
+      await window.MacromixFirebase.unfollowUser(currentUserHandle, cleanTarget);
+    }
+  } else {
+    followingListCache.add(cleanTarget);
+    if (btnEl) {
+      btnEl.classList.add('following');
+      btnEl.textContent = '✓ Following';
+    }
+    if (window.MacromixFirebase && typeof window.MacromixFirebase.followUser === 'function') {
+      await window.MacromixFirebase.followUser(currentUserHandle, cleanTarget);
+    }
+  }
+  renderFollowingList();
+}
+
+// ==========================================================================
 // User Profile & Frictionless Onboarding Controller
 // ==========================================================================
 
@@ -1959,8 +2332,16 @@ async function checkUserProfileOnboarding() {
   const badgeEl = document.getElementById('header-handle-badge');
   const badgeText = document.getElementById('header-handle-text');
 
-  // Check local cache first
+  // Check if visitor viewing another user's public profile directly from URL
+  const routeHandle = parseUrlHandle();
   const cachedHandle = localStorage.getItem('macromix_user_handle');
+  if (routeHandle && (!cachedHandle || cachedHandle.toLowerCase() !== routeHandle.toLowerCase())) {
+    if (onboardingEl) onboardingEl.classList.add('hidden');
+    document.body.style.overflow = '';
+    return;
+  }
+
+  // Check local cache first
   if (cachedHandle) {
     currentUserHandle = cachedHandle;
     if (badgeEl && badgeText) {
@@ -2204,4 +2585,13 @@ function openProfileSettings() {
     alert(`Logged in as @${currentUserHandle}\nProtected by device biometric passkey.`);
   }
 }
+
+// Expose social controller methods on window
+window.switchTab = switchTab;
+window.triggerProfileShare = triggerProfileShare;
+window.handleFriendSearch = handleFriendSearch;
+window.viewFriendProfile = viewFriendProfile;
+window.exitVisitorMode = exitVisitorMode;
+window.toggleFollowUser = toggleFollowUser;
+
 

@@ -44,6 +44,10 @@ button, input, textarea, select {
   font-family: inherit;
 }
 
+.hidden {
+  display: none !important;
+}
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: var(--bg-main);
@@ -1598,6 +1602,350 @@ body {
 .header-handle-badge:active {
   transform: translate(1px, 1px);
   box-shadow: 1px 1px 0 #000;
+}
+
+/* ==========================================================================
+   Bottom Tab Navigation & Social Tab Views
+   ========================================================================== */
+
+.app-tab-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.app-tab-view.hidden {
+  display: none !important;
+}
+
+/* Bottom Tab Bar */
+.bottom-tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 520px;
+  height: 64px;
+  background: var(--bg-card);
+  border-top: var(--border-thick);
+  border-left: var(--border-thick);
+  border-right: var(--border-thick);
+  display: flex;
+  align-items: stretch;
+  z-index: 99;
+  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  gap: 2px;
+  color: #718096;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.tab-btn.active {
+  color: #000;
+  background: #FFFDF7;
+}
+
+.tab-btn.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 20%;
+  right: 20%;
+  height: 4px;
+  background: var(--cal-color);
+  border-bottom: 2px solid #000;
+  border-left: 2px solid #000;
+  border-right: 2px solid #000;
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.tab-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+/* Adjust app-container bottom padding so bottom tab bar doesn't overlay cards */
+.app-container {
+  padding-bottom: 84px !important;
+}
+
+/* ==========================================================================
+   Public Profile Visitor Banner
+   ========================================================================== */
+
+.visitor-banner {
+  background: #111827;
+  color: #FFF;
+  border: var(--border-thick);
+  box-shadow: var(--shadow-sm);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.visitor-banner.hidden {
+  display: none !important;
+}
+
+.visitor-banner-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.visitor-banner-text {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.visitor-banner-text strong {
+  color: var(--cal-color);
+  font-weight: 900;
+}
+
+.btn-visitor-exit {
+  background: var(--cal-color);
+  color: #000;
+  border: 2px solid #000;
+  box-shadow: 2px 2px 0 #000;
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-visitor-exit:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #000;
+}
+
+/* ==========================================================================
+   My Friends View Styling
+   ========================================================================== */
+
+.friends-view-card {
+  background: var(--bg-card);
+  border: var(--border-thick);
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.friends-share-card {
+  background: var(--cal-color);
+  border: var(--border-thick);
+  box-shadow: var(--shadow-sm);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.friends-share-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.friends-share-label {
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: #000;
+}
+
+.friends-share-url {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-share-pill {
+  background: #000;
+  color: #FFF;
+  border: 2px solid #000;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: transform 0.05s ease;
+}
+
+.btn-share-pill:active {
+  transform: scale(0.96);
+}
+
+.friends-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.friend-search-input {
+  width: 100%;
+  padding-left: 38px !important;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.friends-search-wrap .search-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+.friends-section-title {
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.friends-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.friends-list-container.hidden {
+  display: none !important;
+}
+
+.friend-card {
+  background: #FFF;
+  border: 2px solid #000;
+  box-shadow: 2px 2px 0 #000;
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.friend-card-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  min-width: 0;
+  flex: 1;
+}
+
+.friend-avatar-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--prot-color);
+  color: #FFF;
+  border: 2px solid #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.friend-card-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.friend-card-handle {
+  font-weight: 900;
+  font-size: 0.9rem;
+  color: #000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.friend-card-streak {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #FF5E5B;
+}
+
+.friend-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-friend-action {
+  border: 2px solid #000;
+  box-shadow: 2px 2px 0 #000;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 0.05s ease;
+}
+
+.btn-friend-action:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #000;
+}
+
+.btn-macromix {
+  background: var(--cal-color);
+  color: #000;
+}
+
+.btn-follow {
+  background: #FFF;
+  color: #000;
+}
+
+.btn-follow.following {
+  background: #2EE59D;
+  color: #111;
 }
 
 
