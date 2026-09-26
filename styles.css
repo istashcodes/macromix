@@ -82,30 +82,31 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .brand-logo-img {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.brand-title {
-  font-size: 1.4rem;
-  font-weight: 900;
-  letter-spacing: -0.04em;
-  text-transform: lowercase;
-}
-
-.brand-title span {
-  color: var(--prot-color);
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+  display: block;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+#header-handle-text {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .streak-badge {
@@ -129,13 +130,13 @@ body {
 }
 
 /* ==========================================================================
-   Segmented Header Tab Toggle
+   Segmented Header Tab Toggle — black container, yellow active pill
    ========================================================================== */
 
 .header-tab-toggle {
   display: inline-flex;
   align-items: center;
-  background: var(--bg-card);
+  background: #111;
   border: 2.5px solid #000;
   box-shadow: 3px 3px 0 #000;
   border-radius: 24px;
@@ -147,7 +148,7 @@ body {
 .tab-pill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   padding: 4px 12px;
   border-radius: 20px;
   border: none;
@@ -157,25 +158,26 @@ body {
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
-  transition: background 0.15s ease, box-shadow 0.1s ease, transform 0.1s ease, color 0.15s ease;
-  color: #555;
+  color: rgba(255,255,255,0.7);
+  transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
 }
 
 .tab-pill:hover {
-  background: #FFF9E6;
-  color: #000;
+  color: #fff;
+  background: rgba(255,255,255,0.08);
 }
 
-/* Active/selected pill — yellow, depressed */
+/* Active/selected pill — yellow with black text */
 .tab-pill.tab-active {
   background: #FFE600;
   color: #000;
-  box-shadow: inset 2px 2px 0 rgba(0,0,0,0.18);
-  transform: translateY(1px);
+  box-shadow: none;
+  transform: none;
 }
 
 .tab-pill.tab-active:hover {
   background: #FFE600;
+  color: #000;
 }
 
 
@@ -355,7 +357,7 @@ body {
   gap: 14px;
 }
 
-@media (min-width: 480px) {
+@media (min-width: 580px) {
   .circles-grid {
     grid-template-columns: repeat(4, 1fr);
   }
@@ -1673,32 +1675,8 @@ body {
 }
 
 /* ==========================================================================
-   Tab Views – slide animation container
+   Tab Views
    ========================================================================== */
-
-/* Wrap both views so overflow is clipped during animation */
-.tabs-slide-wrapper {
-  position: relative;
-  overflow: hidden;
-  width: 100%;
-}
-
-@keyframes slideInFromLeft {
-  from { transform: translateX(-100%); opacity: 0; }
-  to   { transform: translateX(0);     opacity: 1; }
-}
-@keyframes slideInFromRight {
-  from { transform: translateX(100%);  opacity: 0; }
-  to   { transform: translateX(0);     opacity: 1; }
-}
-@keyframes slideOutToLeft {
-  from { transform: translateX(0);     opacity: 1; }
-  to   { transform: translateX(-100%); opacity: 0; }
-}
-@keyframes slideOutToRight {
-  from { transform: translateX(0);     opacity: 1; }
-  to   { transform: translateX(100%);  opacity: 0; }
-}
 
 .app-tab-view {
   display: flex;
@@ -1711,12 +1689,37 @@ body {
   display: none !important;
 }
 
-/* Slide transition classes applied by JS */
-.tab-slide-in-left  { animation: slideInFromLeft  0.28s cubic-bezier(0.4,0,0.2,1) both; }
-.tab-slide-in-right { animation: slideInFromRight 0.28s cubic-bezier(0.4,0,0.2,1) both; }
-.tab-slide-out-left  { animation: slideOutToLeft  0.22s cubic-bezier(0.4,0,0.2,1) both; }
-.tab-slide-out-right { animation: slideOutToRight 0.22s cubic-bezier(0.4,0,0.2,1) both; }
+/* ==========================================================================
+   Me-pill runner icon — subtle bob every 5s when Friends tab is active
+   ========================================================================== */
 
+.me-pill-icon {
+  display: inline-block;
+  margin-right: 3px;
+  line-height: 1;
+  font-size: 1.1rem;
+  filter: grayscale(1) brightness(10); /* white silhouette on black bg */
+  transition: filter 0.25s ease;
+}
+
+/* Black silhouette when pill is active (yellow bg) */
+.tab-pill.tab-active .me-pill-icon {
+  filter: grayscale(1) brightness(0);
+}
+
+@keyframes gentleBob {
+  0%   { transform: translateY(0); }
+  20%  { transform: translateY(-3px); }
+  40%  { transform: translateY(0); }
+  60%  { transform: translateY(-2px); }
+  80%  { transform: translateY(0); }
+  100% { transform: translateY(0); }
+}
+
+/* Class added by JS when Friends tab is active */
+.me-pill-icon.bob {
+  animation: gentleBob 0.4s ease-in-out;
+}
 
 
 /* Header Friends CTA Button (Neobrutalism Design) */
@@ -2103,28 +2106,48 @@ body {
 
 @media (max-width: 420px) {
   .app-header {
-    padding: 10px 12px;
-  }
-  .brand-title {
-    font-size: 1.22rem;
+    padding: 8px 10px;
   }
   .brand-logo-img {
-    width: 30px;
-    height: 30px;
+    height: 28px;
   }
   .header-actions {
     gap: 4px;
   }
   .header-tab-toggle {
-    padding: 1px;
+    padding: 1.5px;
   }
   .tab-pill {
-    padding: 3px 8px;
+    padding: 3px 7px;
     font-size: 0.74rem;
   }
+  #header-handle-text {
+    max-width: 85px;
+  }
   .streak-badge {
-    padding: 3px 7px;
+    padding: 3px 6px;
     font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .app-header {
+    padding: 6px 8px;
+  }
+  .brand-logo-img {
+    height: 24px;
+  }
+  .tab-pill {
+    padding: 2px 5px;
+    font-size: 0.7rem;
+    gap: 3px;
+  }
+  #header-handle-text {
+    max-width: 65px;
+  }
+  .streak-badge {
+    padding: 2px 5px;
+    font-size: 0.7rem;
   }
 }
 
