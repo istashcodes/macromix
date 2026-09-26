@@ -75,7 +75,7 @@ body {
   background: var(--bg-card);
   border: var(--border-thick);
   box-shadow: var(--shadow-md);
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-radius: 12px;
   gap: 8px;
 }
@@ -88,11 +88,11 @@ body {
 }
 
 .brand-logo-img {
-  height: 68px;
+  height: 48px;
   width: auto;
   object-fit: contain;
   display: block;
-  margin: -12px -8px;
+  margin: -6px -4px;
 }
 
 .header-actions {
@@ -105,7 +105,7 @@ body {
 }
 
 #header-handle-text {
-  max-width: 110px;
+  max-width: 95px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2165,14 +2165,39 @@ body {
   color: #111;
 }
 
-@media (max-width: 420px) {
+@media (max-width: 480px) {
   .app-header {
-    padding: 8px 10px;
+    padding: 7px 10px;
     gap: 6px;
   }
   .brand-logo-img {
-    height: 60px;
-    margin: -10px -6px;
+    height: 44px;
+    margin: -5px -4px;
+  }
+  .header-actions {
+    gap: 5px;
+  }
+  .tab-pill {
+    padding: 3.5px 7px;
+    font-size: 0.75rem;
+  }
+  #header-handle-text {
+    max-width: 80px;
+  }
+  .streak-badge {
+    padding: 3.5px 7px;
+    font-size: 0.76rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .app-header {
+    padding: 6px 8px;
+    gap: 5px;
+  }
+  .brand-logo-img {
+    height: 40px;
+    margin: -5px -3px;
   }
   .onboarding-brand-logo-full {
     height: 72px;
@@ -2185,67 +2210,70 @@ body {
   }
   .tab-pill {
     padding: 3px 6px;
-    font-size: 0.74rem;
+    font-size: 0.72rem;
     gap: 2px;
   }
   #header-handle-text {
-    max-width: 76px;
+    max-width: 72px;
   }
   .streak-badge {
     padding: 3px 6px;
-    font-size: 0.74rem;
+    font-size: 0.72rem;
   }
 }
 
 @media (max-width: 365px) {
   .app-header {
-    padding: 6px 8px;
+    padding: 5px 6px;
     gap: 4px;
   }
   .brand-logo-img {
-    height: 52px;
-    margin: -8px -5px;
+    height: 35px;
+    margin: -4px -3px;
   }
   .onboarding-brand-logo-full {
     height: 64px;
   }
+  .header-actions {
+    gap: 3px;
+  }
   .tab-pill {
     padding: 2.5px 5px;
-    font-size: 0.71rem;
+    font-size: 0.68rem;
     gap: 2px;
   }
   #header-handle-text {
-    max-width: 65px;
+    max-width: 60px;
   }
   .streak-badge {
     padding: 2.5px 5px;
-    font-size: 0.71rem;
+    font-size: 0.68rem;
   }
 }
 
 @media (max-width: 335px) {
   .app-header {
-    padding: 5px 6px;
+    padding: 4px 5px;
     gap: 3px;
   }
   .brand-logo-img {
-    height: 46px;
-    margin: -7px -4px;
+    height: 30px;
+    margin: -3px -2px;
   }
   .onboarding-brand-logo-full {
     height: 56px;
   }
   .tab-pill {
     padding: 2px 4px;
-    font-size: 0.67rem;
+    font-size: 0.64rem;
     gap: 1.5px;
   }
   #header-handle-text {
-    max-width: 55px;
+    max-width: 50px;
   }
   .streak-badge {
     padding: 2px 4px;
-    font-size: 0.67rem;
+    font-size: 0.64rem;
   }
 }
 
