@@ -88,7 +88,7 @@ body {
 }
 
 .brand-logo-img {
-  height: 38px;
+  height: 44px;
   width: auto;
   object-fit: contain;
   display: block;
@@ -104,7 +104,7 @@ body {
 }
 
 #header-handle-text {
-  max-width: 100px;
+  max-width: 110px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1708,7 +1708,7 @@ body {
 
 .me-pill-icon {
   display: inline-block;
-  margin-right: 3px;
+  margin-right: 1px;
   line-height: 1;
   font-size: 1.1rem;
   filter: grayscale(1) brightness(10); /* white silhouette on black bg */
@@ -2123,7 +2123,7 @@ body {
     gap: 6px;
   }
   .brand-logo-img {
-    height: 36px;
+    height: 40px;
   }
   .header-actions {
     gap: 4px;
@@ -2134,10 +2134,10 @@ body {
   .tab-pill {
     padding: 3px 6px;
     font-size: 0.74rem;
-    gap: 3px;
+    gap: 2px;
   }
   #header-handle-text {
-    max-width: 72px;
+    max-width: 76px;
   }
   .streak-badge {
     padding: 3px 6px;
@@ -2151,15 +2151,15 @@ body {
     gap: 4px;
   }
   .brand-logo-img {
-    height: 33px;
+    height: 36px;
   }
   .tab-pill {
     padding: 2.5px 5px;
     font-size: 0.71rem;
-    gap: 2.5px;
+    gap: 2px;
   }
   #header-handle-text {
-    max-width: 60px;
+    max-width: 65px;
   }
   .streak-badge {
     padding: 2.5px 5px;
@@ -2173,15 +2173,15 @@ body {
     gap: 3px;
   }
   .brand-logo-img {
-    height: 28px;
+    height: 32px;
   }
   .tab-pill {
     padding: 2px 4px;
     font-size: 0.67rem;
-    gap: 2px;
+    gap: 1.5px;
   }
   #header-handle-text {
-    max-width: 50px;
+    max-width: 55px;
   }
   .streak-badge {
     padding: 2px 4px;
@@ -2191,3 +2191,17 @@ body {
 
 
 
+
+/* Passkey Tip */
+.passkey-device-tip {
+  font-size: 0.85rem;
+  color: var(--text-color);
+  background: var(--surface-hover);
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  text-align: center;
+}
+.passkey-device-tip.hidden {
+  display: none;
+}

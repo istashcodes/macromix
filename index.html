@@ -52,9 +52,14 @@
           </div>
           <div id="handle-status-msg" class="handle-status-msg"></div>
 
+          <!-- Device tip shown only on Mac/Windows Chrome -->
+          <div id="passkey-device-tip" class="passkey-device-tip hidden">
+            💡 When asked where to save your passkey, choose <strong>Google Password Manager</strong> to access it on all your devices.
+          </div>
+
           <button type="button" id="btn-onboard-passkey" class="btn-onboard-passkey" onclick="handlePasskeyAuth()">
             <span class="btn-passkey-icon">🛡️</span>
-            <span>Continue with FaceID / TouchID</span>
+            <span>Continue with Passkey</span>
           </button>
 
           <div class="onboarding-or-divider">OR</div>
@@ -80,7 +85,7 @@
             <span>✦ Friends</span>
           </button>
           <button type="button" class="tab-pill tab-pill-me" id="tab-pill-me" onclick="if(currentTab!=='me'||isVisitorMode)switchTab('me')" title="My macromix" style="display:none;">
-            <span class="me-pill-icon" id="me-pill-icon">🏃</span><span id="header-handle-text">@you</span>
+            <span class="me-pill-icon" id="me-pill-icon">🏃</span><span id="header-handle-text">you</span>
           </button>
         </div>
         <div class="streak-badge" id="streak-badge" onclick="openSettingsModal()" title="Daily Macro Targets (click to edit)" style="cursor:pointer;">🔥 0d</div>

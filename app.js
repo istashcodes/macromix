@@ -2301,7 +2301,7 @@ function setVisitorMode(isVisitor, targetHandle = null) {
 
   // Always show/update the Me pill with the logged-in handle
   if (handleText && currentUserHandle) {
-    handleText.textContent = '@' + currentUserHandle;
+    handleText.textContent = currentUserHandle.replace(/^@+/, '');
   }
   if (pillMe) {
     pillMe.style.display = currentUserHandle ? '' : 'none';
@@ -2697,37 +2697,8 @@ async function toggleFollowUser(targetHandle, btnEl) {
 
 async function checkUserProfileOnboarding() {
   const onboardingEl = document.getElementById('onboarding-screen');
-  const pillMe = document.getElementById('tab-pill-me');
+  const badgeEl = document.getElementById('tab-pill-me');
   const badgeText = document.getElementById('header-handle-text');
-
-  // Check local cache first
-  const cachedHandle = localStorage.getItem('macromix_user_handle');
-  if (cachedHandle) {
-    currentUserHandle = cachedHandle;
-    if (badgeText) badgeText.textContent = '@' + cachedHandle;
-    if (pillMe) pillMe.style.display = '';
-    if (onboardingEl) onboardingEl.classList.add('hidden');
-    document.body.style.overflow = '';
-
-    // Calculate streak from local cached meals
-    try {
-      const rawMeals = localStorage.getItem(getMealsStorageKey(cachedHandle));
-      if (rawMeals) {
-        currentUserStreak = calculateStreakForLogs(JSON.parse(rawMeals));
-      }
-    } catch (e) {}
-    renderCurrentUserStreak();
-
-    if (window.MacromixFirebase) {
-      try {
-        window.MacromixFirebase.syncStreakToFirestore(cachedHandle, currentUserStreak);
-      } catch (e) {}
-    }
-    setupRealtimeMealsSync();
-    setupCurrentUserProfileSync();
-    updateHeaderFriendsBtn();
-    return;
-  }
 
   // Check if visitor viewing another user's public profile directly without an account
   const routeHandle = parseUrlHandle();
@@ -2741,46 +2712,53 @@ async function checkUserProfileOnboarding() {
     return;
   }
 
-  // Check backend profile if local server is active
-  if (isLocalBackend()) {
-    try {
-      const res = await fetch('/api/user/profile');
-      const ct = res.headers.get('content-type') || '';
-      if (res.ok && ct.includes('application/json')) {
-        const data = await res.json();
-        if (data && data.handle) {
-          currentUserHandle = data.handle;
-          localStorage.setItem('macromix_user_handle', data.handle);
-          if (badgeEl && badgeText) {
-            badgeText.textContent = '@' + data.handle;
-            badgeEl.style.display = 'flex';
-            badgeEl.style.cursor = 'pointer';
+  // 1. Wait for Firebase Auth state to resolve (max 3s)
+  const user = await new Promise((resolve) => {
+    if (!window.__macromixAuth) {
+      resolve(null);
+      return;
+    }
+    const unsub = window.__macromixAuth.onAuthStateChanged((u) => {
+      unsub();
+      resolve(u);
+    });
+    setTimeout(() => resolve(null), 3000);
+  });
+
+  if (user && user.displayName) {
+    const handle = user.displayName.replace(/^@+/, '');
+    
+    // We only need to fetch the profile to confirm it exists, or just use the handle
+    if (window.MacromixFirebase) {
+      const res = await window.MacromixFirebase.createHandleProfile(handle, 'passkey');
+      if (res.success && res.profile) {
+        currentUserHandle = handle;
+        localStorage.setItem('macromix_user_handle', handle);
+        if (badgeText) badgeText.textContent = handle.replace(/^@+/, '');
+        if (badgeEl) badgeEl.style.display = '';
+        if (onboardingEl) onboardingEl.classList.add('hidden');
+        document.body.style.overflow = '';
+        
+        try {
+          const rawMeals = localStorage.getItem(getMealsStorageKey(handle));
+          if (rawMeals) {
+            currentUserStreak = calculateStreakForLogs(JSON.parse(rawMeals));
           }
-          if (onboardingEl) onboardingEl.classList.add('hidden');
-          document.body.style.overflow = '';
-          try {
-            const rawMeals = localStorage.getItem(getMealsStorageKey(data.handle));
-            if (rawMeals) {
-              currentUserStreak = calculateStreakForLogs(JSON.parse(rawMeals));
-            }
-          } catch (e) {}
-          renderCurrentUserStreak();
-          setupRealtimeMealsSync();
-          setupCurrentUserProfileSync();
-          updateHeaderFriendsBtn();
-          return;
-        }
+        } catch (e) {}
+        renderCurrentUserStreak();
+        
+        setupRealtimeMealsSync();
+        setupCurrentUserProfileSync();
+        updateHeaderFriendsBtn();
+        return;
       }
-    } catch (err) {
-      console.warn("[macromix] Could not fetch user profile:", err);
     }
   }
 
-  // If no handle is found, reveal dedicated onboarding screen
+  // 2. No Firebase Auth session -> show onboarding
   if (onboardingEl) {
     onboardingEl.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
-    AppLogger.log('UI', 'Revealed dedicated first-time user onboarding screen');
   }
 }
 
@@ -2865,7 +2843,7 @@ async function registerHandleOnboarding(handle, authMethod = 'passkey') {
 
   const pillMe = document.getElementById('tab-pill-me');
   const badgeText = document.getElementById('header-handle-text');
-  if (badgeText) badgeText.textContent = '@' + clean;
+  if (badgeText) badgeText.textContent = clean.replace(/^@+/, '');
   if (pillMe) pillMe.style.display = '';
 
   const onboardingEl = document.getElementById('onboarding-screen');
@@ -2887,82 +2865,179 @@ async function registerHandleOnboarding(handle, authMethod = 'passkey') {
   return true;
 }
 
+// ─── Cloud Function base URL ───────────────────────────────────
+const AUTH_BASE = ''; // Uses relative paths with Firebase Hosting rewrites
+
+// ─── @simplewebauthn/browser (loaded once on demand) ──────────
+let _swab = null;
+async function getSimpleWebAuthn() {
+  if (!_swab) {
+    _swab = await import(
+      'https://cdn.jsdelivr.net/npm/@simplewebauthn/browser@10/esm/index.js'
+    );
+  }
+  return _swab;
+}
+
+// ─── Device Tip ─────────────────────────────────────────────
+function showDeviceTip() {
+  const ua = navigator.userAgent;
+  if (/Macintosh|Windows/.test(ua)) {
+    const tip = document.getElementById('passkey-device-tip');
+    if (tip) tip.classList.remove('hidden');
+  }
+}
+
+// ─── Input helper ─────────────────────────────────────────────
+function getHandleInput() {
+  const input = document.getElementById('onboarding-handle-input');
+  const val   = input ? input.value : '';
+  if (!val.trim()) {
+    showOnboardingError('Please enter your desired handle first.');
+    return null;
+  }
+  return val.trim().toLowerCase().replace(/^@+/, '');
+}
+
+// ─── Main entry point ─────────────────────────────────────────
 async function handlePasskeyAuth() {
   await waitForFirebaseDB();
-  const input = document.getElementById('onboarding-handle-input');
-  const handleVal = input ? input.value : '';
-  if (!handleVal.trim()) {
-    showOnboardingError("Please enter your desired handle first.");
+  const clean = getHandleInput();
+  if (!clean) return;
+
+  showDeviceTip();
+
+  let isExisting = false;
+  try {
+    const isAvailable = await window.MacromixFirebase.checkHandleAvailable(clean);
+    isExisting = !isAvailable;
+  } catch (e) {}
+
+  if (isExisting) {
+    await passkeyLogin(clean);
+  } else {
+    await passkeyRegister(clean);
+  }
+}
+
+// ─── Registration (TOFU) ─────────────────────────────────────────────
+async function passkeyRegister(handle) {
+  let options;
+  try {
+    const res = await fetch(`${AUTH_BASE}/authRegisterBegin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ handle }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showOnboardingError(err.error || 'Could not start registration.');
+      return;
+    }
+    options = await res.json();
+  } catch (e) {
+    showOnboardingError('Network error. Please try again.');
     return;
   }
-  const clean = handleVal.trim().toLowerCase().replace(/^@+/, '');
 
-  // Check if handle already exists to determine whether to verify passkey (login) or register new passkey
-  let isExistingUser = false;
-  if (window.MacromixFirebase && typeof window.MacromixFirebase.checkHandleAvailable === 'function') {
-    try {
-      const isAvailable = await window.MacromixFirebase.checkHandleAvailable(clean);
-      isExistingUser = !isAvailable;
-    } catch (e) {}
+  let attestation;
+  try {
+    const { startRegistration } = await getSimpleWebAuthn();
+    attestation = await startRegistration({ optionsJSON: options });
+  } catch (e) {
+    AppLogger.log('AUTH', 'Registration cancelled/unsupported: ' + e.message, null, 'INFO');
+    showOnboardingError('Passkey setup was cancelled. Please try again.');
+    return;
   }
 
-  // WebAuthn Passkey Flow
-  if (window.PublicKeyCredential) {
-    try {
-      const challenge = new Uint8Array(32);
-      window.crypto.getRandomValues(challenge);
-
-      if (isExistingUser) {
-        // --- SEAMLESS LOG-IN: Verify Passkey via navigator.credentials.get ---
-        AppLogger.log('AUTH', `Verifying passkey for existing user @${clean}...`);
-        const assertion = await navigator.credentials.get({
-          publicKey: {
-            challenge: challenge,
-            rpId: window.location.hostname,
-            userVerification: "preferred",
-            timeout: 60000
-          }
-        });
-        if (assertion) {
-          AppLogger.log('AUTH', 'WebAuthn passkey verified successfully for login');
-        }
-      } else {
-        // --- REGISTRATION: Create Passkey via navigator.credentials.create ---
-        AppLogger.log('AUTH', `Initiating WebAuthn Passkey creation for @${clean}...`);
-        const userIdBytes = new Uint8Array(16);
-        window.crypto.getRandomValues(userIdBytes);
-
-        const credential = await navigator.credentials.create({
-          publicKey: {
-            challenge: challenge,
-            rp: { name: "macromix", id: window.location.hostname },
-            user: {
-              id: userIdBytes,
-              name: clean,
-              displayName: "@" + clean
-            },
-            pubKeyCredParams: [
-              { alg: -7, type: "public-key" },  // ES256
-              { alg: -257, type: "public-key" } // RS256
-            ],
-            authenticatorSelection: {
-              authenticatorAttachment: "platform",
-              userVerification: "preferred"
-            },
-            timeout: 60000
-          }
-        });
-        if (credential) {
-          AppLogger.log('AUTH', 'WebAuthn passkey credential created successfully');
-        }
-      }
-    } catch (err) {
-      // User cancelled or platform-unsupported: still continue seamlessly
-      AppLogger.log('AUTH', 'WebAuthn prompt completed/bypassed: ' + (err.message || err), null, 'INFO');
+  let customToken;
+  try {
+    const res = await fetch(`${AUTH_BASE}/authRegisterComplete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ handle, attestation }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showOnboardingError(err.error || 'Passkey registration failed.');
+      return;
     }
+    const data = await res.json();
+    customToken = data.customToken;
+  } catch (e) {
+    showOnboardingError('Server error during registration. Please try again.');
+    return;
   }
 
-  await registerHandleOnboarding(clean, 'passkey');
+  try {
+    await window.__macromixAuth.signInWithCustomToken(customToken);
+  } catch (e) {
+    showOnboardingError('Could not complete sign-in. Please try again.');
+    return;
+  }
+
+  AppLogger.log('AUTH', `Passkey registered for @${handle}`, { handle }, 'SUCCESS');
+  await registerHandleOnboarding(handle, 'passkey');
+}
+
+// ─── Login ────────────────────────────────────────────────────
+async function passkeyLogin(handle) {
+  let options;
+  try {
+    const res = await fetch(`${AUTH_BASE}/authLoginBegin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ handle }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showOnboardingError(err.error || 'Could not start login.');
+      return;
+    }
+    options = await res.json();
+  } catch (e) {
+    showOnboardingError('Network error. Please try again.');
+    return;
+  }
+
+  let assertion;
+  try {
+    const { startAuthentication } = await getSimpleWebAuthn();
+    assertion = await startAuthentication({ optionsJSON: options });
+  } catch (e) {
+    AppLogger.log('AUTH', 'Authentication cancelled/unsupported: ' + e.message, null, 'INFO');
+    showOnboardingError('Passkey login was cancelled. Please try again.');
+    return;
+  }
+
+  let customToken;
+  try {
+    const res = await fetch(`${AUTH_BASE}/authLoginComplete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ handle, assertion }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      showOnboardingError(err.error || 'Passkey login failed.');
+      return;
+    }
+    const data = await res.json();
+    customToken = data.customToken;
+  } catch (e) {
+    showOnboardingError('Server error during login. Please try again.');
+    return;
+  }
+
+  try {
+    await window.__macromixAuth.signInWithCustomToken(customToken);
+  } catch (e) {
+    showOnboardingError('Could not complete sign-in. Please try again.');
+    return;
+  }
+
+  AppLogger.log('AUTH', `Passkey login for @${handle}`, { handle }, 'SUCCESS');
+  await registerHandleOnboarding(handle, 'passkey');
 }
 
 async function handlePhoneAuthFallback() {
