@@ -67,6 +67,7 @@ body {
 }
 
 /* --- Header --- */
+/* --- Header --- */
 .app-header {
   display: flex;
   align-items: center;
@@ -74,19 +75,20 @@ body {
   background: var(--bg-card);
   border: var(--border-thick);
   box-shadow: var(--shadow-md);
-  padding: 12px 16px;
+  padding: 10px 14px;
   border-radius: 12px;
+  gap: 8px;
 }
 
 .brand-wrapper {
   display: flex;
   align-items: center;
-  gap: 10px;
   flex-shrink: 0;
+  cursor: pointer;
 }
 
 .brand-logo-img {
-  height: 36px;
+  height: 38px;
   width: auto;
   object-fit: contain;
   display: block;
@@ -95,13 +97,14 @@ body {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-shrink: 1;
+  gap: 6px;
+  flex-shrink: 0;
   min-width: 0;
+  justify-content: flex-end;
 }
 
 #header-handle-text {
-  max-width: 120px;
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -111,13 +114,21 @@ body {
 
 .streak-badge {
   background: var(--cal-color);
-  border: var(--border-thick);
-  box-shadow: var(--shadow-sm);
-  padding: 4px 10px;
+  border: 2px solid #000;
+  box-shadow: 2px 2px 0 #000;
+  padding: 4px 9px;
   border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 800;
-  transition: transform 0.05s ease, box-shadow 0.05s ease;
+  font-size: 0.82rem;
+  font-weight: 900;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex-shrink: 0;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.05s ease, box-shadow 0.05s ease, background 0.1s ease;
 }
 
 .streak-badge:hover {
@@ -137,23 +148,25 @@ body {
   display: inline-flex;
   align-items: center;
   background: #111;
-  border: 2.5px solid #000;
-  box-shadow: 3px 3px 0 #000;
+  border: 2px solid #000;
+  box-shadow: 2px 2px 0 #000;
   border-radius: 24px;
   overflow: hidden;
   padding: 2px;
   gap: 2px;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .tab-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 12px;
+  gap: 4px;
+  padding: 4px 10px;
   border-radius: 20px;
   border: none;
   background: transparent;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
@@ -2107,9 +2120,10 @@ body {
 @media (max-width: 420px) {
   .app-header {
     padding: 8px 10px;
+    gap: 6px;
   }
   .brand-logo-img {
-    height: 28px;
+    height: 36px;
   }
   .header-actions {
     gap: 4px;
@@ -2118,36 +2132,60 @@ body {
     padding: 1.5px;
   }
   .tab-pill {
-    padding: 3px 7px;
-    font-size: 0.74rem;
-  }
-  #header-handle-text {
-    max-width: 85px;
-  }
-  .streak-badge {
     padding: 3px 6px;
-    font-size: 0.75rem;
-  }
-}
-
-@media (max-width: 340px) {
-  .app-header {
-    padding: 6px 8px;
-  }
-  .brand-logo-img {
-    height: 24px;
-  }
-  .tab-pill {
-    padding: 2px 5px;
-    font-size: 0.7rem;
+    font-size: 0.74rem;
     gap: 3px;
   }
   #header-handle-text {
-    max-width: 65px;
+    max-width: 72px;
   }
   .streak-badge {
-    padding: 2px 5px;
-    font-size: 0.7rem;
+    padding: 3px 6px;
+    font-size: 0.74rem;
+  }
+}
+
+@media (max-width: 365px) {
+  .app-header {
+    padding: 6px 8px;
+    gap: 4px;
+  }
+  .brand-logo-img {
+    height: 33px;
+  }
+  .tab-pill {
+    padding: 2.5px 5px;
+    font-size: 0.71rem;
+    gap: 2.5px;
+  }
+  #header-handle-text {
+    max-width: 60px;
+  }
+  .streak-badge {
+    padding: 2.5px 5px;
+    font-size: 0.71rem;
+  }
+}
+
+@media (max-width: 335px) {
+  .app-header {
+    padding: 5px 6px;
+    gap: 3px;
+  }
+  .brand-logo-img {
+    height: 28px;
+  }
+  .tab-pill {
+    padding: 2px 4px;
+    font-size: 0.67rem;
+    gap: 2px;
+  }
+  #header-handle-text {
+    max-width: 50px;
+  }
+  .streak-badge {
+    padding: 2px 4px;
+    font-size: 0.67rem;
   }
 }
 
