@@ -69,13 +69,16 @@ body {
 /* --- Header --- */
 /* --- Header --- */
 .app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
   background: var(--bg-card);
   border: var(--border-thick);
   box-shadow: var(--shadow-md);
-  padding: 8px 12px;
+  padding: 12px 14px;
   border-radius: 12px;
   gap: 8px;
 }
@@ -212,6 +215,10 @@ body {
   z-index: 2;
   color: rgba(255,255,255,0.7);
   transition: color 0.3s ease 0.15s, transform 0.2s ease;
+}
+
+.tab-pill-me {
+  gap: 0.28em;
 }
 
 .tab-pill:hover {
@@ -1756,9 +1763,9 @@ body {
 
 .me-pill-icon {
   display: inline-block;
-  margin-right: 2px;
+  margin-right: 0;
   line-height: 1;
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   filter: grayscale(1) brightness(10); /* white silhouette on black bg */
   transition: filter 0.25s ease;
 }
@@ -2167,7 +2174,8 @@ body {
 
 @media (max-width: 480px) {
   .app-header {
-    padding: 7px 10px;
+    top: 0;
+    padding: 10px 10px;
     gap: 6px;
   }
   .brand-logo-img {
@@ -2182,7 +2190,7 @@ body {
     font-size: 0.75rem;
   }
   .me-pill-icon {
-    font-size: 0.88rem;
+    font-size: 0.76rem;
   }
   #header-handle-text {
     max-width: 80px;
@@ -2195,7 +2203,8 @@ body {
 
 @media (max-width: 420px) {
   .app-header {
-    padding: 6px 8px;
+    top: 0;
+    padding: 9px 8px;
     gap: 5px;
   }
   .brand-logo-img {
@@ -2217,7 +2226,7 @@ body {
     gap: 2px;
   }
   .me-pill-icon {
-    font-size: 0.82rem;
+    font-size: 0.70rem;
   }
   #header-handle-text {
     max-width: 72px;
@@ -2230,7 +2239,8 @@ body {
 
 @media (max-width: 365px) {
   .app-header {
-    padding: 5px 6px;
+    top: 0;
+    padding: 7px 6px;
     gap: 4px;
   }
   .brand-logo-img {
@@ -2249,7 +2259,7 @@ body {
     gap: 2px;
   }
   .me-pill-icon {
-    font-size: 0.76rem;
+    font-size: 0.65rem;
   }
   #header-handle-text {
     max-width: 60px;
@@ -2262,7 +2272,8 @@ body {
 
 @media (max-width: 335px) {
   .app-header {
-    padding: 4px 5px;
+    top: 0;
+    padding: 6px 5px;
     gap: 3px;
   }
   .brand-logo-img {
@@ -2278,7 +2289,7 @@ body {
     gap: 1.5px;
   }
   .me-pill-icon {
-    font-size: 0.70rem;
+    font-size: 0.60rem;
   }
   #header-handle-text {
     max-width: 50px;
