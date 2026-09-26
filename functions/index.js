@@ -1,0 +1,306 @@
+const { onRequest } = require('firebase-functions/v2/https');
+const admin = require('firebase-admin');
+const {
+  generateRegistrationOptions,
+  verifyRegistrationResponse,
+  generateAuthenticationOptions,
+  verifyAuthenticationResponse,
+} = require('@simplewebauthn/server');
+
+admin.initializeApp();
+const db = admin.firestore();
+
+// Use environment variables for flexible deployment
+const RP_NAME    = 'Macromix';
+const RP_ID      = process.env.PASSKEY_RP_ID || 'localhost';
+const ORIGIN     = process.env.PASSKEY_ORIGIN || 'http://localhost:5000';
+const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+// CORS helper (allow dynamic origins matching PASSKEY_ORIGIN, or wildcard for local dev)
+function setCORS(req, res) {
+  const origin = req.headers.origin;
+  if (origin === ORIGIN || origin?.includes('localhost') || origin?.includes('127.0.0.1')) {
+    res.set('Access-Control-Allow-Origin', origin || '*');
+  } else {
+    res.set('Access-Control-Allow-Origin', ORIGIN);
+  }
+  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+}
+
+/** Validate handle format */
+function isValidHandle(h) {
+  return typeof h === 'string' && /^[a-z0-9_]{3,12}$/.test(h);
+}
+
+/** Get all credential descriptors for a handle (for allowCredentials list) */
+async function getCredentials(handle) {
+  const snap = await db.collection('users').doc(handle).get();
+  if (!snap.exists) return [];
+  return snap.data().credentials || [];
+}
+
+/** Store a verified challenge with expiry */
+async function storeChallenge(handle, challenge) {
+  await db.collection('challenges').doc(handle).set({
+    challenge,
+    expiresAt: admin.firestore.Timestamp.fromMillis(Date.now() + CHALLENGE_TTL_MS),
+  });
+}
+
+/** Read and immediately delete challenge (one-time use) */
+async function consumeChallenge(handle) {
+  const ref = db.collection('challenges').doc(handle);
+  const snap = await ref.get();
+  if (!snap.exists) return null;
+  const { challenge, expiresAt } = snap.data();
+  await ref.delete();
+  if (expiresAt.toMillis() < Date.now()) return null; // expired
+  return challenge;
+}
+
+/** Mint a Firebase Custom Token for a uid */
+async function mintToken(uid) {
+  return admin.auth().createCustomToken(uid);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// POST /authRegisterBegin
+// Body: { handle: string }
+// Returns: PublicKeyCredentialCreationOptionsJSON
+// ─────────────────────────────────────────────────────────────────
+exports.authRegisterBegin = onRequest({ cors: false }, async (req, res) => {
+  setCORS(req, res);
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+
+  const { handle } = req.body;
+  if (!isValidHandle(handle)) {
+    return res.status(400).json({ error: 'Invalid handle format.' });
+  }
+
+  // TOFU Logic
+  const userRef = db.collection('users').doc(handle);
+  const snap = await userRef.get();
+  if (snap.exists) {
+    const data = snap.data();
+    if (data.uid || (data.credentials && data.credentials.length > 0)) {
+      return res.status(409).json({ error: 'Handle already claimed by a passkey. Please use login.' });
+    }
+  }
+
+  const options = await generateRegistrationOptions({
+    rpName:    RP_NAME,
+    rpID:      RP_ID,
+    userName:  handle,
+    userDisplayName: '@' + handle,
+    authenticatorSelection: {
+      residentKey:      'required',
+      userVerification: 'required',
+    },
+    attestationType: 'none',
+    supportedAlgorithmIDs: [-7, -257],
+  });
+
+  await storeChallenge(handle, options.challenge);
+  return res.json(options);
+});
+
+// ─────────────────────────────────────────────────────────────────
+// POST /authRegisterComplete
+// Body: { handle: string, attestation: RegistrationResponseJSON }
+// Returns: { customToken: string, uid: string }
+// ─────────────────────────────────────────────────────────────────
+exports.authRegisterComplete = onRequest({ cors: false }, async (req, res) => {
+  setCORS(req, res);
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+
+  const { handle, attestation } = req.body;
+  if (!isValidHandle(handle) || !attestation) {
+    return res.status(400).json({ error: 'Invalid request body.' });
+  }
+
+  // Re-check TOFU logic (race condition guard)
+  const userRef = db.collection('users').doc(handle);
+  let snap = await userRef.get();
+  if (snap.exists) {
+    const data = snap.data();
+    if (data.uid || (data.credentials && data.credentials.length > 0)) {
+      return res.status(409).json({ error: 'Handle already claimed.' });
+    }
+  }
+
+  const expectedChallenge = await consumeChallenge(handle);
+  if (!expectedChallenge) {
+    return res.status(400).json({ error: 'Challenge expired or not found. Please retry.' });
+  }
+
+  let verification;
+  try {
+    verification = await verifyRegistrationResponse({
+      response:          attestation,
+      expectedChallenge,
+      expectedOrigin:    [ORIGIN, 'http://localhost:5000', 'http://127.0.0.1:5000', 'http://localhost:8000', 'http://127.0.0.1:8000'],
+      expectedRPID:      RP_ID,
+      requireUserVerification: true,
+    });
+  } catch (e) {
+    return res.status(400).json({ error: 'Passkey verification failed: ' + e.message });
+  }
+
+  if (!verification.verified) {
+    return res.status(401).json({ error: 'Passkey not verified.' });
+  }
+
+  const { credentialID, credentialPublicKey, counter } = verification.registrationInfo;
+
+  // Create Firebase Auth user
+  const userRecord = await admin.auth().createUser({ displayName: '@' + handle });
+  const uid = userRecord.uid;
+
+  const ua = req.headers['user-agent'] || '';
+  const deviceName = ua.includes('Android') ? 'Android / Chrome'
+    : ua.includes('Macintosh') ? 'Mac / Chrome'
+    : ua.includes('Windows')   ? 'Windows / Chrome'
+    : 'Unknown device';
+
+  const credentialRecord = {
+    credentialID:        Buffer.from(credentialID).toString('base64url'),
+    credentialPublicKey: Buffer.from(credentialPublicKey).toString('base64url'),
+    counter,
+    deviceName,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  // Update or Create the users/{handle} document
+  if (snap.exists) {
+    await userRef.update({
+      uid,
+      credentials: admin.firestore.FieldValue.arrayUnion(credentialRecord),
+      lastActive: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } else {
+    await userRef.set({
+      handle,
+      uid,
+      streak: 0,
+      latestStats: { streak: 0, targetPct: 0 },
+      dailyTargets: { calories: 2000, protein: 150, carbs: 200, fat: 65, fiber: 35 },
+      credentials: [credentialRecord],
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      lastActive: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+
+  const customToken = await mintToken(uid);
+  return res.json({ customToken, uid, handle });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// POST /authLoginBegin
+// Body: { handle: string }
+// Returns: PublicKeyCredentialRequestOptionsJSON
+// ─────────────────────────────────────────────────────────────────
+exports.authLoginBegin = onRequest({ cors: false }, async (req, res) => {
+  setCORS(req, res);
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+
+  const { handle } = req.body;
+  if (!isValidHandle(handle)) {
+    return res.status(400).json({ error: 'Invalid handle.' });
+  }
+
+  const storedCreds = await getCredentials(handle);
+  if (storedCreds.length === 0) {
+    return res.status(404).json({ error: 'No passkeys registered for this handle. Please register.' });
+  }
+
+  const allowCredentials = storedCreds.map(c => ({
+    id:   c.credentialID,
+    type: 'public-key',
+  }));
+
+  const options = await generateAuthenticationOptions({
+    rpID: RP_ID,
+    allowCredentials,
+    userVerification: 'required',
+  });
+
+  await storeChallenge(handle, options.challenge);
+  return res.json(options);
+});
+
+// ─────────────────────────────────────────────────────────────────
+// POST /authLoginComplete
+// Body: { handle: string, assertion: AuthenticationResponseJSON }
+// Returns: { customToken: string, uid: string }
+// ─────────────────────────────────────────────────────────────────
+exports.authLoginComplete = onRequest({ cors: false }, async (req, res) => {
+  setCORS(req, res);
+  if (req.method === 'OPTIONS') return res.status(204).send('');
+
+  const { handle, assertion } = req.body;
+  if (!isValidHandle(handle) || !assertion) {
+    return res.status(400).json({ error: 'Invalid request body.' });
+  }
+
+  const userRef = db.collection('users').doc(handle);
+  const snap = await userRef.get();
+  if (!snap.exists) {
+    return res.status(404).json({ error: 'Handle not found.' });
+  }
+  
+  const userData = snap.data();
+  const storedCreds = userData.credentials || [];
+  const uid = userData.uid;
+
+  if (!uid) {
+    return res.status(400).json({ error: 'Account not claimed yet.' });
+  }
+
+  const expectedChallenge = await consumeChallenge(handle);
+  if (!expectedChallenge) {
+    return res.status(400).json({ error: 'Challenge expired or not found. Please retry.' });
+  }
+
+  const credentialID = assertion.id;
+  const storedCred = storedCreds.find(c => c.credentialID === credentialID);
+
+  if (!storedCred) {
+    return res.status(401).json({ error: 'Passkey not recognised for this account.' });
+  }
+
+  let verification;
+  try {
+    verification = await verifyAuthenticationResponse({
+      response:          assertion,
+      expectedChallenge,
+      expectedOrigin:    [ORIGIN, 'http://localhost:5000', 'http://127.0.0.1:5000', 'http://localhost:8000', 'http://127.0.0.1:8000'],
+      expectedRPID:      RP_ID,
+      requireUserVerification: true,
+      credential: {
+        id:        storedCred.credentialID,
+        publicKey: Buffer.from(storedCred.credentialPublicKey, 'base64url'),
+        counter:   storedCred.counter,
+      },
+    });
+  } catch (e) {
+    return res.status(401).json({ error: 'Assertion verification failed: ' + e.message });
+  }
+
+  if (!verification.verified) {
+    return res.status(401).json({ error: 'Passkey authentication failed.' });
+  }
+
+  const newCounter = verification.authenticationInfo.newCounter;
+  const updatedCreds = storedCreds.map(c =>
+    c.credentialID === credentialID ? { ...c, counter: newCounter } : c
+  );
+
+  await userRef.update({
+    credentials: updatedCreds,
+    lastActive: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  const customToken = await mintToken(uid);
+  return res.json({ customToken, uid, handle });
+});
