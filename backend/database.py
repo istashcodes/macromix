@@ -46,6 +46,28 @@ def init_db():
     if "handle" not in cols:
         cursor.execute("ALTER TABLE users ADD COLUMN handle TEXT")
 
+    # WebAuthn Passkeys / Credentials table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_credentials (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        handle TEXT NOT NULL,
+        credential_id TEXT UNIQUE NOT NULL,
+        public_key TEXT NOT NULL,
+        counter INTEGER DEFAULT 0,
+        device_name TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    # WebAuthn Challenges table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS auth_challenges (
+        handle TEXT PRIMARY KEY,
+        challenge TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
     # USDA SR Legacy Reference Nutrients table (100g baseline values)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS usda_nutrients (
@@ -571,5 +593,58 @@ def update_user_handle(handle: str, user_id: int = 1) -> bool:
     conn.commit()
     conn.close()
     return True
+
+# --- WebAuthn Passkey Storage Helpers ---
+def save_auth_challenge(handle: str, challenge: str):
+    clean = handle.strip().lower().lstrip("@")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR REPLACE INTO auth_challenges (handle, challenge, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)", (clean, challenge))
+    conn.commit()
+    conn.close()
+
+def consume_auth_challenge(handle: str) -> Optional[str]:
+    clean = handle.strip().lower().lstrip("@")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT challenge FROM auth_challenges WHERE handle = ?", (clean,))
+    row = cursor.fetchone()
+    if row:
+        cursor.execute("DELETE FROM auth_challenges WHERE handle = ?", (clean,))
+        conn.commit()
+        conn.close()
+        return row["challenge"]
+    conn.close()
+    return None
+
+def get_user_credentials(handle: str) -> List[Dict[str, Any]]:
+    clean = handle.strip().lower().lstrip("@")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT credential_id, public_key, counter, device_name FROM user_credentials WHERE handle = ?", (clean,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def save_user_credential(handle: str, credential_id: str, public_key: str, counter: int = 0, device_name: str = "Unknown"):
+    clean = handle.strip().lower().lstrip("@")
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT OR REPLACE INTO user_credentials (handle, credential_id, public_key, counter, device_name, created_at)
+    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    """, (clean, credential_id, public_key, counter, device_name))
+    # Also ensure handle is assigned to local user
+    cursor.execute("UPDATE users SET handle = ? WHERE id = 1", (clean,))
+    conn.commit()
+    conn.close()
+
+def update_credential_counter(credential_id: str, new_counter: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE user_credentials SET counter = ? WHERE credential_id = ?", (new_counter, credential_id))
+    conn.commit()
+    conn.close()
+
 
 

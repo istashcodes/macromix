@@ -1,8 +1,10 @@
 import os
 import re
 import time
+import json
+import subprocess
 from typing import Dict, Any, Optional, List
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -19,7 +21,12 @@ from backend.database import (
     get_user_gemini_info,
     set_user_gemini_key,
     get_user_profile,
-    update_user_handle
+    update_user_handle,
+    save_auth_challenge,
+    consume_auth_challenge,
+    get_user_credentials,
+    save_user_credential,
+    update_credential_counter
 )
 from backend.schemas import (
     ExtractionResponse,
@@ -268,6 +275,148 @@ def save_profile_handle(req: HandleUpdateRequest):
     log_event("SQL", f"Claimed handle '@{clean}' for user #{req.user_id}", level="SUCCESS")
     return {"status": "success", "handle": clean, "user_id": req.user_id}
 
+@app.get("/api/handle/check/{handle}")
+def check_handle_status(handle: str):
+    clean = handle.strip().lower().lstrip("@")
+    creds = get_user_credentials(clean)
+    # If credentials exist, handle is claimed/registered -> login
+    # If no credentials exist, handle is available for registration
+    return {"handle": clean, "available": len(creds) == 0, "has_passkey": len(creds) > 0}
+
+# --- WebAuthn Passkey Auth Endpoints (Localhost Backend) ---
+WEBAUTHN_RUNNER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "webauthn_runner.js")
+
+def run_webauthn_node(action: str, payload: dict) -> dict:
+    proc = subprocess.run(
+        ["node", WEBAUTHN_RUNNER, action],
+        input=json.dumps(payload).encode(),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+    if proc.returncode != 0:
+        err_msg = proc.stderr.decode().strip() or "WebAuthn runner failed"
+        raise HTTPException(status_code=400, detail=err_msg)
+    return json.loads(proc.stdout.decode().strip())
+
+def get_webauthn_rp_id(request: Request) -> str:
+    host = request.headers.get("host", "localhost").split(":")[0]
+    return "localhost" if host in ("127.0.0.1", "localhost") else host
+
+class AuthBeginRequest(BaseModel):
+    handle: str
+
+class AuthRegisterCompleteRequest(BaseModel):
+    handle: str
+    attestation: Dict[str, Any]
+
+class AuthLoginCompleteRequest(BaseModel):
+    handle: str
+    assertion: Dict[str, Any]
+
+@app.post("/authRegisterBegin")
+def auth_register_begin(req: AuthBeginRequest, request: Request):
+    clean = req.handle.strip().lower().lstrip("@")
+    if not clean or len(clean) < 3 or len(clean) > 12 or not re.match(r'^[a-z0-9_]+$', clean):
+        raise HTTPException(status_code=400, detail="Invalid handle format.")
+
+    # In local SQLite, if handle already has credentials registered, prompt login
+    existing_creds = get_user_credentials(clean)
+    if len(existing_creds) > 0:
+        raise HTTPException(status_code=409, detail="Handle already registered with a passkey. Use login instead.")
+
+    rp_id = get_webauthn_rp_id(request)
+    out = run_webauthn_node("generate-registration", {"handle": clean, "rpId": rp_id})
+    save_auth_challenge(clean, out["options"]["challenge"])
+    return out["options"]
+
+@app.post("/authRegisterComplete")
+def auth_register_complete(req: AuthRegisterCompleteRequest, request: Request):
+    clean = req.handle.strip().lower().lstrip("@")
+    expected_challenge = consume_auth_challenge(clean)
+    if not expected_challenge:
+        raise HTTPException(status_code=400, detail="Challenge expired or not found. Please retry.")
+
+    origin = request.headers.get("origin") or f"http://{request.headers.get('host', 'localhost:8000')}"
+    rp_id = get_webauthn_rp_id(request)
+    ua = request.headers.get("user-agent", "Browser")
+
+    out = run_webauthn_node("verify-registration", {
+        "attestation": req.attestation,
+        "expectedChallenge": expected_challenge,
+        "expectedOrigin": [origin, "http://localhost:8000", "http://127.0.0.1:8000"],
+        "expectedRPID": rp_id
+    })
+
+    if not out.get("success") or not out.get("registrationInfo"):
+        raise HTTPException(status_code=401, detail="Passkey not verified.")
+
+    info = out["registrationInfo"]
+    device_name = "Android / Chrome" if "Android" in ua else "Mac / Chrome" if "Macintosh" in ua else "Windows / Chrome" if "Windows" in ua else "Browser"
+    save_user_credential(
+        handle=clean,
+        credential_id=info["credentialID"],
+        public_key=info["credentialPublicKey"],
+        counter=info.get("counter", 0),
+        device_name=device_name
+    )
+
+    log_event("AUTH", f"Passkey registered successfully for @{clean}", {"handle": clean, "device": device_name}, level="SUCCESS")
+    return {"customToken": f"local_token_{clean}", "uid": f"uid_{clean}", "handle": clean}
+
+@app.post("/authLoginBegin")
+def auth_login_begin(req: AuthBeginRequest, request: Request):
+    clean = req.handle.strip().lower().lstrip("@")
+    creds = get_user_credentials(clean)
+    if not creds:
+        raise HTTPException(status_code=404, detail="No passkeys registered for this handle. Please register.")
+
+    rp_id = get_webauthn_rp_id(request)
+    allow_credentials = [{"id": c["credential_id"], "type": "public-key"} for c in creds]
+    out = run_webauthn_node("generate-authentication", {
+        "rpId": rp_id,
+        "allowCredentials": allow_credentials
+    })
+    save_auth_challenge(clean, out["options"]["challenge"])
+    return out["options"]
+
+@app.post("/authLoginComplete")
+def auth_login_complete(req: AuthLoginCompleteRequest, request: Request):
+    clean = req.handle.strip().lower().lstrip("@")
+    creds = get_user_credentials(clean)
+    if not creds:
+        raise HTTPException(status_code=404, detail="Handle not found.")
+
+    expected_challenge = consume_auth_challenge(clean)
+    if not expected_challenge:
+        raise HTTPException(status_code=400, detail="Challenge expired or not found. Please retry.")
+
+    cred_id = req.assertion.get("id")
+    stored_cred = next((c for c in creds if c["credential_id"] == cred_id), None)
+    if not stored_cred:
+        raise HTTPException(status_code=401, detail="Passkey not recognised for this account.")
+
+    origin = request.headers.get("origin") or f"http://{request.headers.get('host', 'localhost:8000')}"
+    rp_id = get_webauthn_rp_id(request)
+
+    out = run_webauthn_node("verify-authentication", {
+        "assertion": req.assertion,
+        "expectedChallenge": expected_challenge,
+        "expectedOrigin": [origin, "http://localhost:8000", "http://127.0.0.1:8000"],
+        "expectedRPID": rp_id,
+        "credential": {
+            "id": stored_cred["credential_id"],
+            "publicKey": stored_cred["public_key"],
+            "counter": stored_cred.get("counter", 0)
+        }
+    })
+
+    if not out.get("success"):
+        raise HTTPException(status_code=401, detail="Passkey verification failed.")
+
+    update_credential_counter(cred_id, out.get("newCounter", 0))
+    log_event("AUTH", f"Passkey login verified for @{clean}", {"handle": clean}, level="SUCCESS")
+    return {"customToken": f"local_token_{clean}", "uid": f"uid_{clean}", "handle": clean}
+
 # --- Relational Meal Logs (FR-105) ---
 @app.get("/api/logs")
 def get_logs(user_id: int = 1):
@@ -415,5 +564,9 @@ def serve_manifest():
 @app.get("/sw.js")
 def serve_sw():
     return FileResponse(os.path.join(STATIC_DIR, "sw.js"), media_type="application/javascript")
+
+@app.get("/simplewebauthn-browser.min.js")
+def serve_simplewebauthn():
+    return FileResponse(os.path.join(STATIC_DIR, "simplewebauthn-browser.min.js"), media_type="application/javascript")
 
 app.mount("/icons", StaticFiles(directory=os.path.join(STATIC_DIR, "icons")), name="icons")

@@ -21,17 +21,26 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=4.0">
+  <link rel="stylesheet" href="styles.css?v=5.0">
 </head>
 <body>
+  <!-- Gooey SVG Filter for Header Tab Toggle (gooey-react technique) -->
+  <svg style="position: absolute; width: 0; height: 0; pointer-events: none; opacity: 0;" aria-hidden="true">
+    <defs>
+      <filter id="gooey-filter" color-interpolation-filters="sRGB">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
+        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 42 -20" result="goo" />
+        <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+      </filter>
+    </defs>
+  </svg>
 
   <!-- Dedicated First-Time User Onboarding Screen -->
   <section id="onboarding-screen" class="onboarding-screen hidden">
     <div class="onboarding-container">
       <div class="onboarding-top">
         <div class="onboarding-brand">
-          <img src="icons/logo.png" alt="macromix logo" class="onboarding-brand-logo">
-          <h1 class="onboarding-brand-title">macro<span>mix</span></h1>
+          <img src="icons/logo-full.png" alt="macromix logo" class="onboarding-brand-logo-full">
         </div>
 
         <!-- 2-Line Intro Card -->
@@ -81,6 +90,10 @@
       <div class="header-actions">
         <!-- Segmented pill toggle: Friends (left) | @handle (right) -->
         <div class="header-tab-toggle" id="header-tab-toggle">
+          <div class="goo-layer" id="header-goo-layer" aria-hidden="true">
+            <div class="goo-pill-tail" id="goo-tail"></div>
+            <div class="goo-pill-lead" id="goo-lead"></div>
+          </div>
           <button type="button" class="tab-pill tab-pill-friends" id="tab-pill-friends" onclick="handleHeaderFriendsClick()" title="Friends">
             <span>✦ Friends</span>
           </button>
@@ -309,7 +322,10 @@
   <!-- Firebase Cloud Firestore Integration -->
   <script type="module" src="firebase-db.js?v=1.6"></script>
 
+  <!-- SimpleWebAuthn Browser SDK -->
+  <script src="simplewebauthn-browser.min.js"></script>
+
   <!-- Frontend Controller -->
-  <script src="app.js?v=6.0"></script>
+  <script src="app.js?v=7.0"></script>
 </body>
 </html>
