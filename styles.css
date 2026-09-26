@@ -1756,9 +1756,9 @@ body {
 
 .me-pill-icon {
   display: inline-block;
-  margin-right: 1px;
+  margin-right: 2px;
   line-height: 1;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   filter: grayscale(1) brightness(10); /* white silhouette on black bg */
   transition: filter 0.25s ease;
 }
@@ -2181,6 +2181,9 @@ body {
     padding: 3.5px 7px;
     font-size: 0.75rem;
   }
+  .me-pill-icon {
+    font-size: 0.88rem;
+  }
   #header-handle-text {
     max-width: 80px;
   }
@@ -2213,6 +2216,9 @@ body {
     font-size: 0.72rem;
     gap: 2px;
   }
+  .me-pill-icon {
+    font-size: 0.82rem;
+  }
   #header-handle-text {
     max-width: 72px;
   }
@@ -2242,6 +2248,9 @@ body {
     font-size: 0.68rem;
     gap: 2px;
   }
+  .me-pill-icon {
+    font-size: 0.76rem;
+  }
   #header-handle-text {
     max-width: 60px;
   }
@@ -2267,6 +2276,9 @@ body {
     padding: 2px 4px;
     font-size: 0.64rem;
     gap: 1.5px;
+  }
+  .me-pill-icon {
+    font-size: 0.70rem;
   }
   #header-handle-text {
     max-width: 50px;

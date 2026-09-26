@@ -1186,7 +1186,7 @@ function renderTimeline(logsToUse = null) {
   const validLogs = logs.filter(log => log.items && log.items.length > 0);
   if (!validLogs || validLogs.length === 0) {
     if (selectedDate === getTodayDateString()) {
-      container.innerHTML = `<div class="empty-state">${isVisitorMode ? `No meals logged yet today by @${viewedHandle || 'user'}.` : 'No meals logged yet today. Tap the mic or type above!'}</div>`;
+      container.innerHTML = `<div class="empty-state">${isVisitorMode ? `No meals logged yet today by ${viewedHandle || 'user'}.` : 'No meals logged yet today. Tap the mic or type above!'}</div>`;
     } else {
       container.innerHTML = `<div class="empty-state">No meals logged ${formatDateLabel(selectedDate)}.</div>`;
     }
@@ -2360,7 +2360,7 @@ function setVisitorMode(isVisitor, targetHandle = null) {
     currentLogs = [];
     filterAndRenderSelectedDate();
     if (visitorBanner) visitorBanner.classList.remove('hidden');
-    if (targetHandleEl) targetHandleEl.textContent = '@' + viewedHandle;
+    if (targetHandleEl) targetHandleEl.textContent = viewedHandle;
     if (visitorStreakPill) {
       visitorStreakPill.textContent = '';
       visitorStreakPill.classList.add('hidden');
@@ -2650,7 +2650,7 @@ async function handleFriendSearch(query) {
         <div class="friend-card-left" onclick="viewFriendProfile('${escapeHtml(u.handle)}')">
           <div class="friend-avatar-badge">${initial}</div>
           <div class="friend-card-meta">
-            <span class="friend-card-handle">@${escapeHtml(u.handle)}</span>
+            <span class="friend-card-handle">${escapeHtml(u.handle)}</span>
             <span class="friend-card-streak">🔥 ${streak}d streak</span>
           </div>
         </div>
@@ -2695,7 +2695,7 @@ async function renderFollowingList() {
         <div class="friend-card-left" onclick="viewFriendProfile('${escapeHtml(friendHandle)}')">
           <div class="friend-avatar-badge">${initial}</div>
           <div class="friend-card-meta">
-            <span class="friend-card-handle">@${escapeHtml(friendHandle)}</span>
+            <span class="friend-card-handle">${escapeHtml(friendHandle)}</span>
             <span class="friend-card-streak">🔥 ${streak}d streak</span>
           </div>
         </div>

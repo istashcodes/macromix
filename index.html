@@ -21,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=5.1">
+  <link rel="stylesheet" href="styles.css?v=5.2">
 </head>
 <body>
   <!-- Gooey SVG Filter for Header Tab Toggle (gooey-react technique) -->
@@ -107,10 +107,9 @@
 
     <!-- Public Profile Visitor Header Bar (Option 2) -->
     <div id="visitor-banner" class="visitor-banner hidden">
-      <button type="button" class="btn-visitor-back" id="btn-visitor-back" onclick="backToFriendsList()" title="Back to Friends list">← Friends</button>
+      <button type="button" class="btn-visitor-back" id="btn-visitor-back" onclick="backToFriendsList()" title="Back to Friends list">Friends</button>
       <div class="visitor-profile-pill">
-        <span class="visitor-live-dot"></span>
-        <span class="visitor-banner-text" id="visitor-banner-text"><strong id="visitor-target-handle">@friend</strong>'s macromix</span>
+        <span class="visitor-banner-text" id="visitor-banner-text"><strong id="visitor-target-handle">friend</strong>'s macromix</span>
         <span class="visitor-streak-pill hidden" id="visitor-streak-pill"></span>
       </div>
     </div>
@@ -326,6 +325,6 @@
   <script src="simplewebauthn-browser.min.js"></script>
 
   <!-- Frontend Controller -->
-  <script src="app.js?v=7.0"></script>
+  <script src="app.js?v=7.1"></script>
 </body>
 </html>
