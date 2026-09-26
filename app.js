@@ -1402,7 +1402,7 @@ async function handleTextLog(e) {
     isProcessingLog = false;
     if (manualTextInput) {
       manualTextInput.disabled = false;
-      manualTextInput.placeholder = 'Or type e.g. 100g dal with 200g rice and some veggies';
+      manualTextInput.placeholder = 'Or type e.g. 200g veg pulao and some veggies';
     }
     if (submitBtn) {
       submitBtn.innerHTML = 'Log ⚡';
@@ -1770,7 +1770,7 @@ async function processTranscript(transcript, audioBase64 = null) {
     if (manualTextInput) {
       manualTextInput.value = '';
       manualTextInput.disabled = false;
-      manualTextInput.placeholder = 'Or type e.g. 100g dal with 200g rice and some veggies';
+      manualTextInput.placeholder = 'Or type e.g. 200g veg pulao and some veggies';
     }
     updateLogButtonState();
     return true;
@@ -1788,7 +1788,7 @@ async function processTranscript(transcript, audioBase64 = null) {
     isProcessingLog = false;
     if (manualTextInput) {
       manualTextInput.disabled = false;
-      manualTextInput.placeholder = 'Or type e.g. 100g dal with 200g rice and some veggies';
+      manualTextInput.placeholder = 'Or type e.g. 200g veg pulao and some veggies';
     }
     if (submitBtn) {
       submitBtn.innerHTML = 'Log ⚡';
@@ -2237,25 +2237,52 @@ function updateHeaderFriendsBtn() {
   const pillMe = document.getElementById('tab-pill-me');
   if (!pillFriends || !pillMe) return;
 
-  if (currentTab === 'friends' && !isVisitorMode) {
-    // Friends tab active
+  const friendsIsActive = (currentTab === 'friends') || isVisitorMode;
+
+  if (friendsIsActive) {
     pillFriends.classList.add('tab-active');
     pillMe.classList.remove('tab-active');
+    startMePillBobInterval();
   } else {
-    // Me tab active (including visitor mode — still showing my handle)
     pillMe.classList.add('tab-active');
     pillFriends.classList.remove('tab-active');
+    stopMePillBobInterval();
   }
+}
+
+let _mePillBobTimer = null;
+
+function _triggerMePillBob() {
+  const icon = document.getElementById('me-pill-icon');
+  if (!icon) return;
+  icon.classList.remove('bob');
+  void icon.offsetWidth; // force reflow so animation replays
+  icon.classList.add('bob');
+  icon.addEventListener('animationend', () => icon.classList.remove('bob'), { once: true });
+}
+
+function startMePillBobInterval() {
+  if (_mePillBobTimer) return;
+  _triggerMePillBob();
+  _mePillBobTimer = setInterval(_triggerMePillBob, 5000);
+}
+
+function stopMePillBobInterval() {
+  if (_mePillBobTimer) {
+    clearInterval(_mePillBobTimer);
+    _mePillBobTimer = null;
+  }
+  const icon = document.getElementById('me-pill-icon');
+  if (icon) icon.classList.remove('bob');
 }
 
 function handleHeaderFriendsClick() {
   if (isVisitorMode) {
     backToFriendsList();
-  } else if (currentTab === 'friends') {
-    switchTab('me');
-  } else {
+  } else if (currentTab !== 'friends') {
     switchTab('friends');
   }
+  // Already on Friends tab — no-op
 }
 
 function setVisitorMode(isVisitor, targetHandle = null) {
@@ -2382,9 +2409,8 @@ async function switchTab(tabName, updateUrl = true) {
       return;
     }
 
+    if (viewMe) viewMe.classList.add('hidden');
     if (viewFriends) viewFriends.classList.remove('hidden');
-    animateTabSlide(viewMe, viewFriends, 'to-friends');
-    setTimeout(() => { if (viewMe) viewMe.classList.add('hidden'); }, 220);
     refreshFriendsView();
     updateHeaderFriendsBtn();
   } else {
@@ -2404,8 +2430,7 @@ async function switchTab(tabName, updateUrl = true) {
     }
 
     if (viewMe) viewMe.classList.remove('hidden');
-    animateTabSlide(viewFriends, viewMe, 'to-me');
-    setTimeout(() => { if (viewFriends) viewFriends.classList.add('hidden'); }, 220);
+    if (viewFriends) viewFriends.classList.add('hidden');
     updateHeaderFriendsBtn();
   }
 }
