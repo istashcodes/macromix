@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-gemini_coder.py - Autonomous AI Coder powered by Gemini 2.5 Flash
+gemini_coder.py - Autonomous AI Coder powered by Gemini 3.8 Flash
 Reads a GitHub Issue, understands the macromix codebase, generates exact code changes,
 and comments back with the results.
 """
@@ -13,6 +13,7 @@ import urllib.error
 import subprocess
 
 CORE_FILES = ["index.html", "styles.css", "app.js", "firebase-db.js"]
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
 
 def log(msg):
     print(f"[Gemini Coder] {msg}", flush=True)
@@ -49,7 +50,7 @@ def read_codebase_context():
     return context
 
 def call_gemini(api_key, issue_info, codebase):
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={api_key}"
 
     files_prompt = "\n\n".join([f"--- FILE: {path} ---\n{content}" for path, content in codebase.items()])
 
@@ -148,7 +149,7 @@ def main():
     codebase = read_codebase_context()
     log(f"Read {len(codebase)} files from codebase.")
 
-    log("Calling Gemini 2.5 Flash to plan and write code...")
+    log(f"Calling {GEMINI_MODEL} to plan and write code...")
     try:
         ai_response = call_gemini(api_key, issue, codebase)
     except Exception as e:
