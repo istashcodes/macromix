@@ -1,0 +1,62 @@
+name: Gemini Mobile Coder
+
+on:
+  issues:
+    types: [opened, edited]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  code:
+    # Trigger if authored by repo owner or if explicitly tagged/commanded
+    if: >
+      github.event.issue.user.login == 'istashcodes' ||
+      github.event.comment.user.login == 'istashcodes' ||
+      contains(github.event.issue.labels.*.name, 'gemini') ||
+      startsWith(github.event.comment.body, '/gemini')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Gemini Coder
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 .github/scripts/gemini_coder.py
+
+      - name: Commit and Push Changes
+        run: |
+          git config user.name "Gemini AI Coder"
+          git config user.email "gemini-bot@macromix.app"
+          if [ -f gemini_summary.txt ]; then
+            COMMIT_MSG=$(cat gemini_summary.txt)
+            rm -f gemini_summary.txt
+            git add -A
+            if git diff --cached --quiet; then
+              echo "No changes staged to commit."
+            else
+              git commit -m "$COMMIT_MSG"
+              git push origin main
+            fi
+          else
+            echo "No gemini_summary.txt generated."
+          fi

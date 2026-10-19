@@ -5,14 +5,21 @@ on:
     branches:
       - main
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Gemini Mobile Coder"]
+    types: [completed]
+    branches: [main]
 
 jobs:
   deploy:
     name: Build & Deploy to Firebase Hosting
     runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
