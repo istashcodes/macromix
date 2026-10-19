@@ -1,4 +1,4 @@
-// firebase-db.js - Cloud Firestore Client for Macromix
+// firebase-db.js - Cloud Firestore & Auth Client for Macromix
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js';
 import {
   getFirestore,
@@ -10,10 +10,20 @@ import {
   getDocs,
   collection,
   query,
+  where,
   orderBy,
   onSnapshot,
   serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  onAuthStateChanged,
+  signOut
+} from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js';
 
 const firebaseConfig = {
   projectId: "macro-streak-tracker",
@@ -25,21 +35,37 @@ const firebaseConfig = {
   measurementId: "G-NX030X8N6D"
 };
 
+let app = null;
 let db = null;
+let auth = null;
 let isInitialized = false;
 
-export function initFirebaseDB() {
-  if (isInitialized && db) return db;
+export function initFirebase() {
+  if (isInitialized && db && auth) return { app, db, auth };
   try {
-    const app = initializeApp(firebaseConfig);
+    app = initializeApp(firebaseConfig);
     db = getFirestore(app);
+    auth = getAuth(app);
     isInitialized = true;
-    console.log('[Macromix Firebase] Firestore initialized successfully.');
-    return db;
+    if (typeof window !== 'undefined') {
+      window.__macromixAuth = auth;
+    }
+    console.log('[Macromix Firebase] Firestore & Auth initialized successfully.');
+    return { app, db, auth };
   } catch (err) {
-    console.error('[Macromix Firebase] Failed to initialize Firestore:', err);
-    return null;
+    console.error('[Macromix Firebase] Failed to initialize Firebase:', err);
+    return { app: null, db: null, auth: null };
   }
+}
+
+export function initFirebaseDB() {
+  const { db } = initFirebase();
+  return db;
+}
+
+export function getFirebaseAuth() {
+  const { auth } = initFirebase();
+  return auth;
 }
 
 export function getOrCreateDeviceId() {
@@ -93,7 +119,15 @@ export async function checkHandleAvailable(handle) {
  * @param {object} dailyTargets
  * @returns {Promise<{success: boolean, error?: string, profile?: object, offline?: boolean}>}
  */
-export async function createHandleProfile(handle, authMethod = 'passkey', dailyTargets = null) {
+/**
+ * Atomically create or update a user profile with claimed handle in Firestore
+ * @param {string} handle
+ * @param {string} authMethod
+ * @param {object} dailyTargets
+ * @param {object} googleUser (optional Google Auth user profile)
+ * @returns {Promise<{success: boolean, error?: string, profile?: object, offline?: boolean, isLogin?: boolean}>}
+ */
+export async function createHandleProfile(handle, authMethod = 'passkey', dailyTargets = null, googleUser = null) {
   const database = initFirebaseDB();
   const clean = (handle || '').trim().toLowerCase().replace(/^@+/, '');
   const deviceId = getOrCreateDeviceId();
@@ -129,11 +163,21 @@ export async function createHandleProfile(handle, authMethod = 'passkey', dailyT
         updates.dailyTargets = dailyTargets;
         existingData.dailyTargets = dailyTargets;
       }
+      if (googleUser) {
+        updates.googleUid = googleUser.uid;
+        updates.email = googleUser.email ? googleUser.email.toLowerCase() : null;
+        if (googleUser.displayName) updates.googleDisplayName = googleUser.displayName;
+        if (googleUser.photoURL) updates.googlePhotoURL = googleUser.photoURL;
+        if (existingData.authMethod === 'passkey') {
+          updates.authMethod = 'both';
+          existingData.authMethod = 'both';
+        }
+      }
       // Seamless Login: Update deviceId and lastActive to connect this session
       await updateDoc(docRef, updates);
-      localStorage.setItem('macronomics_user_handle', clean);
+      localStorage.setItem('macromix_user_handle', clean);
       console.log(`[Macromix Firebase] Seamless login for @${clean} from device ${deviceId}.`);
-      return { success: true, profile: existingData, isLogin: true };
+      return { success: true, profile: { ...existingData, ...updates }, isLogin: true };
     }
 
     const newProfile = {
@@ -154,6 +198,13 @@ export async function createHandleProfile(handle, authMethod = 'passkey', dailyT
       lastActive: serverTimestamp()
     };
 
+    if (googleUser) {
+      newProfile.googleUid = googleUser.uid;
+      newProfile.email = googleUser.email ? googleUser.email.toLowerCase() : null;
+      newProfile.googleDisplayName = googleUser.displayName || null;
+      newProfile.googlePhotoURL = googleUser.photoURL || null;
+    }
+
     await setDoc(docRef, newProfile);
     localStorage.setItem('macromix_user_handle', clean);
     console.log(`[Macromix Firebase] Handle @${clean} registered successfully in Firestore.`);
@@ -163,6 +214,160 @@ export async function createHandleProfile(handle, authMethod = 'passkey', dailyT
     // Graceful fallback to client storage
     localStorage.setItem('macromix_user_handle', clean);
     return { success: true, profile: { handle: clean, streak: 0, deviceId }, offline: true };
+  }
+}
+
+/**
+ * Sign in using Google OIDC via Firebase Auth Popup
+ */
+export async function signInWithGoogle() {
+  const { auth } = initFirebase();
+  if (!auth) throw new Error('Firebase Auth is not available.');
+
+  const provider = new GoogleAuthProvider();
+  provider.addScope('email');
+  provider.addScope('profile');
+  provider.setCustomParameters({ prompt: 'select_account' });
+
+  try {
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+    return {
+      success: true,
+      user: {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL
+      }
+    };
+  } catch (err) {
+    console.warn('[Macromix Firebase] Google Sign-In popup error:', err);
+    if (err.code === 'auth/popup-blocked') {
+      try {
+        await signInWithRedirect(auth, provider);
+        return { success: true, redirecting: true };
+      } catch (redirErr) {
+        return { success: false, error: redirErr.message };
+      }
+    }
+    return { success: false, error: err.message, code: err.code };
+  }
+}
+
+/**
+ * Check if the page returned from a Google sign-in redirect
+ */
+export async function checkRedirectAuthResult() {
+  const { auth } = initFirebase();
+  if (!auth) return null;
+  try {
+    const result = await getRedirectResult(auth);
+    if (result && result.user) {
+      return {
+        success: true,
+        user: {
+          uid: result.user.uid,
+          email: result.user.email,
+          displayName: result.user.displayName,
+          photoURL: result.user.photoURL
+        }
+      };
+    }
+    return null;
+  } catch (err) {
+    console.warn('[Macromix Firebase] Redirect auth result error:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Query Firestore to find an existing user profile by Google UID or email
+ */
+export async function findUserByGoogleAuth(uid, email) {
+  const database = initFirebaseDB();
+  if (!database) return null;
+
+  try {
+    const usersColl = collection(database, 'users');
+    if (uid) {
+      const qUid = query(usersColl, where('googleUid', '==', uid));
+      const snapUid = await getDocs(qUid);
+      if (!snapUid.empty) {
+        return snapUid.docs[0].data();
+      }
+    }
+    if (email) {
+      const qEmail = query(usersColl, where('email', '==', email.toLowerCase()));
+      const snapEmail = await getDocs(qEmail);
+      if (!snapEmail.empty) {
+        return snapEmail.docs[0].data();
+      }
+    }
+    return null;
+  } catch (err) {
+    console.warn('[Macromix Firebase] Error finding user by Google Auth:', err);
+    return null;
+  }
+}
+
+/**
+ * Link a passkey credential to a user's Firestore profile
+ */
+export async function savePasskeyCredentialToUser(handle, credentialData) {
+  const database = initFirebaseDB();
+  if (!database || !handle) return false;
+  const clean = handle.trim().toLowerCase().replace(/^@+/, '');
+
+  try {
+    const docRef = doc(database, 'users', clean);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) return false;
+
+    const data = snap.data();
+    const existingCreds = data.credentials || [];
+    existingCreds.push(credentialData);
+
+    await updateDoc(docRef, {
+      credentials: existingCreds,
+      authMethod: data.authMethod === 'google' ? 'both' : (data.authMethod || 'passkey'),
+      lastActive: serverTimestamp()
+    });
+    console.log(`[Macromix Firebase] Saved new passkey credential for @${clean}.`);
+    return true;
+  } catch (err) {
+    console.error('[Macromix Firebase] Failed to save passkey credential:', err);
+    return false;
+  }
+}
+
+/**
+ * Link Google identity to an existing handle
+ */
+export async function linkGoogleToHandle(handle, googleUser) {
+  const database = initFirebaseDB();
+  if (!database || !handle || !googleUser) return false;
+  const clean = handle.trim().toLowerCase().replace(/^@+/, '');
+
+  try {
+    const docRef = doc(database, 'users', clean);
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) return false;
+
+    const data = snap.data();
+    await updateDoc(docRef, {
+      googleUid: googleUser.uid,
+      email: googleUser.email ? googleUser.email.toLowerCase() : null,
+      googleDisplayName: googleUser.displayName || null,
+      googlePhotoURL: googleUser.photoURL || null,
+      authMethod: data.authMethod === 'passkey' ? 'both' : 'google',
+      lastActive: serverTimestamp()
+    });
+    console.log(`[Macromix Firebase] Linked Google account ${googleUser.email} to @${clean}.`);
+    return true;
+  } catch (err) {
+    console.error('[Macromix Firebase] Failed to link Google account to handle:', err);
+    return false;
   }
 }
 
@@ -570,12 +775,19 @@ export function subscribeMealsFromFirestore(handle, callback) {
 }
 
 // Auto-initialize on load
-initFirebaseDB();
+initFirebase();
 
 // Expose globally on window for easy access from app.js and browser console
 if (typeof window !== 'undefined') {
   window.MacromixFirebase = {
+    initFirebase,
     initFirebaseDB,
+    getFirebaseAuth,
+    signInWithGoogle,
+    checkRedirectAuthResult,
+    findUserByGoogleAuth,
+    savePasskeyCredentialToUser,
+    linkGoogleToHandle,
     getOrCreateDeviceId,
     checkHandleAvailable,
     createHandleProfile,

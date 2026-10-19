@@ -5,9 +5,20 @@
 
 // Application State
 let currentEngine = 'gemini'; // 'gemini' primary nutrition engine
-const GLOBAL_GEMINI_API_KEY = "";
+function getEffectiveGeminiKey() {
+  if (typeof window !== 'undefined' && window.__ENV && window.__ENV.GEMINI_API_KEY) {
+    return window.__ENV.GEMINI_API_KEY.trim();
+  }
+  const localKey = typeof localStorage !== 'undefined' ? localStorage.getItem('macronomics_gemini_key') : null;
+  if (localKey && localKey.trim()) {
+    return localKey.trim();
+  }
+  return "";
+}
+
+const GLOBAL_GEMINI_API_KEY = getEffectiveGeminiKey();
 let userTargets = { calories: 2000, protein_g: 150, carbs_g: 200, fat_g: 65, fiber_g: 30 };
-let userGeminiInfo = { free_remaining: 9999, has_custom_key: true, can_use_gemini: true, gemini_api_key: GLOBAL_GEMINI_API_KEY, masked_key: "...7SKA" };
+let userGeminiInfo = { free_remaining: 0, has_custom_key: false, can_use_gemini: false, gemini_api_key: "", masked_key: "Not set" };
 let currentLogs = [];
 let currentUserHandle = null;
 let currentTab = 'me';
@@ -488,22 +499,60 @@ async function loadGeminiStatus() {
     } catch (e) {}
   }
 
-  userGeminiInfo.gemini_api_key = GLOBAL_GEMINI_API_KEY;
-  userGeminiInfo.has_custom_key = true;
-  userGeminiInfo.can_use_gemini = true;
-  userGeminiInfo.free_remaining = 9999;
-  userGeminiInfo.masked_key = "...7SKA";
-  localStorage.setItem('macronomics_gemini_key', GLOBAL_GEMINI_API_KEY);
+  const effectiveKey = getEffectiveGeminiKey();
+  if (effectiveKey) {
+    userGeminiInfo.gemini_api_key = effectiveKey;
+    userGeminiInfo.has_custom_key = true;
+    userGeminiInfo.can_use_gemini = true;
+    userGeminiInfo.free_remaining = 9999;
+    userGeminiInfo.masked_key = effectiveKey.length > 8
+      ? `${effectiveKey.slice(0, 4)}...${effectiveKey.slice(-4)}`
+      : '...configured';
+    AppLogger.log('UI', 'Gemini AI configured with key', { masked_key: userGeminiInfo.masked_key });
+  } else {
+    userGeminiInfo.gemini_api_key = "";
+    userGeminiInfo.has_custom_key = false;
+    userGeminiInfo.can_use_gemini = false;
+    userGeminiInfo.free_remaining = 0;
+    userGeminiInfo.masked_key = "Not set";
+    AppLogger.log('UI', 'No Gemini AI key configured');
+  }
   updateGeminiBadge();
-  AppLogger.log('UI', 'Gemini AI configured with global unlimited key', { has_custom_key: true });
 }
 
 function updateGeminiBadge() {
   if (geminiBadge) {
-    geminiBadge.textContent = "Gemini: Unlimited ⚡";
-    geminiBadge.style.background = "var(--fat-color)";
-    geminiBadge.style.color = "#1E293B";
+    if (userGeminiInfo && userGeminiInfo.can_use_gemini) {
+      geminiBadge.textContent = "Gemini: Active ⚡";
+      geminiBadge.style.background = "var(--fat-color)";
+      geminiBadge.style.color = "#1E293B";
+    } else {
+      geminiBadge.textContent = "Gemini: Setup Key 🔑";
+      geminiBadge.style.background = "#F1F5F9";
+      geminiBadge.style.color = "#64748B";
+    }
   }
+}
+
+function saveGeminiApiKeyFromSettings() {
+  const input = document.getElementById('settings-gemini-key-input');
+  const status = document.getElementById('settings-gemini-key-status');
+  if (!input) return;
+  const key = input.value.trim();
+  if (!key) {
+    localStorage.removeItem('macronomics_gemini_key');
+    if (status) {
+      status.style.color = '#DC2626';
+      status.textContent = 'Cleared Gemini key';
+    }
+  } else {
+    localStorage.setItem('macronomics_gemini_key', key);
+    if (status) {
+      status.style.color = '#16A34A';
+      status.textContent = '✓ Saved Gemini key!';
+    }
+  }
+  loadGeminiStatus();
 }
 
 // --- Daily Targets & Circles Rendering ---
@@ -1453,7 +1502,10 @@ Output strictly a JSON object with this structure:
 }`;
 
 async function callClientGeminiDirect(transcript, audioBase64 = null) {
-  const apiKey = GLOBAL_GEMINI_API_KEY;
+  const apiKey = getEffectiveGeminiKey();
+  if (!apiKey) {
+    throw new Error("Gemini API key is not configured. Tap your streak/handle in the header to open Settings and save your Gemini API key.");
+  }
 
   const modelsToTry = [
     'gemini-3.6-flash',
@@ -2103,6 +2155,24 @@ function openSettingsModal() {
     if (fibEl && userTargets.fiber_g !== undefined) fibEl.value = userTargets.fiber_g;
     if (fatEl && userTargets.fat_g) fatEl.value = userTargets.fat_g;
   }
+
+  const keyInput = document.getElementById('settings-gemini-key-input');
+  const keyStatus = document.getElementById('settings-gemini-key-status');
+  const currentKey = getEffectiveGeminiKey();
+  if (keyInput) {
+    keyInput.value = currentKey || '';
+  }
+  if (keyStatus) {
+    if (currentKey) {
+      const masked = currentKey.length > 8 ? `${currentKey.slice(0, 4)}...${currentKey.slice(-4)}` : '...active';
+      keyStatus.style.color = '#16A34A';
+      keyStatus.textContent = `✓ Active Key: ${masked}`;
+    } else {
+      keyStatus.style.color = '#B45309';
+      keyStatus.textContent = '⚠️ No Gemini key configured. Voice & text AI logging requires an API key.';
+    }
+  }
+
   const modal = document.getElementById('settings-modal');
   if (modal) modal.classList.remove('hidden');
 }

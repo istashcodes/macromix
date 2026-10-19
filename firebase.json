@@ -1,4 +1,18 @@
 {
+  "auth": {
+    "providers": {
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "macromix",
+        "supportEmail": "satish.k3g@gmail.com",
+        "authorizedRedirectUris": [
+          "https://macro-streak-tracker.firebaseapp.com/__/auth/handler",
+          "https://macromix.web.app/__/auth/handler",
+          "http://localhost:5000",
+          "http://localhost:8000"
+        ]
+      }
+    }
+  },
   "database": {
     "rules": "database.rules.json"
   },

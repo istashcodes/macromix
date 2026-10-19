@@ -539,12 +539,13 @@ def get_user_gemini_info(user_id: int = 1) -> Dict[str, Any]:
     row = cursor.fetchone()
     conn.close()
     count = (row["gemini_usage_count"] or 0) if row else 0
+    has_key = bool(PRECONFIGURED_GEMINI_KEY)
     return {
         "gemini_usage_count": count,
-        "free_remaining": 9999,
-        "has_custom_key": True,
-        "can_use_gemini": True,
-        "masked_key": f"...{PRECONFIGURED_GEMINI_KEY[-4:]}",
+        "free_remaining": 9999 if has_key else 0,
+        "has_custom_key": has_key,
+        "can_use_gemini": has_key,
+        "masked_key": f"...{PRECONFIGURED_GEMINI_KEY[-4:]}" if has_key else "Not set",
         "gemini_api_key": PRECONFIGURED_GEMINI_KEY
     }
 

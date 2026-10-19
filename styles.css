@@ -1666,6 +1666,39 @@ body {
   color: #D63031;
 }
 
+.btn-onboard-google {
+  background: #FFF;
+  color: #111;
+  border: 3px solid #111;
+  border-radius: 14px;
+  padding: 13px 15px;
+  font-size: 0.98rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  box-shadow: 4px 4px 0 #000;
+  transition: transform 0.05s ease, box-shadow 0.05s ease, background 0.1s ease;
+  width: 100%;
+}
+
+.btn-onboard-google:hover {
+  background: #F8F9FA;
+}
+
+.btn-onboard-google:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 #000;
+}
+
+.btn-onboard-google .google-icon {
+  flex-shrink: 0;
+  display: block;
+}
+
 .btn-onboard-passkey {
   background: #111;
   color: var(--cal-color);
@@ -1702,6 +1735,97 @@ body {
   font-size: 0.75rem;
   font-weight: 800;
   color: #888;
+  letter-spacing: 0.05em;
+  margin: 4px 0;
+}
+
+/* Account & Security section in Settings Modal */
+.settings-section-divider {
+  border: none;
+  border-top: 2px dashed #000;
+  margin: 18px 0 14px;
+}
+
+.settings-section-title {
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.account-auth-card {
+  background: #FAF7F0;
+  border: 2px solid #000;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.account-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 700;
+  gap: 8px;
+}
+
+.account-info-row span:last-child {
+  font-weight: 800;
+  color: #111;
+  word-break: break-all;
+}
+
+.btn-link-auth {
+  background: var(--cal-color);
+  color: #000;
+  border: 2px solid #000;
+  box-shadow: 2px 2px 0 #000;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: transform 0.05s ease;
+  width: 100%;
+}
+
+.btn-link-auth:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #000;
+}
+
+.btn-logout {
+  background: #FFF;
+  color: #D63031;
+  border: 2px solid #D63031;
+  box-shadow: 2px 2px 0 #D63031;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+  transition: transform 0.05s ease;
+  width: 100%;
+}
+
+.btn-logout:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 #D63031;
 }
 
 .btn-onboard-phone {
