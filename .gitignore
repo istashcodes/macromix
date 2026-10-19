@@ -39,5 +39,10 @@ env.js
 # Node
 node_modules/
 
+# Agent IDE metadata
+.agents/
+.claude/
+skills-lock.json
+
 # Mac OS
 .DS_Store

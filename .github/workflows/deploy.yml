@@ -1,0 +1,32 @@
+name: Deploy macromix to Firebase Hosting
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build & Deploy to Firebase Hosting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Inject Gemini API Key into env.js
+        run: |
+          cat << 'EOF' > env.js
+          window.__ENV = {
+            GEMINI_API_KEY: "${{ secrets.GEMINI_API_KEY }}"
+          };
+          EOF
+
+      - name: Deploy to Firebase Hosting
+        run: |
+          npx --yes firebase-tools@latest deploy --only hosting --project macro-streak-tracker --token "${{ secrets.FIREBASE_TOKEN }}"
