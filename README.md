@@ -18,7 +18,6 @@
 * **🛡️ Passwordless Biometric Passkeys & Google OIDC:** Sign in with Face ID, Touch ID, or Google 1-Tap authentication. No passwords to remember or leak.
 * **🔥 Daily Streak & Friends System:** Maintain daily consistency streaks (🔥), discover friends by handle, and view their daily macromix circles in real time.
 * **📱 Full Offline-Capable PWA:** Install directly to your iOS or Android home screen with instant caching, standalone window frame, and local-first persistence.
-* **🤖 Autonomous Mobile Coding Bot:** Modify the app directly from your phone! Create a GitHub Issue, and a built-in **Gemini 3.8 Flash** GitHub Action writes the code, validates syntax, commits, and deploys to production automatically.
 
 ---
 
@@ -32,13 +31,6 @@ flowchart TD
     PWA -->|Sync Daily Logs & Streaks| Firestore[(Cloud Firestore)]
     PWA -->|Biometrics / Google OIDC| Auth[Firebase Auth & WebAuthn]
     Firestore <-->|Realtime Listener| Friends[Friend Social Circles]
-    
-    subgraph CI/CD & Autonomous Agent
-        Issue[GitHub Issue from Phone] --> Coder[Gemini 3.8 Flash Coder Bot]
-        Coder -->|Commit & Push| Git[GitHub main Branch]
-        Git --> Actions[GitHub Actions CI/CD]
-        Actions -->|Deploy| Live[macromix.web.app]
-    end
 ```
 
 ---
@@ -52,7 +44,6 @@ flowchart TD
 | **Database** | Google Cloud Firestore (Real-time snapshots, multi-device sync) |
 | **Authentication** | SimpleWebAuthn (Passkeys / FIDO2) + Firebase Auth (Google OIDC) |
 | **Hosting** | Google Firebase Hosting CDN |
-| **CI/CD** | GitHub Actions with automated secrets injection & deployment |
 
 ---
 
@@ -98,40 +89,21 @@ Open `http://localhost:8000` in your browser.
 
 ---
 
-## 🚢 Automated CI/CD & Deployments
+## 🚢 Deployment to Firebase Hosting
 
-This repository uses **GitHub Actions** for zero-maintenance cloud deployments to Firebase Hosting.
+`macromix` is served as a static progressive web app on Firebase Hosting.
 
-### Deployment Workflow (`.github/workflows/deploy.yml`)
-Whenever commits are pushed or merged into `main`:
-1. The GitHub Actions runner checks out the repository.
-2. Injects the `GEMINI_API_KEY` GitHub secret into a temporary `env.js`.
-3. Deploys the static assets directly to **[`macromix.web.app`](https://macromix.web.app)** using `FIREBASE_TOKEN`.
+### Manual Deploy (Firebase CLI)
+```bash
+firebase deploy --only hosting
+```
 
-### Required GitHub Repository Secrets
-If you are deploying your own fork, add these two secrets under **Settings > Secrets and variables > Actions**:
+### Continuous Deployment via GitHub Actions
+If you fork or manage this repository with GitHub Actions, pushing commits to `main` automatically deploys the site to Firebase Hosting using [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
 
-| Secret Name | Description |
-|---|---|
-| `GEMINI_API_KEY` | Your Google AI Studio Gemini API key. |
-| `FIREBASE_TOKEN` | CI deployment token generated via `npx firebase-tools login:ci`. |
-
----
-
-## 🤖 Developing from Mobile (Gemini Issue Bot)
-
-You can build and deploy features to `macromix` directly from your smartphone:
-
-1. Open a new **GitHub Issue** on this repo via the GitHub mobile app or mobile browser.
-2. Type your requested feature or fix in plain English:
-   * *Example Title:* `Add a water intake tracker ring to the home dashboard`
-   * *Example Description:* `Include a 2.5L daily target with quick +250ml buttons styled in neo-brutalist theme.`
-3. **Gemini 3.8 Flash** automatically:
-   * Inspects all project files (`index.html`, `styles.css`, `app.js`, etc.).
-   * Generates the code modifications and validates JavaScript syntax.
-   * Posts a summary comment on the issue.
-   * Commits the changes to `main`.
-   * Triggers CI/CD to deploy live to `macromix.web.app` in under 45 seconds.
+Configure these repository secrets under **Settings > Secrets and variables > Actions**:
+* `GEMINI_API_KEY`: Your Gemini API key (injected into `env.js` during deployment).
+* `FIREBASE_TOKEN`: CI token generated via `npx firebase-tools login:ci`.
 
 ---
 
@@ -149,12 +121,8 @@ macromix/
 ├── env.example.js               # Template for local environment config
 ├── firebase.json                # Firebase Hosting, Firestore, and Auth rules
 ├── firestore.rules              # Granular Cloud Firestore security rules
-└── .github/
-    ├── scripts/
-    │   └── gemini_coder.py      # Autonomous Gemini 3.8 Flash coder engine
-    └── workflows/
-        ├── deploy.yml           # Automated deployment pipeline to Firebase
-        └── gemini_coder.yml     # GitHub Issues autonomous bot trigger
+└── .github/workflows/
+    └── deploy.yml               # Automated deployment to Firebase Hosting
 ```
 
 ---
