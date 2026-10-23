@@ -122,7 +122,11 @@ class CDPClient {
 }
 
 async function run() {
-  const server = await startServer();
+  const targetUrl = process.env.TARGET_URL || `http://127.0.0.1:${PORT}/`;
+  let server = null;
+  if (!process.env.TARGET_URL) {
+    server = await startServer();
+  }
   const { chromeProc, tmpDir } = launchChrome();
 
   try {
@@ -156,8 +160,8 @@ async function run() {
       mobile: true
     });
 
-    console.log('[Page] Navigating to http://127.0.0.1:' + PORT + '...');
-    await client.send('Page.navigate', { url: `http://127.0.0.1:${PORT}/` });
+    console.log('[Page] Navigating to ' + targetUrl + '...');
+    await client.send('Page.navigate', { url: targetUrl });
     await new Promise(r => setTimeout(r, 1500));
 
     // Preset user session to skip onboarding and set initial targets
@@ -169,7 +173,7 @@ async function run() {
     `);
 
     // Reload page with active session
-    await client.send('Page.navigate', { url: `http://127.0.0.1:${PORT}/` });
+    await client.send('Page.navigate', { url: targetUrl });
     await new Promise(r => setTimeout(r, 2000));
 
     console.log('[Action] Entering meal: "2 boiled eggs, sourdough toast, and black coffee"...');
@@ -226,7 +230,7 @@ async function run() {
     client.close();
   } finally {
     chromeProc.kill('SIGTERM');
-    server.close();
+    if (server) server.close();
     try {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     } catch (e) {}
