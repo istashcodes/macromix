@@ -26,25 +26,30 @@ def run_test(name, fn):
         return False
 
 def check_gemini_direct_inference(api_key: str):
-    """Test actual Gemini meal analysis via Gemini API"""
+    """Test actual Gemini meal analysis via Gemini API matching app.js configuration"""
     if not api_key:
         raise ValueError("No Gemini API key available to verify meal analysis.")
 
     prompt_payload = {
         "contents": [{
-            "parts": [{"text": "2 boiled eggs and black coffee"}]
+            "parts": [{"text": "chicken biryani with 300g rice and 100g chicken and 1 glass lassi"}]
         }],
         "systemInstruction": {
             "parts": [{
-                "text": 'Analyze meal and respond with JSON: {"is_food": true, "items": [{"food_name": "egg", "calories": 140, "protein_g": 12, "carbs_g": 1, "fat_g": 10, "fiber_g": 0}]}'
+                "text": """You are a high-precision nutritional voice assistant.
+CRITICAL INSTRUCTION: Analyze the audio or text carefully.
+1. If the input is conversational speech, questions, commands, background chatter, or does NOT describe actual food or drink consumed, set is_food: false.
+2. If and only if the input mentions edible food or beverages consumed, set is_food: true, transcribe what was eaten, extract each food item entity, and compute precise macronutrients.
+Output strictly JSON object."""
             }]
         },
         "generationConfig": {
-            "responseMimeType": "application/json"
+            "responseMimeType": "application/json",
+            "thinkingConfig": {"thinkingBudget": 0}
         }
     }
 
-    models = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-3.8-flash"]
+    models = ["gemini-flash-latest", "gemini-3.8-flash"]
     last_err = None
     success = False
 
@@ -56,7 +61,7 @@ def check_gemini_direct_inference(api_key: str):
             headers={"Content-Type": "application/json"}
         )
         try:
-            with urllib.request.urlopen(req, timeout=10, context=SSL_CTX) as resp:
+            with urllib.request.urlopen(req, timeout=15, context=SSL_CTX) as resp:
                 if resp.status == 200:
                     body = json.loads(resp.read().decode("utf-8"))
                     text = body["candidates"][0]["content"]["parts"][0]["text"]
@@ -133,6 +138,10 @@ def verify_deployment(base_url: str = DEFAULT_URL, local_key: str = None) -> boo
                 raise AssertionError("Direct Gemini API fallback missing from app.js")
             if "gemini-flash-latest" not in js:
                 raise AssertionError("gemini-flash-latest missing from app.js")
+            if "thinkingBudget" not in js:
+                raise AssertionError("thinkingBudget configuration missing from app.js")
+            if "25000" not in js and "20000" not in js:
+                raise AssertionError("Client-side timeout should be at least 20000ms in app.js")
     results.append(run_test("Asset Check: app.js (Direct Gemini API & valid models)", test_app))
 
     # 5. Check sw.js

@@ -1516,7 +1516,6 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
 
   const modelsToTry = [
     'gemini-flash-latest',
-    'gemini-2.5-flash',
     'gemini-3.8-flash'
   ];
 
@@ -1539,7 +1538,8 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
     contents: [{ parts: parts }],
     systemInstruction: { parts: [{ text: GEMINI_SYSTEM_PROMPT }] },
     generationConfig: {
-      responseMimeType: "application/json"
+      responseMimeType: "application/json",
+      thinkingConfig: { thinkingBudget: 0 }
     }
   };
 
@@ -1552,7 +1552,9 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
     try {
       if (typeof AbortController !== 'undefined') {
         controller = new AbortController();
-        timeoutId = setTimeout(() => controller.abort(), 9000);
+        timeoutId = setTimeout(() => {
+          controller.abort(new Error("Meal analysis timed out after 25s. Please check your connection and try again."));
+        }, 25000);
       }
 
       let res = null;
@@ -1612,7 +1614,13 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
       }
     } catch (e) {
       if (timeoutId) clearTimeout(timeoutId);
-      lastErr = e;
+      let errMsg = e.message || '';
+      if (!errMsg || errMsg.includes('signal is aborted') || errMsg.includes('aborted without reason')) {
+        errMsg = (controller && controller.signal && controller.signal.reason && controller.signal.reason.message)
+          ? controller.signal.reason.message
+          : "Meal analysis timed out. Please check your connection and try again.";
+      }
+      lastErr = new Error(errMsg);
     }
   }
 
