@@ -66,10 +66,10 @@ def process_gemini_multimodal(
 
     if api_key and api_key != "PRECONFIGURED_FREE_TIER_KEY" and not api_key.startswith("mock_"):
         models_to_try = [
-            "gemini-3.6-flash",
-            "gemini-3.1-flash-lite",
             "gemini-flash-latest",
-            "gemini-flash-lite-latest"
+            "gemini-3.8-flash",
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
         ]
         
         parts = []

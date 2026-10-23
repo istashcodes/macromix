@@ -13,12 +13,12 @@ permissions:
 
 jobs:
   code:
-    # Trigger if authored by repo owner or if explicitly tagged/commanded
+    # Trigger strictly if authored by repository owner (istashcodes)
     if: >
-      github.event.issue.user.login == 'istashcodes' ||
-      github.event.comment.user.login == 'istashcodes' ||
-      contains(github.event.issue.labels.*.name, 'gemini') ||
-      startsWith(github.event.comment.body, '/gemini')
+      github.actor == 'istashcodes' && (
+        (github.event.issue && github.event.issue.user.login == 'istashcodes' && contains(github.event.issue.labels.*.name, 'gemini')) ||
+        (github.event.comment && github.event.comment.user.login == 'istashcodes' && startsWith(github.event.comment.body, '/gemini'))
+      )
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -40,6 +40,7 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_MODEL: gemini-3.8-flash
         run: |
           python3 .github/scripts/gemini_coder.py
 

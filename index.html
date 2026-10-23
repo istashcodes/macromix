@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>macromix</title>
   
   <meta name="description" content="Voice-first macro and calorie tracker powered by USDA SR Legacy deterministic grounding and Gemini Multimodal AI.">
@@ -11,6 +11,16 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="macromix">
+
+  <!-- Open Graph & Social Cards (L8) -->
+  <meta property="og:title" content="macromix - Zero-Hallucination Macro Tracker">
+  <meta property="og:description" content="Voice-driven macronutrient tracking with circles-based Neobrutalism design and real accountability.">
+  <meta property="og:image" content="icons/icon-512.png">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="macromix">
+  <meta name="twitter:description" content="Voice-driven macronutrient tracking with circles-based Neobrutalism design and real accountability.">
+  <meta name="twitter:image" content="icons/icon-512.png">
   
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
@@ -21,7 +31,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=5.3">
+  <link rel="stylesheet" href="styles.css?v=6.0">
 </head>
 <body>
   <!-- Gooey SVG Filter for Header Tab Toggle (gooey-react technique) -->
@@ -36,7 +46,7 @@
   </svg>
 
   <!-- Dedicated First-Time User Onboarding Screen -->
-  <section id="onboarding-screen" class="onboarding-screen hidden">
+  <section id="onboarding-screen" class="onboarding-screen hidden" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
     <div class="onboarding-container">
       <div class="onboarding-top">
         <div class="onboarding-brand">
@@ -45,7 +55,7 @@
 
         <!-- 2-Line Intro Card -->
         <div class="onboarding-intro-card">
-          <div class="intro-headline">Track macros everyday. Get ready to flaunt! 🔥</div>
+          <div class="intro-headline" id="onboarding-title">Track macros everyday. Get ready to flaunt! 🔥</div>
           <div class="intro-subtext">
             <div>• <span class="highlight-1">Track macros effortlessly</span> with voice and smart AI.</div>
             <div>• <span class="highlight-2">Share streaks &amp; meals</span> with friends for real accountability.</div>
@@ -55,7 +65,7 @@
         <!-- Dual Auth: Google OIDC or Passkey -->
         <div class="onboarding-form-card">
           <!-- 1-Tap Google OIDC Button -->
-          <button type="button" id="btn-onboard-google" class="btn-onboard-google" onclick="handleGoogleAuth()">
+          <button type="button" id="btn-onboard-google" class="btn-onboard-google">
             <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -79,7 +89,7 @@
             💡 When asked where to save your passkey, choose <strong>Google Password Manager</strong> to access it on all your devices.
           </div>
 
-          <button type="button" id="btn-onboard-passkey" class="btn-onboard-passkey" onclick="handlePasskeyAuth()">
+          <button type="button" id="btn-onboard-passkey" class="btn-onboard-passkey">
             <span class="btn-passkey-icon">🛡️</span>
             <span>Continue with Passkey</span>
           </button>
@@ -91,7 +101,7 @@
   <div class="app-container">
     <!-- Header -->
     <header class="app-header">
-      <div class="brand-wrapper" onclick="switchTab('me')" style="cursor: pointer;" title="Back to My Tracker">
+      <div class="brand-wrapper" id="brand-wrapper" role="button" tabindex="0" style="cursor: pointer;" title="Back to My Tracker">
         <img src="icons/logo-full.png" alt="macromix logo" class="brand-logo-img">
       </div>
       <div class="header-actions">
@@ -101,23 +111,42 @@
             <div class="goo-pill-tail" id="goo-tail"></div>
             <div class="goo-pill-lead" id="goo-lead"></div>
           </div>
-          <button type="button" class="tab-pill tab-pill-friends" id="tab-pill-friends" onclick="handleHeaderFriendsClick()" title="Friends">
+          <button type="button" class="tab-pill tab-pill-friends" id="tab-pill-friends" title="Friends">
             <span>✦ Friends</span>
           </button>
-          <button type="button" class="tab-pill tab-pill-me" id="tab-pill-me" onclick="if(currentTab!=='me'||isVisitorMode)switchTab('me')" title="My macromix" style="display:none;">
+          <button type="button" class="tab-pill tab-pill-me" id="tab-pill-me" title="My macromix" style="display:none;">
             <span class="me-pill-icon" id="me-pill-icon">🏃</span><span id="header-handle-text">you</span>
           </button>
         </div>
-        <div class="streak-badge" id="streak-badge" onclick="openSettingsModal()" title="Daily Macro Targets (click to edit)" style="cursor:pointer;">🔥 0d</div>
+        <div class="streak-badge" id="streak-badge" role="button" tabindex="0" title="Daily Macro Targets (click to edit)" style="cursor:pointer;">🔥 0d</div>
       </div>
     </header>
 
     <!-- Public Profile Visitor Header Bar (Option 2) -->
     <div id="visitor-banner" class="visitor-banner hidden">
-      <button type="button" class="btn-visitor-back" id="btn-visitor-back" onclick="backToFriendsList()" title="Back to Friends list">Friends</button>
+      <button type="button" class="btn-visitor-back" id="btn-visitor-back" title="Back to Friends list">Friends</button>
       <div class="visitor-profile-pill">
         <span class="visitor-banner-text" id="visitor-banner-text"><strong id="visitor-target-handle">friend</strong>'s macromix</span>
         <span class="visitor-streak-pill hidden" id="visitor-streak-pill"></span>
+      </div>
+    </div>
+
+    <!-- Persistent Neo-Brutalist PWA Install Banner (activated post-first meal) -->
+    <div id="pwa-install-banner" class="pwa-install-banner" role="region" aria-label="Install App" aria-hidden="true">
+      <div class="pwa-banner-card">
+        <button type="button" class="pwa-banner-close" id="btn-pwa-install-close" title="Dismiss banner" aria-label="Dismiss banner">✕</button>
+        <img src="icons/icon-192.png" alt="macromix logo" class="pwa-banner-logo">
+        <div class="pwa-banner-content">
+          <div class="pwa-banner-title">
+            <span>INSTALL MACROMIX</span>
+            <span class="pwa-banner-badge">PWA</span>
+          </div>
+          <div class="pwa-banner-desc">Instant 1-tap logging, offline mode &amp; home screen speed</div>
+        </div>
+        <button type="button" class="pwa-banner-install-btn" id="btn-pwa-install-action">
+          <span class="pwa-btn-icon">📲</span>
+          <span>INSTALL</span>
+        </button>
       </div>
     </div>
 
@@ -126,9 +155,9 @@
       <!-- Circles Macro Dashboard -->
       <section class="circles-container">
       <div class="date-nav-bar">
-        <button type="button" class="date-nav-arrow" id="btn-date-prev" onclick="changeDate(-1)" title="Previous Day">◀</button>
-        <button type="button" class="date-nav-pill" id="date-label" onclick="resetToToday()" title="Jump to Today">TODAY</button>
-        <button type="button" class="date-nav-arrow disabled" id="btn-date-next" onclick="changeDate(1)" title="Next Day" disabled>▶</button>
+        <button type="button" class="date-nav-arrow" id="btn-date-prev" title="Previous Day">◀</button>
+        <button type="button" class="date-nav-pill" id="date-label" title="Jump to Today">TODAY</button>
+        <button type="button" class="date-nav-arrow disabled" id="btn-date-next" title="Next Day" disabled>▶</button>
       </div>
       <hr class="date-divider">
       <div class="circles-grid">
@@ -206,17 +235,17 @@
       </div>
     </section>
 
-    <!-- Unified Logging & Timeline Container (Screenshot Match) -->
+    <!-- Unified Logging & Timeline Container -->
     <section class="main-container-card">
       <div id="mic-status-text" class="mic-status-banner">Mic Idle • Ready to Record</div>
 
       <div class="voice-buttons-row">
-        <button type="button" class="btn-primary" id="btn-tap-record" onclick="toggleVoiceRecording()">
+        <button type="button" class="btn-primary" id="btn-tap-record">
           <span class="btn-mic-icon">🎙️</span><span class="btn-track-text">Track your macro<span class="btn-brand-mix">mix</span></span>
         </button>
       </div>
 
-      <form id="text-log-form" onsubmit="handleTextLog(event)" class="text-input-wrap">
+      <form id="text-log-form" class="text-input-wrap">
         <input type="text" id="manual-text-input" class="neo-input" placeholder="Or type e.g. 200g veg pulao and some veggies" autocomplete="off">
         <button type="submit" class="btn-log" id="btn-submit-log" disabled>Log ⚡</button>
       </form>
@@ -243,7 +272,7 @@
             <span class="friends-share-label">Share your profile</span>
             <span class="friends-share-url" id="friends-share-url">macromix.web.app/@you</span>
           </div>
-          <button type="button" class="btn-share-pill" onclick="triggerProfileShare()">
+          <button type="button" class="btn-share-pill" id="btn-share-profile">
             <span>🔗</span> <span>Share link</span>
           </button>
         </div>
@@ -251,7 +280,7 @@
         <!-- In-App Search -->
         <div class="friends-search-wrap">
           <span class="search-icon">🔍</span>
-          <input type="text" id="friend-search-input" class="neo-input friend-search-input" placeholder="Search friends by @handle..." oninput="handleFriendSearch(this.value)" autocomplete="off">
+          <input type="text" id="friend-search-input" class="neo-input friend-search-input" placeholder="Search friends by @handle..." autocomplete="off">
         </div>
 
         <!-- Search Results List -->
@@ -267,11 +296,11 @@
   </div>
 
   <!-- Daily Macro Targets Modal -->
-  <div id="settings-modal" class="modal-overlay hidden">
+  <div id="settings-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title">Daily Macro Targets</h2>
-        <button type="button" class="close-btn" onclick="closeSettingsModal()">✕</button>
+        <h2 class="modal-title" id="settings-modal-title">Daily Macro Targets</h2>
+        <button type="button" class="close-btn" id="btn-close-settings" aria-label="Close Settings">✕</button>
       </div>
 
       <div class="form-group">
@@ -298,7 +327,20 @@
           </div>
         </div>
       </div>
-      <button type="button" class="btn-primary" onclick="saveTargets()">Save Daily Targets</button>
+      <button type="button" class="btn-primary" id="btn-save-targets">Save Daily Targets</button>
+
+      <div class="settings-section-divider"></div>
+      <div class="settings-section-title">Gemini AI Key</div>
+      <div class="account-auth-card">
+        <div style="font-size:12px; margin-bottom:8px; color:var(--text-secondary); line-height:1.4;">
+          Personal Gemini API key for instant voice and multimodal meal analysis.
+        </div>
+        <div style="display:flex; gap:8px;">
+          <input type="password" id="settings-gemini-key-input" class="neo-input" placeholder="Paste Gemini Key" style="flex:1;">
+          <button type="button" class="btn-primary" id="btn-save-gemini-key" style="padding:8px 12px; font-size:13px; white-space:nowrap;">Save</button>
+        </div>
+        <div id="settings-gemini-key-status" style="font-size:11px; margin-top:6px; font-weight:700;"></div>
+      </div>
 
       <div class="settings-section-divider"></div>
       <div class="settings-section-title">Account &amp; Security</div>
@@ -315,10 +357,10 @@
           <span>Auth Method:</span>
           <span id="settings-account-method">Passkey</span>
         </div>
-        <button type="button" class="btn-link-auth" id="btn-settings-link-passkey" onclick="handleLinkPasskey()">
+        <button type="button" class="btn-link-auth" id="btn-settings-link-passkey">
           <span>🛡️ Link Passkey for this device</span>
         </button>
-        <button type="button" class="btn-link-auth" id="btn-settings-link-google" onclick="handleLinkGoogle()" style="display:none; background:#FFF; color:#111;">
+        <button type="button" class="btn-link-auth" id="btn-settings-link-google" style="display:none; background:#FFF; color:#111;">
           <svg class="google-icon" viewBox="0 0 24 24" width="16" height="16">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -327,32 +369,19 @@
           </svg>
           <span>Link Google Account</span>
         </button>
-        <button type="button" class="btn-logout" onclick="handleSignOut()">
+        <button type="button" class="btn-logout" id="btn-settings-signout">
           Sign Out
         </button>
-      </div>
-
-      <div class="settings-section-divider"></div>
-      <div class="settings-section-title">Gemini AI Key</div>
-      <div class="account-auth-card">
-        <div style="font-size:12px; margin-bottom:8px; color:var(--text-secondary); line-height:1.4;">
-          Personal Gemini API key for instant voice and multimodal meal analysis.
-        </div>
-        <div style="display:flex; gap:8px;">
-          <input type="password" id="settings-gemini-key-input" class="neo-input" placeholder="Paste Gemini Key (AIza...)" style="flex:1;">
-          <button type="button" class="btn-primary" onclick="saveGeminiApiKeyFromSettings()" style="padding:8px 12px; font-size:13px; white-space:nowrap;">Save</button>
-        </div>
-        <div id="settings-gemini-key-status" style="font-size:11px; margin-top:6px; font-weight:700;"></div>
       </div>
     </div>
   </div>
 
   <!-- Inline Edit Item Drawer -->
-  <div id="edit-item-modal" class="modal-overlay hidden">
+  <div id="edit-item-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title">Edit Food Portion</h2>
-        <button type="button" class="close-btn" onclick="closeEditModal()">✕</button>
+        <h2 class="modal-title" id="edit-modal-title">Edit Food Portion</h2>
+        <button type="button" class="close-btn" id="btn-close-edit-modal" aria-label="Close Edit Modal">✕</button>
       </div>
       <div class="form-group">
         <label id="edit-food-name-label">Food Item</label>
@@ -366,12 +395,40 @@
         <label>Standardized Weight (grams)</label>
         <input type="number" id="edit-weight-g" class="neo-input" step="any">
       </div>
-      <button type="button" class="btn-primary" onclick="saveItemEdit()">Update Item & Recalculate Circles</button>
+      <button type="button" class="btn-primary" id="btn-save-item-edit">Update Item &amp; Recalculate Circles</button>
+    </div>
+  </div>
+
+  <!-- iOS PWA Install Guidance Modal -->
+  <div id="ios-install-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="ios-modal-title">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="ios-modal-title">📲 Install on iPhone / iPad</h2>
+        <button type="button" class="close-btn" id="btn-close-ios-install" aria-label="Close modal">✕</button>
+      </div>
+      <p style="font-size: 0.88rem; color: #444; margin-bottom: 14px; font-weight: 600;">
+        Install macromix directly to your home screen for fullscreen voice logging with zero address bar:
+      </p>
+      <div class="ios-install-steps">
+        <div class="ios-step-item">
+          <span class="ios-step-num">1</span>
+          <span class="ios-step-text">Tap the Safari <strong>Share</strong> button <span class="ios-glyph">⎋</span> in the toolbar.</span>
+        </div>
+        <div class="ios-step-item">
+          <span class="ios-step-num">2</span>
+          <span class="ios-step-text">Scroll down and tap <strong>"Add to Home Screen"</strong> <span class="ios-glyph">⊞</span>.</span>
+        </div>
+        <div class="ios-step-item">
+          <span class="ios-step-num">3</span>
+          <span class="ios-step-text">Tap <strong>"Add"</strong> in the top-right corner.</span>
+        </div>
+      </div>
+      <button type="button" class="btn-primary" id="btn-got-it-ios-install" style="width: 100%; margin-top: 14px;">Got It! 👍</button>
     </div>
   </div>
 
   <!-- Firebase Cloud Firestore Integration -->
-  <script type="module" src="firebase-db.js?v=1.6"></script>
+  <script type="module" src="firebase-db.js?v=6.0"></script>
 
   <!-- SimpleWebAuthn Browser SDK -->
   <script src="simplewebauthn-browser.min.js"></script>
@@ -380,6 +437,6 @@
   <script src="env.js" onerror="/* optional env.js */"></script>
 
   <!-- Frontend Controller -->
-  <script src="app.js?v=7.2"></script>
+  <script src="app.js?v=8.1"></script>
 </body>
 </html>

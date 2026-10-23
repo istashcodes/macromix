@@ -1,17 +1,27 @@
-const CACHE_NAME = 'macromix-pwa-v5.3';
+const CACHE_NAME = 'macromix-pwa-v8.1';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/styles.css',
   '/app.js',
+  '/firebase-db.js',
+  '/simplewebauthn-browser.min.js',
   '/manifest.json',
-  '/icons/icon.svg'
+  '/icons/icon.svg',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/icon-maskable-192.png',
+  '/icons/icon-maskable-512.png',
+  '/icons/logo.png',
+  '/icons/logo-full.png'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE).catch(() => {});
+      return cache.addAll(ASSETS_TO_CACHE).catch((err) => {
+        console.warn('[SW] Precache partial error:', err);
+      });
     })
   );
   self.skipWaiting();
@@ -30,23 +40,57 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Never cache API calls (e.g. /api/debug/logs, /api/logs, etc.)
-  if (url.pathname.startsWith('/api/')) {
+  // Never cache API or Cloud Function calls
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/auth') ||
+    url.pathname === '/geminiProxy' ||
+    url.pathname === '/getLeaderboard' ||
+    url.hostname.includes('generativelanguage.googleapis.com') ||
+    url.hostname.includes('identitytoolkit.googleapis.com')
+  ) {
     return;
   }
 
-  // Network first for static shell assets, fallback to cache
+  // Network-first with 3-second timeout fallback to cache for shell assets (H10, H11)
   if (event.request.method === 'GET') {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+      new Promise((resolve, reject) => {
+        let hasResolved = false;
+        const timeoutId = setTimeout(() => {
+          if (!hasResolved) {
+            caches.match(event.request, { ignoreSearch: true }).then((cached) => {
+              if (cached) {
+                hasResolved = true;
+                resolve(cached);
+              }
+            });
           }
-          return response;
-        })
-        .catch(() => caches.match(event.request))
+        }, 3000);
+
+        fetch(event.request)
+          .then((response) => {
+            if (!hasResolved) {
+              hasResolved = true;
+              clearTimeout(timeoutId);
+              if (response && response.status === 200 && response.type === 'basic') {
+                const clone = response.clone();
+                caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+              }
+              resolve(response);
+            }
+          })
+          .catch(() => {
+            if (!hasResolved) {
+              hasResolved = true;
+              clearTimeout(timeoutId);
+              caches.match(event.request, { ignoreSearch: true })
+                .then(cached => cached || caches.match('/index.html', { ignoreSearch: true }))
+                .then(resolve)
+                .catch(reject);
+            }
+          });
+      })
     );
   }
 });

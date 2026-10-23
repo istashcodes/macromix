@@ -1,4 +1,4 @@
-name: Deploy macromix to Firebase Hosting
+name: Deploy macromix to Firebase
 
 on:
   push:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   deploy:
-    name: Build & Deploy to Firebase Hosting
+    name: Build & Deploy to Firebase
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     steps:
@@ -34,6 +34,6 @@ jobs:
           };
           EOF
 
-      - name: Deploy to Firebase Hosting
+      - name: Deploy to Firebase Hosting & Rules
         run: |
-          npx --yes firebase-tools@latest deploy --only hosting --project macro-streak-tracker --token "${{ secrets.FIREBASE_TOKEN }}"
+          npx --yes firebase-tools@latest deploy --only hosting,firestore:rules,database --project macro-streak-tracker --token "${{ secrets.FIREBASE_TOKEN }}"

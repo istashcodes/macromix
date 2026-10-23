@@ -5,8 +5,8 @@
 
 [![Live App](https://img.shields.io/badge/Live_App-macromix.web.app-FFE600?style=for-the-badge&logo=googlechrome&logoColor=black)](https://macromix.web.app)
 [![PWA Ready](https://img.shields.io/badge/PWA-Installable-5C7CFA?style=for-the-badge&logo=pwa&logoColor=white)](https://macromix.web.app)
-[![Gemini AI](https://img.shields.io/badge/AI-Gemini_3.8_Flash-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)](https://aistudio.google.com/)
-[![Firebase](https://img.shields.io/badge/Backend-Cloud_Firestore-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![Gemini AI](https://img.shields.io/badge/AI-Gemini_Flash_Latest-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)](https://aistudio.google.com/)
+[![Firebase](https://img.shields.io/badge/Backend-Cloud_Firestore_%26_Functions-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-00E5FF?style=for-the-badge)](LICENSE)
 
 ---
@@ -14,10 +14,10 @@
 ## ⚡ Highlights
 
 * **🎙️ Natural Voice & Text Logging:** Say *"Had 2 rotis with a bowl of dal, 150g grilled chicken, and an apple"* — Gemini breaks down items, standardized gram weights, calories, protein, carbs, fat, and fiber.
-* **🎨 Neo-brutalist Aesthetics:** Bold high-contrast UI, thick borders, brutalist drop-shadows, animated nutrient rings, and fluid responsive design across mobile and desktop.
-* **🛡️ Passwordless Biometric Passkeys & Google OIDC:** Sign in with Face ID, Touch ID, or Google 1-Tap authentication. No passwords to remember or leak.
-* **🔥 Daily Streak & Friends System:** Maintain daily consistency streaks (🔥), discover friends by handle, and view their daily macromix circles in real time.
-* **📱 Full Offline-Capable PWA:** Install directly to your iOS or Android home screen with instant caching, standalone window frame, and local-first persistence.
+* **🎨 Neo-brutalist Aesthetics:** Bold high-contrast UI, thick borders, brutalist drop-shadows, animated nutrient rings, accessible color contrast, and fluid responsive design across mobile and desktop.
+* **🛡️ Passwordless Biometric Passkeys & Google OIDC:** Sign in with Face ID, Touch ID, or Google 1-Tap authentication. Uses server-verified SimpleWebAuthn with counter replay checks and Firebase Custom Tokens.
+* **🔥 Daily Streak & Friends System:** Maintain daily consistency streaks (🔥), discover friends by handle, and view their daily macromix circles in real time via a privacy-preserving leaderboard API.
+* **📱 Full Offline-Capable PWA:** Install directly to your iOS or Android home screen with instant caching, standalone window frame, background sync, and local-first persistence.
 
 ---
 
@@ -26,11 +26,15 @@
 ```mermaid
 flowchart TD
     User([User Voice or Text]) --> PWA[macromix PWA Frontend]
-    PWA -->|Audio / Text Prompt| Gemini[Google Gemini 3.8 Flash AI]
-    Gemini -->|Structured JSON Macros| PWA
+    PWA -->|Proxy Meal Text / Audio| Functions[Firebase Cloud Functions]
+    Functions -->|geminiProxy with Server Secret| Gemini[Google Gemini Flash AI (gemini-flash-latest)]
+    Gemini -->|Structured JSON Macros| Functions
+    Functions -->|Validated Macros| PWA
     PWA -->|Sync Daily Logs & Streaks| Firestore[(Cloud Firestore)]
-    PWA -->|Biometrics / Google OIDC| Auth[Firebase Auth & WebAuthn]
-    Firestore <-->|Realtime Listener| Friends[Friend Social Circles]
+    PWA -->|Passkey Registration / Login| Functions
+    Functions -->|SimpleWebAuthn Validation| Auth[Firebase Custom Token Auth]
+    Auth -->|Client Token Sign-In| PWA
+    PWA -->|getLeaderboard API| Functions
 ```
 
 ---
@@ -39,11 +43,13 @@ flowchart TD
 
 | Layer | Technology |
 |---|---|
-| **Frontend** | Vanilla ES6+ JavaScript, Semantic HTML5, Neo-brutalist CSS3 |
-| **AI Engine** | Google Gemini (`gemini-3.8-flash`, `gemini-3.6-flash`, `gemini-flash-latest`) |
-| **Database** | Google Cloud Firestore (Real-time snapshots, multi-device sync) |
-| **Authentication** | SimpleWebAuthn (Passkeys / FIDO2) + Firebase Auth (Google OIDC) |
-| **Hosting** | Google Firebase Hosting CDN |
+| **Frontend** | Vanilla ES6+ JavaScript, Semantic HTML5, Neo-brutalist CSS3, Service Worker (`sw.js`) |
+| **AI Engine** | Google Gemini (`gemini-flash-latest`, with fallback to `gemini-3.8-flash`, `gemini-2.5-flash`, `gemini-2.0-flash`) via server-side proxy |
+| **Serverless Backend** | Firebase Cloud Functions (Node.js 20, SimpleWebAuthn, `/geminiProxy`, `/getLeaderboard`) |
+| **Local / Python Backend** | FastAPI, SQLite (`backend/database.py`), golden benchmark test suite |
+| **Database** | Google Cloud Firestore (Granular security rules, composite indexes) & Realtime DB (locked) |
+| **Authentication** | SimpleWebAuthn (Passkeys / FIDO2) + Firebase Auth (Google OIDC & Custom Tokens) |
+| **Hosting & CI/CD** | Firebase Hosting CDN & GitHub Actions Automated Deployments |
 
 ---
 
@@ -55,28 +61,25 @@ git clone https://github.com/istashcodes/macromix.git
 cd macromix
 ```
 
-### 2. Configure Gemini API Key
-You can configure your Google Gemini API key in either of two ways:
+### 2. Configure Environment Secrets
+All Gemini API calls are securely proxied through Firebase Cloud Functions (`/geminiProxy`), keeping your API key safe on the server side:
 
-* **Option A (Local config file):**
-  Copy `env.example.js` to `env.js` and paste your key from [Google AI Studio](https://aistudio.google.com/app/apikey):
+* Set the `GEMINI_API_KEY` secret in your Firebase Functions environment or `.env` file inside `functions/`:
   ```bash
-  cp env.example.js env.js
+  cd functions
+  npm install
+  # For local emulator testing:
+  echo "GEMINI_API_KEY=your_gemini_api_key_here" > .env
+  cd ..
   ```
-  Edit `env.js`:
-  ```javascript
-  window.__ENV = {
-    GEMINI_API_KEY: "AIzaSy..."
-  };
-  ```
-  *(Note: `env.js` is included in `.gitignore` and is never committed to Git).*
 
-* **Option B (Directly in UI):**
-  Launch the app, tap your streak/handle in the header to open **Settings**, and paste your API key under the **Gemini AI Key** card. It saves to your browser's secure `localStorage`.
+### 3. Run Locally with Firebase Emulators (Recommended)
+```bash
+# Start Firebase Functions and Hosting emulators
+firebase emulators:start
+```
 
-### 3. Run a local web server
-Because `macromix` is a zero-dependency static PWA, you can use any static file server:
-
+Or run any static file server for frontend testing:
 ```bash
 # Using Python 3
 python3 -m http.server 8000
@@ -89,21 +92,22 @@ Open `http://localhost:8000` in your browser.
 
 ---
 
-## 🚢 Deployment to Firebase Hosting
+## 🚢 Deployment to Firebase
 
-`macromix` is served as a static progressive web app on Firebase Hosting.
+`macromix` deploys frontend hosting, Cloud Functions, and database security rules together.
 
 ### Manual Deploy (Firebase CLI)
 ```bash
-firebase deploy --only hosting
+firebase deploy
 ```
+*(Deploys hosting, functions, firestore:rules, firestore:indexes, and database rules).*
 
 ### Continuous Deployment via GitHub Actions
-If you fork or manage this repository with GitHub Actions, pushing commits to `main` automatically deploys the site to Firebase Hosting using [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
+Pushing commits to `main` automatically runs [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
 
 Configure these repository secrets under **Settings > Secrets and variables > Actions**:
-* `GEMINI_API_KEY`: Your Gemini API key (injected into `env.js` during deployment).
 * `FIREBASE_TOKEN`: CI token generated via `npx firebase-tools login:ci`.
+* `GEMINI_API_KEY`: Server-side Gemini API key used by Cloud Functions.
 
 ---
 
@@ -111,28 +115,39 @@ Configure these repository secrets under **Settings > Secrets and variables > Ac
 
 ```text
 macromix/
-├── index.html                   # Core PWA markup and modals
-├── styles.css                   # Neo-brutalist design system & responsive layout
-├── app.js                       # Frontend controller, macro math, Gemini client
-├── firebase-db.js               # Cloud Firestore & Firebase Auth integration
-├── manifest.json                # PWA manifest (app name, icons, theme colors)
-├── service-worker.js            # Offline asset caching & PWA service worker
+├── index.html                   # Core PWA markup, accessible dialogs & meta tags
+├── styles.css                   # Neo-brutalist design system & accessible contrast styles
+├── app.js                       # Frontend controller, event listeners, macro calculations
+├── firebase-db.js               # Cloud Firestore, Google Auth & Passkey Custom Token client
+├── sw.js                        # Offline asset caching, network timeout fallback, PWA worker
+├── manifest.json                # PWA manifest (scope, orientation, standard & maskable icons)
 ├── simplewebauthn-browser.min.js# Passkey / WebAuthn client library
-├── env.example.js               # Template for local environment config
-├── firebase.json                # Firebase Hosting, Firestore, and Auth rules
-├── firestore.rules              # Granular Cloud Firestore security rules
+├── firestore.rules              # Granular Cloud Firestore security rules with validation
+├── firestore.indexes.json       # Composite indexes for queries
+├── database.rules.json          # Locked down Realtime Database rules
+├── firebase.json                # Firebase Hosting rewrites, function definitions, cache headers
+├── functions/                   # Firebase Cloud Functions (Node.js 20)
+│   ├── index.js                 # WebAuthn auth endpoints, geminiProxy, getLeaderboard
+│   └── package.json             # Backend serverless dependencies
+├── backend/                     # Python FastAPI & SQLite backend
+│   ├── main.py                  # API endpoints with user ID isolation
+│   ├── database.py              # SQLite CRUD operations with user ownership checks
+│   └── gemini_engine.py         # Backend Gemini integration (gemini-flash-latest)
+├── icons/                       # Standard & maskable PWA icons (192x192, 512x512)
+├── tests/ & test_*.py           # E2E Playwright & Golden benchmark test suites
 └── .github/workflows/
-    └── deploy.yml               # Automated deployment to Firebase Hosting
+    ├── deploy.yml               # Automated multi-target Firebase deployment
+    └── gemini_coder.yml         # Repository maintainer automated coding workflow
 ```
 
 ---
 
 ## 🔒 Security & Privacy
 
-* **Direct AI Communication:** Food prompts and audio recordings are processed via Google Gemini API without intermediate third-party tracking.
-* **No Hardcoded Secrets:** Client keys are decoupled via `.gitignore`, browser `localStorage`, and encrypted GitHub Actions Secrets.
-* **Firestore Security Rules:** Access to user profiles and meal logs is restricted using strict Firestore security rules enforced at the database level.
-* **Phishing-Resistant Auth:** WebAuthn credentials use public-key cryptography tied specifically to the application domain.
+* **Server-Side AI Proxy:** Gemini API keys are never exposed in client bundles or `localStorage`. Requests are proxied via `/geminiProxy`.
+* **Phishing-Resistant WebAuthn:** Passkeys authenticate against FIDO2 domain rpId standards, with monotonic sign counter validation to block replay attacks.
+* **Privacy-Preserving Leaderboard:** The `/getLeaderboard` endpoint strictly aggregates macro totals and public handles, never exposing user emails, UIDs, or private logs.
+* **Granular Database Security Rules:** Cloud Firestore enforces strict schema constraints, ownership verification, and handle uniqueness at the database layer.
 
 ---
 

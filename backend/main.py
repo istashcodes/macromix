@@ -15,6 +15,7 @@ from backend.database import (
     save_meal_log,
     get_all_meal_logs,
     update_logged_food_item,
+    delete_logged_food_item,
     delete_meal_log,
     get_user_targets,
     update_user_targets,
@@ -22,6 +23,7 @@ from backend.database import (
     set_user_gemini_key,
     get_user_profile,
     update_user_handle,
+    get_user_id_by_handle,
     save_auth_challenge,
     consume_auth_challenge,
     get_user_credentials,
@@ -413,15 +415,35 @@ def auth_login_complete(req: AuthLoginCompleteRequest, request: Request):
     if not out.get("success"):
         raise HTTPException(status_code=401, detail="Passkey verification failed.")
 
-    update_credential_counter(cred_id, out.get("newCounter", 0))
+    new_counter = out.get("newCounter", 0)
+    stored_counter = stored_cred.get("counter", 0)
+    if stored_counter > 0 and new_counter <= stored_counter:
+        log_event("AUTH", f"Counter monotonic check failed for @{clean}: {new_counter} <= {stored_counter}", level="WARN")
+        raise HTTPException(status_code=401, detail="Potential authenticator clone detected (counter not monotonic).")
+
+    update_credential_counter(cred_id, new_counter)
     log_event("AUTH", f"Passkey login verified for @{clean}", {"handle": clean}, level="SUCCESS")
     return {"customToken": f"local_token_{clean}", "uid": f"uid_{clean}", "handle": clean}
 
+def get_request_user_id(request: Request, user_id_param: Optional[int] = None) -> int:
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.split("Bearer ")[1].strip()
+        if token.startswith("local_token_"):
+            handle = token.replace("local_token_", "")
+            uid = get_user_id_by_handle(handle)
+            if uid:
+                return uid
+    if user_id_param is not None and user_id_param > 0:
+        return user_id_param
+    return 1
+
 # --- Relational Meal Logs (FR-105) ---
 @app.get("/api/logs")
-def get_logs(user_id: int = 1):
-    logs = get_all_meal_logs(user_id)
-    log_event("SQL", f"Fetched {len(logs)} meal logs from database for user #{user_id}")
+def get_logs(request: Request, user_id: int = 1):
+    uid = get_request_user_id(request, user_id)
+    logs = get_all_meal_logs(uid)
+    log_event("SQL", f"Fetched {len(logs)} meal logs from database for user #{uid}")
     return logs
 
 @app.post("/api/logs")
@@ -508,29 +530,31 @@ def create_log(log: MealLogCreate, user_id: int = 1):
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
 
 @app.put("/api/logs/items/{item_id}")
-def update_item(item_id: int, req: ItemUpdateRequest):
+def update_item(item_id: int, req: ItemUpdateRequest, request: Request, user_id: int = 1):
     if req.quantity <= 0 or req.standardized_weight_g <= 0:
         raise HTTPException(status_code=422, detail="Quantity and weight must be positive numbers greater than 0.")
-    res = update_logged_food_item(item_id, req.quantity, req.standardized_weight_g)
+    uid = get_request_user_id(request, user_id)
+    res = update_logged_food_item(item_id, req.quantity, req.standardized_weight_g, user_id=uid)
     if not res:
-        log_event("SQL", f"Item #{item_id} not found for portion update", level="WARN")
-        raise HTTPException(status_code=404, detail="Item not found")
+        log_event("SQL", f"Item #{item_id} not found or unauthorized for portion update", level="WARN")
+        raise HTTPException(status_code=404, detail="Item not found or unauthorized")
     log_event("SQL", f"Updated portion for item #{item_id}: {req.quantity} ({req.standardized_weight_g}g) -> {res['calories']} kcal", res, level="SUCCESS")
     return res
 
 @app.delete("/api/logs/items/{item_id}")
-def delete_item(item_id: int):
-    from backend.database import delete_logged_food_item
-    ok = delete_logged_food_item(item_id)
+def delete_item(item_id: int, request: Request, user_id: int = 1):
+    uid = get_request_user_id(request, user_id)
+    ok = delete_logged_food_item(item_id, user_id=uid)
     if not ok:
-        log_event("SQL", f"Item #{item_id} not found for deletion", level="WARN")
-        raise HTTPException(status_code=404, detail="Item not found")
+        log_event("SQL", f"Item #{item_id} not found or unauthorized for deletion", level="WARN")
+        raise HTTPException(status_code=404, detail="Item not found or unauthorized")
     log_event("SQL", f"Deleted individual food item #{item_id} from SQLite", level="SUCCESS")
     return {"status": "deleted", "item_id": item_id}
 
 @app.delete("/api/logs/{log_id}")
-def delete_log(log_id: int, user_id: int = 1):
-    ok = delete_meal_log(log_id, user_id=user_id)
+def delete_log(log_id: int, request: Request, user_id: int = 1):
+    uid = get_request_user_id(request, user_id)
+    ok = delete_meal_log(log_id, user_id=uid)
     if not ok:
         log_event("SQL", f"Meal log #{log_id} not found for deletion", level="WARN")
         raise HTTPException(status_code=404, detail="Log not found")

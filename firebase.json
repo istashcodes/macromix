@@ -20,6 +20,11 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "functions": {
+    "source": "functions",
+    "codebase": "default",
+    "runtime": "nodejs20"
+  },
   "hosting": {
     "site": "macromix",
     "public": ".",
@@ -31,28 +36,85 @@
       ".venv/**",
       "test/**",
       "*.py",
-      "golden_benchmark.json"
+      "*.md",
+      "golden_benchmark.json",
+      ".env*",
+      "functions/**",
+      "scratch/**",
+      "skills-lock.json",
+      "LICENSE"
     ],
     "headers": [
       {
         "source": "**",
         "headers": [
           {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "DENY"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "strict-origin-when-cross-origin"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(), microphone=(self), geolocation=()"
+          }
+        ]
+      },
+      {
+        "source": "/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/sw.js",
+        "headers": [
+          {
             "key": "Cache-Control",
             "value": "no-cache, no-store, must-revalidate"
-          },
+          }
+        ]
+      },
+      {
+        "source": "**/*.@(jpg|jpeg|gif|png|svg|webp|js|css)",
+        "headers": [
           {
-            "key": "Pragma",
-            "value": "no-cache"
-          },
-          {
-            "key": "Expires",
-            "value": "0"
+            "key": "Cache-Control",
+            "value": "public, max-age=86400, stale-while-revalidate=604800"
           }
         ]
       }
     ],
     "rewrites": [
+      {
+        "source": "/authRegisterBegin",
+        "function": "authRegisterBegin"
+      },
+      {
+        "source": "/authRegisterComplete",
+        "function": "authRegisterComplete"
+      },
+      {
+        "source": "/authLoginBegin",
+        "function": "authLoginBegin"
+      },
+      {
+        "source": "/authLoginComplete",
+        "function": "authLoginComplete"
+      },
+      {
+        "source": "/getLeaderboard",
+        "function": "getLeaderboard"
+      },
       {
         "source": "**",
         "destination": "/index.html"

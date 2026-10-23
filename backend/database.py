@@ -6,7 +6,7 @@ from typing import Dict, Any, List, Optional
 DEFAULT_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "macronomics.db")
 
 def get_db_path() -> str:
-    return os.environ.get("MACRONOMICS_DB_PATH", DEFAULT_DB_PATH)
+    return os.environ.get("TEST_DB_PATH") or os.environ.get("MACRONOMICS_DB_PATH", DEFAULT_DB_PATH)
 
 def get_db_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(get_db_path(), timeout=30.0)
@@ -458,10 +458,27 @@ def get_all_meal_logs(user_id: int = 1) -> List[Dict[str, Any]]:
     conn.close()
     return result
 
-def delete_logged_food_item(item_id: int) -> bool:
+def get_user_id_by_handle(handle: str) -> Optional[int]:
+    clean = handle.strip().lower().lstrip("@")
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT meal_log_id FROM logged_food_items WHERE id = ?", (item_id,))
+    cursor.execute("SELECT id FROM users WHERE handle = ? OR username = ?", (clean, clean))
+    row = cursor.fetchone()
+    conn.close()
+    return row["id"] if row else None
+
+def delete_logged_food_item(item_id: int, user_id: Optional[int] = None) -> bool:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if user_id is not None:
+        cursor.execute("""
+            SELECT lfi.meal_log_id 
+            FROM logged_food_items lfi
+            JOIN meal_logs ml ON lfi.meal_log_id = ml.id
+            WHERE lfi.id = ? AND ml.user_id = ?
+        """, (item_id, user_id))
+    else:
+        cursor.execute("SELECT meal_log_id FROM logged_food_items WHERE id = ?", (item_id,))
     row = cursor.fetchone()
     if not row:
         conn.close()
@@ -476,10 +493,18 @@ def delete_logged_food_item(item_id: int) -> bool:
     conn.close()
     return True
 
-def update_logged_food_item(item_id: int, quantity: float, standardized_weight_g: float) -> Optional[Dict[str, Any]]:
+def update_logged_food_item(item_id: int, quantity: float, standardized_weight_g: float, user_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM logged_food_items WHERE id = ?", (item_id,))
+    if user_id is not None:
+        cursor.execute("""
+            SELECT lfi.* 
+            FROM logged_food_items lfi
+            JOIN meal_logs ml ON lfi.meal_log_id = ml.id
+            WHERE lfi.id = ? AND ml.user_id = ?
+        """, (item_id, user_id))
+    else:
+        cursor.execute("SELECT * FROM logged_food_items WHERE id = ?", (item_id,))
     item = cursor.fetchone()
     if not item:
         conn.close()

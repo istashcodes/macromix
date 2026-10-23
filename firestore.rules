@@ -3,50 +3,79 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // ===============================================================
-    // Assumed Data Model
+    // Macromix Cloud Firestore Security Rules
     // ===============================================================
     //
     // Collection: users
-    // Document ID: {userId} (handle, 3-12 characters)
+    // Document ID: {userId} (handle: 3-12 characters, lowercase alphanumeric + underscore)
     // Fields:
-    //   - handle / publicUsername: string (3-12 chars)
+    //   - handle: string (3-12 chars)
+    //   - uid / googleUid: string (Firebase Auth UID of the owner)
     //   - streak: number (integer >= 0)
-    //   - latestStats: map (optional, { streak, targetPct })
+    //   - latestStats: map ({ streak, targetPct })
     //   - targets / dailyTargets: map (nutritional targets)
-    //   - deviceId: string (client identifier)
-    //   - createdAt: timestamp / string
-    //   - lastActive: timestamp / string
+    //   - deviceId: string
+    //   - createdAt / lastActive: timestamp
     //
+    // Subcollections:
+    //   - users/{userId}/meals/{mealId}
+    //   - users/{userId}/following/{targetHandle}
     // ===============================================================
 
     function isValidHandle(h) {
       return h is string &&
              h.size() >= 3 &&
-             h.size() <= 16;
+             h.size() <= 12 &&
+             h.matches('^[a-z0-9_]+$');
+    }
+
+    function isOwner(userId) {
+      return request.auth != null && (
+        (resource != null && resource.data.uid != null && request.auth.uid == resource.data.uid) ||
+        (resource != null && resource.data.googleUid != null && request.auth.uid == resource.data.googleUid)
+      );
+    }
+
+    function isParentOwner(userId) {
+      let userDoc = get(/databases/$(database)/documents/users/$(userId));
+      return request.auth != null && (
+        (userDoc.data.uid != null && request.auth.uid == userDoc.data.uid) ||
+        (userDoc.data.googleUid != null && request.auth.uid == userDoc.data.googleUid)
+      );
     }
 
     match /users/{userId} {
-      // Public read for leaderboard, streak flaunting, and friend discovery
+      // Public read for leaderboard, streak display, and friend discovery
       allow read: if true;
 
-      // Create: Valid handle format
-      allow create: if isValidHandle(userId);
+      // Create: Authenticated user claiming an available valid handle
+      allow create: if request.auth != null &&
+                       isValidHandle(userId) &&
+                       (request.resource.data.uid == request.auth.uid ||
+                        request.resource.data.googleUid == request.auth.uid);
 
-      // Update: Prevent deleting required profile fields
-      allow update: if true;
+      // Update: Only authenticated owner; UID cannot be overwritten
+      allow update: if isOwner(userId) &&
+                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid', 'googleUid']);
 
       // Delete: Disallow direct client delete
       allow delete: if false;
 
-      // Subcollection for real-time meal entries across all devices
+      // Subcollection for real-time meal entries across devices
       match /meals/{mealId} {
-        allow read, write, delete: if true;
+        allow read, write, delete: if isParentOwner(userId);
       }
 
       // Subcollection for social friend relationships
       match /following/{targetHandle} {
-        allow read, write, delete: if true;
+        allow read: if true;
+        allow write, delete: if isParentOwner(userId);
       }
+    }
+
+    // Passkey WebAuthn challenges
+    match /challenges/{handle} {
+      allow read, write: if request.auth != null;
     }
   }
 }

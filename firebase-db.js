@@ -8,6 +8,7 @@ import {
   updateDoc,
   deleteDoc,
   getDocs,
+  writeBatch,
   collection,
   query,
   where,
@@ -20,6 +21,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
+  signInWithCustomToken,
   getRedirectResult,
   onAuthStateChanged,
   signOut
@@ -71,10 +73,21 @@ export function getFirebaseAuth() {
 export function getOrCreateDeviceId() {
   let id = localStorage.getItem('macromix_device_id');
   if (!id) {
-    id = 'dev_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+    id = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? 'dev_' + crypto.randomUUID()
+      : 'dev_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
     localStorage.setItem('macromix_device_id', id);
   }
   return id;
+}
+
+/**
+ * Sign in using Firebase Custom Token (Modular SDK fix for C7)
+ */
+export async function completeCustomTokenAuth(customToken) {
+  const { auth } = initFirebase();
+  if (!auth) throw new Error('Firebase Auth is not initialized.');
+  return await signInWithCustomToken(auth, customToken);
 }
 
 export function sanitizeForFirestore(obj) {
@@ -113,14 +126,7 @@ export async function checkHandleAvailable(handle) {
 }
 
 /**
- * Atomically create a user profile with claimed handle in Firestore
- * @param {string} handle
- * @param {string} authMethod
- * @param {object} dailyTargets
- * @returns {Promise<{success: boolean, error?: string, profile?: object, offline?: boolean}>}
- */
-/**
- * Atomically create or update a user profile with claimed handle in Firestore
+ * Atomically create or verify a user profile with claimed handle in Firestore (C5 secured)
  * @param {string} handle
  * @param {string} authMethod
  * @param {object} dailyTargets
@@ -150,11 +156,24 @@ export async function createHandleProfile(handle, authMethod = 'passkey', dailyT
     return { success: true, profile: { handle: clean, streak: 0, deviceId }, offline: true };
   }
 
+  const { auth } = initFirebase();
+  const currentAuthUser = auth ? auth.currentUser : null;
+  const currentUid = (googleUser && googleUser.uid) || (currentAuthUser && currentAuthUser.uid) || null;
+
   try {
     const docRef = doc(database, 'users', clean);
     const existing = await getDoc(docRef);
     if (existing.exists()) {
       const existingData = existing.data();
+      // Require caller identity to match existing owner to prevent account takeover (C5)
+      const isOwner = currentUid && (existingData.uid === currentUid || existingData.googleUid === currentUid);
+      if (!isOwner) {
+        return {
+          success: false,
+          error: `Handle @${clean} is already claimed. Please sign in with the registered passkey or Google account.`
+        };
+      }
+
       const updates = {
         deviceId: deviceId,
         lastActive: serverTimestamp()
@@ -163,26 +182,19 @@ export async function createHandleProfile(handle, authMethod = 'passkey', dailyT
         updates.dailyTargets = dailyTargets;
         existingData.dailyTargets = dailyTargets;
       }
-      if (googleUser) {
+      if (googleUser && !existingData.googleUid) {
         updates.googleUid = googleUser.uid;
         updates.email = googleUser.email ? googleUser.email.toLowerCase() : null;
-        if (googleUser.displayName) updates.googleDisplayName = googleUser.displayName;
-        if (googleUser.photoURL) updates.googlePhotoURL = googleUser.photoURL;
-        if (existingData.authMethod === 'passkey') {
-          updates.authMethod = 'both';
-          existingData.authMethod = 'both';
-        }
       }
-      // Seamless Login: Update deviceId and lastActive to connect this session
       await updateDoc(docRef, updates);
       localStorage.setItem('macromix_user_handle', clean);
-      console.log(`[Macromix Firebase] Seamless login for @${clean} from device ${deviceId}.`);
       return { success: true, profile: { ...existingData, ...updates }, isLogin: true };
     }
 
     const newProfile = {
       handle: clean,
       publicUsername: clean,
+      uid: currentUid,
       streak: 0,
       latestStats: { streak: 0, targetPct: 0 },
       targets: {
@@ -211,9 +223,7 @@ export async function createHandleProfile(handle, authMethod = 'passkey', dailyT
     return { success: true, profile: newProfile };
   } catch (err) {
     console.error('[Macromix Firebase] Failed to create handle in Firestore:', err);
-    // Graceful fallback to client storage
-    localStorage.setItem('macromix_user_handle', clean);
-    return { success: true, profile: { handle: clean, streak: 0, deviceId }, offline: true };
+    return { success: false, error: err.message };
   }
 }
 
@@ -468,21 +478,42 @@ export async function getFirestoreUserProfile(handle) {
 }
 
 /**
- * Fetch all registered users in Firestore
+ * Fetch public leaderboard users (H4 sanitized - no PII exposed)
  * @returns {Promise<Array<object>>}
  */
 export async function getAllFirestoreUsers() {
+  try {
+    const res = await fetch('/getLeaderboard');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.users)) {
+        return data.users;
+      }
+    }
+  } catch (err) {
+    console.warn('[Macromix Firebase] /getLeaderboard unavailable, falling back:', err);
+  }
+
   const database = initFirebaseDB();
   if (!database) return [];
   try {
     const snap = await getDocs(collection(database, 'users'));
     const users = [];
     snap.forEach((d) => {
-      users.push(d.data());
+      const data = d.data();
+      // Sanitize: ONLY return public stats; NEVER expose uid, googleUid, email, deviceId, or credentials
+      users.push({
+        handle: data.handle || d.id,
+        publicUsername: data.publicUsername || data.handle || d.id,
+        streak: typeof data.streak === 'number' ? data.streak : 0,
+        latestStats: data.latestStats || { streak: data.streak || 0, targetPct: 0 },
+        dailyTargets: data.dailyTargets || data.targets || null,
+        lastActive: data.lastActive || null
+      });
     });
     return users;
   } catch (err) {
-    console.error('[Macromix Firebase] Error getting all users:', err);
+    console.error('[Macromix Firebase] Error getting leaderboard users:', err);
     return [];
   }
 }
@@ -716,15 +747,22 @@ export async function syncLocalMealsWithFirestore(handle) {
       return true;
     });
 
-    // 3. Upload only genuinely unsynced local meals belonging to this handle
+    // 3. Upload only genuinely unsynced local meals belonging to this handle via writeBatch (M1)
+    const batch = writeBatch(database);
+    let batchCount = 0;
     for (const localMeal of localMeals) {
       if (localMeal && localMeal.id && !remoteMap.has(String(localMeal.id))) {
         if (!localMeal.owner_handle || localMeal.owner_handle.toLowerCase() === clean) {
           localMeal.owner_handle = clean;
-          await saveMealToFirestore(clean, localMeal);
+          const mealRef = doc(database, 'users', clean, 'meals', String(localMeal.id));
+          batch.set(mealRef, sanitizeForFirestore(localMeal), { merge: true });
           remoteMap.set(String(localMeal.id), localMeal);
+          batchCount++;
         }
       }
+    }
+    if (batchCount > 0) {
+      await batch.commit();
     }
 
     // 4. Combined list sorted by created_at desc
@@ -779,7 +817,7 @@ initFirebase();
 
 // Expose globally on window for easy access from app.js and browser console
 if (typeof window !== 'undefined') {
-  window.MacromixFirebase = {
+  window.MacromixFirebase = Object.freeze({
     initFirebase,
     initFirebaseDB,
     getFirebaseAuth,
@@ -805,6 +843,8 @@ if (typeof window !== 'undefined') {
     unfollowUser,
     getFollowingList,
     subscribeFollowing,
-    getMealsStorageKey
-  };
+    getMealsStorageKey,
+    completeCustomTokenAuth
+  });
 }
+

@@ -146,6 +146,10 @@ const AppLogger = {
     this.logs.push(entry);
     if (this.logs.length > 1000) {
       this.logs.shift();
+      const feed = document.getElementById('debug-feed');
+      if (feed && feed.firstChild) {
+        feed.removeChild(feed.firstChild);
+      }
     }
     this.renderEntry(entry);
     this.updateStats();
@@ -450,6 +454,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   setupSettingsModal();
   setupSwipeGestures();
   initFriendsView();
+  setupEventListeners();
 });
 
 window.addEventListener('popstate', async () => {
@@ -1109,6 +1114,7 @@ async function loadMealLogs() {
         }
         filterAndRenderSelectedDate();
         AppLogger.log('UI', `Timeline updated: ${currentLogs.length} total meal logs loaded`, { count: currentLogs.length });
+        checkAndTriggerInstallBanner(false);
         return;
       }
     } catch (e) {
@@ -1124,6 +1130,7 @@ async function loadMealLogs() {
         currentLogs = fireMeals;
         filterAndRenderSelectedDate();
         AppLogger.log('UI', `Timeline updated from Cloud Firestore: ${currentLogs.length} total meals`, { count: currentLogs.length });
+        checkAndTriggerInstallBanner(false);
         return;
       }
     } catch (fErr) {
@@ -1163,6 +1170,9 @@ async function loadMealLogs() {
   }
   filterAndRenderSelectedDate();
   AppLogger.log('UI', `Loaded ${currentLogs.length} meal logs from local storage`);
+  if (currentLogs && currentLogs.length > 0) {
+    checkAndTriggerInstallBanner(false);
+  }
 }
 
 function escapeHtml(str) {
@@ -1503,15 +1513,11 @@ Output strictly a JSON object with this structure:
 
 async function callClientGeminiDirect(transcript, audioBase64 = null) {
   const apiKey = getEffectiveGeminiKey();
-  if (!apiKey) {
-    throw new Error("Gemini API key is not configured. Tap your streak/handle in the header to open Settings and save your Gemini API key.");
-  }
 
   const modelsToTry = [
-    'gemini-3.6-flash',
-    'gemini-3.1-flash-lite',
     'gemini-flash-latest',
-    'gemini-flash-lite-latest'
+    'gemini-2.5-flash',
+    'gemini-3.8-flash'
   ];
 
   const parts = [];
@@ -1546,20 +1552,37 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
     try {
       if (typeof AbortController !== 'undefined') {
         controller = new AbortController();
-        timeoutId = setTimeout(() => controller.abort(), 8000);
+        timeoutId = setTimeout(() => controller.abort(), 9000);
       }
-      const fetchOpts = {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      };
-      if (controller) fetchOpts.signal = controller.signal;
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const res = await fetch(url, fetchOpts);
+      let res = null;
+
+      // 1. If an API key is available (from env.js or settings), call Gemini direct for fast, resilient inference
+      if (apiKey) {
+        const fetchOpts = {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        };
+        if (controller) fetchOpts.signal = controller.signal;
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        res = await fetch(url, fetchOpts);
+      } else {
+        // 2. Otherwise attempt server proxy if configured
+        const fetchOpts = {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...payload, model })
+        };
+        if (controller) fetchOpts.signal = controller.signal;
+        res = await fetch('/geminiProxy', fetchOpts);
+      }
+
       if (timeoutId) clearTimeout(timeoutId);
 
-      if (res.ok) {
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && contentType.includes('application/json')) {
         const data = await res.json();
         const candidate = data.candidates?.[0];
         if (candidate?.content?.parts) {
@@ -1575,15 +1598,17 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
           }
         }
         if (geminiResult) {
-          AppLogger.log('GEMINI', `Client direct Gemini (${model}) processed meal`, {
+          AppLogger.log('GEMINI', `Gemini (${model}) processed meal successfully`, {
             is_food: geminiResult.is_food,
             item_count: (geminiResult.items || []).length
           });
           break;
         }
       } else {
-        const errText = await res.text();
-        lastErr = new Error(`HTTP ${res.status}: ${errText.slice(0, 100)}`);
+        const errText = await res.text().catch(() => '');
+        // Strip out HTML tags (e.g. 404 pages) to prevent raw HTML in UI alerts
+        const cleanErr = errText.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+        lastErr = new Error(`HTTP ${res.status}: ${cleanErr.slice(0, 100) || res.statusText}`);
       }
     } catch (e) {
       if (timeoutId) clearTimeout(timeoutId);
@@ -1592,7 +1617,12 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
   }
 
   if (!geminiResult) {
-    throw lastErr || new Error("Gemini AI is currently busy. Please wait a few minutes and try again.");
+    if (!apiKey) {
+      openSettingsModal();
+      throw new Error("Gemini API key is required. Please paste your Gemini key in Settings to analyze meals.");
+    }
+    const safeMsg = lastErr ? (lastErr.message || '').replace(/<[^>]*>?/gm, '').trim() : '';
+    throw new Error(safeMsg || "Gemini AI is currently busy. Please wait a few moments and try again.");
   }
 
   return geminiResult;
@@ -1691,7 +1721,8 @@ async function processTranscript(transcript, audioBase64 = null) {
         geminiData = await callClientGeminiDirect(transcript, audioBase64);
       } catch (clientErr) {
         AppLogger.log('GEMINI', `Client-side Gemini failed: ${clientErr.message}`, null, 'WARN');
-        setMicStatus(`Could not analyze meal: ${clientErr.message || 'Gemini service unavailable'}`, true);
+        const cleanMsg = (clientErr.message || 'Gemini service unavailable').replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+        setMicStatus(`Could not analyze meal: ${cleanMsg}`, true);
         return false;
       }
       if (!geminiData) return false;
@@ -1814,6 +1845,7 @@ async function processTranscript(transcript, audioBase64 = null) {
     renderStreak();
     setMicStatus("Meal logged successfully! 🎯");
     AppLogger.log('UI', 'Meal pipeline finished successfully! 🎯');
+    checkAndTriggerInstallBanner(true);
     setTimeout(() => {
       setMicStatus("Mic Idle • Ready to Record");
     }, 2500);
@@ -2451,6 +2483,7 @@ function setVisitorMode(isVisitor, targetHandle = null) {
     filterAndRenderSelectedDate();
     renderCurrentUserStreak();
   }
+
   updateHeaderFriendsBtn();
 }
 
@@ -2458,7 +2491,12 @@ function setVisitorMode(isVisitor, targetHandle = null) {
 async function checkUrlRoute() {
   const routeHandle = parseUrlHandle();
   if (routeHandle) {
-    if (currentUserHandle && currentUserHandle.toLowerCase() === routeHandle.toLowerCase()) {
+    if (!currentUserHandle) {
+      // Unauthenticated guests must register/create an account first
+      sessionStorage.setItem('macromix_pending_share_handle', routeHandle);
+      return;
+    }
+    if (currentUserHandle.toLowerCase() === routeHandle.toLowerCase()) {
       setVisitorMode(false);
       currentTab = 'me';
       const viewMe = document.getElementById('view-me');
@@ -2819,19 +2857,7 @@ async function checkUserProfileOnboarding() {
   const badgeEl = document.getElementById('tab-pill-me');
   const badgeText = document.getElementById('header-handle-text');
 
-  // Check if visitor viewing another user's public profile directly without an account
-  const routeHandle = parseUrlHandle();
-  if (routeHandle) {
-    if (onboardingEl) onboardingEl.classList.add('hidden');
-    document.body.style.overflow = '';
-    if (badgeEl) badgeEl.style.display = 'none';
-    const streakBadge = document.getElementById('streak-badge');
-    if (streakBadge) streakBadge.style.display = 'none';
-    updateHeaderFriendsBtn();
-    return;
-  }
-
-  // Check cached session first for instant resume without blocking
+  // 1. Check cached session first for instant resume without blocking
   const cachedHandle = localStorage.getItem('macromix_user_handle');
   if (cachedHandle) {
     currentUserHandle = cachedHandle;
@@ -2850,7 +2876,7 @@ async function checkUserProfileOnboarding() {
     return;
   }
 
-  // 1. Wait for Firebase Auth state to resolve (max 3s)
+  // 2. Wait for Firebase Auth state to resolve (max 3s)
   const user = await new Promise((resolve) => {
     if (!window.__macromixAuth) {
       resolve(null);
@@ -2893,10 +2919,23 @@ async function checkUserProfileOnboarding() {
     }
   }
 
-  // 2. No Firebase Auth session -> show onboarding
+  // 3. User is unauthenticated: they MUST register/create an account first before seeing the shared profile!
+  const routeHandle = parseUrlHandle();
+  if (routeHandle) {
+    sessionStorage.setItem('macromix_pending_share_handle', routeHandle);
+    showSharedInviteNotice(routeHandle);
+  }
+
   if (onboardingEl) {
     onboardingEl.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+  }
+}
+
+function showSharedInviteNotice(friendHandle) {
+  const introHeadline = document.getElementById('onboarding-title');
+  if (introHeadline && friendHandle) {
+    introHeadline.innerHTML = `👋 <strong>@${escapeHtml(friendHandle)}</strong> shared their macros!<br><span style="font-size: 0.95rem; font-weight: 700; color: #121212;">Create your handle or sign in to view their profile.</span>`;
   }
 }
 
@@ -2998,8 +3037,14 @@ async function registerHandleOnboarding(handle, authMethod = 'passkey') {
   setupRealtimeProfileSync();
   await loadMealLogs();
   currentUserStreak = calculateStreak();
-  renderCurrentUserStreak();
   updateHeaderFriendsBtn();
+
+  // If the user arrived via a friend's profile link, navigate to that profile now that they are authenticated!
+  const pendingShareHandle = sessionStorage.getItem('macromix_pending_share_handle') || parseUrlHandle();
+  if (pendingShareHandle && pendingShareHandle.toLowerCase() !== clean.toLowerCase()) {
+    sessionStorage.removeItem('macromix_pending_share_handle');
+    await viewFriendProfile(pendingShareHandle);
+  }
   return true;
 }
 
@@ -3171,9 +3216,11 @@ async function passkeyRegister(handle) {
     return;
   }
 
-  if (customToken && !customToken.startsWith('local_token_') && window.__macromixAuth) {
+  if (customToken && !customToken.startsWith('local_token_')) {
     try {
-      await window.__macromixAuth.signInWithCustomToken(customToken);
+      if (window.MacromixFirebase && typeof window.MacromixFirebase.completeCustomTokenAuth === 'function') {
+        await window.MacromixFirebase.completeCustomTokenAuth(customToken);
+      }
     } catch (e) {
       showOnboardingError('Could not complete sign-in. Please try again.');
       return;
@@ -3195,14 +3242,9 @@ async function passkeyLogin(handle) {
     });
     const ct = res.headers.get('content-type') || '';
     if (!res.ok || !ct.includes('application/json')) {
-      if (!isLocalBackend()) {
-        await registerHandleNativePasskey(handle);
-        return;
-      }
       const err = await res.json().catch(() => ({}));
       const msg = err.detail || err.error || '';
       if (res.status === 404 || msg.toLowerCase().includes('register')) {
-        // Handle has no registered passkey locally -> seamlessly route to register
         AppLogger.log('AUTH', `Handle @${handle} has no passkey on record, switching to registration...`, null, 'INFO');
         await passkeyRegister(handle);
         return;
@@ -3212,10 +3254,6 @@ async function passkeyLogin(handle) {
     }
     options = await res.json();
   } catch (e) {
-    if (!isLocalBackend()) {
-      await registerHandleNativePasskey(handle);
-      return;
-    }
     showOnboardingError('Network error. Please try again.');
     return;
   }
@@ -3249,9 +3287,11 @@ async function passkeyLogin(handle) {
     return;
   }
 
-  if (customToken && !customToken.startsWith('local_token_') && window.__macromixAuth) {
+  if (customToken && !customToken.startsWith('local_token_')) {
     try {
-      await window.__macromixAuth.signInWithCustomToken(customToken);
+      if (window.MacromixFirebase && typeof window.MacromixFirebase.completeCustomTokenAuth === 'function') {
+        await window.MacromixFirebase.completeCustomTokenAuth(customToken);
+      }
     } catch (e) {
       showOnboardingError('Could not complete sign-in. Please try again.');
       return;
@@ -3262,21 +3302,271 @@ async function passkeyLogin(handle) {
   await registerHandleOnboarding(handle, 'passkey');
 }
 
-async function handlePhoneAuthFallback() {
-  const input = document.getElementById('onboarding-handle-input');
-  const handleVal = input ? input.value : '';
-  if (!handleVal.trim()) {
-    showOnboardingError("Please enter your desired handle first.");
-    return;
-  }
+// ─── Google OIDC Authentication Flow ─────────────────────────
+async function handleGoogleAuth() {
+  clearOnboardingError();
+  AppLogger.log('AUTH', 'Starting Google Sign-In flow');
+  try {
+    await waitForFirebaseDB();
+    if (!window.MacromixFirebase || typeof window.MacromixFirebase.signInWithGoogle !== 'function') {
+      showOnboardingError('Google Sign-In is initializing. Please retry in a moment.');
+      return;
+    }
+    const res = await window.MacromixFirebase.signInWithGoogle();
+    if (!res.success) {
+      if (res.redirecting) return;
+      showOnboardingError(res.error || 'Google Sign-In failed.');
+      return;
+    }
+    const googleUser = res.user;
+    const existingProfile = await window.MacromixFirebase.findUserByGoogleAuth(googleUser.uid, googleUser.email);
+    if (existingProfile && existingProfile.handle) {
+      await registerHandleOnboarding(existingProfile.handle, 'google', existingProfile);
+      return;
+    }
+    let defaultHandle = (googleUser.email ? googleUser.email.split('@')[0] : (googleUser.displayName || 'user'))
+      .toLowerCase().replace(/[^a-z0-9_]/g, '').substring(0, 12);
+    if (defaultHandle.length < 3) defaultHandle = 'user_' + googleUser.uid.substring(0, 6);
 
-  const phone = prompt("Enter your mobile number for SMS verification code:");
-  if (phone && phone.trim()) {
-    const code = prompt("Enter the 6-digit SMS verification code:");
-    if (code && code.trim()) {
-      await registerHandleOnboarding(handleVal, 'phone_sms');
+    const userHandle = prompt('Welcome to macromix! Choose your handle (3-12 characters, lowercase letters & numbers):', defaultHandle);
+    if (!userHandle || !userHandle.trim()) {
+      showOnboardingError('Handle is required to complete profile setup.');
+      return;
+    }
+    const cleanHandle = userHandle.trim().toLowerCase().replace(/^@+/, '');
+    const createRes = await window.MacromixFirebase.createHandleProfile(cleanHandle, 'google', userTargets, googleUser);
+    if (!createRes.success) {
+      showOnboardingError(createRes.error || 'Failed to claim handle.');
+      return;
+    }
+    await registerHandleOnboarding(cleanHandle, 'google', createRes.profile);
+  } catch (err) {
+    AppLogger.log('AUTH', 'Google Sign-In error: ' + err.message, null, 'ERROR');
+    showOnboardingError('Google Sign-In error: ' + err.message);
+  }
+}
+
+// ─── Neo-Brutalist PWA Install Prompt Banner ───────────────────────
+let deferredInstallPrompt = null;
+
+function isPwaInstalled() {
+  return window.matchMedia('(display-mode: standalone)').matches ||
+         window.navigator.standalone === true ||
+         localStorage.getItem('macromix_pwa_installed') === 'true';
+}
+
+function isInstallDismissed() {
+  const dismissedAt = localStorage.getItem('macromix_install_dismissed_at');
+  if (!dismissedAt) return false;
+  const cooldownMs = 7 * 24 * 60 * 60 * 1000; // 7 days
+  return (Date.now() - parseInt(dismissedAt, 10)) < cooldownMs;
+}
+
+function checkAndTriggerInstallBanner(isFirstMealEvent = false) {
+  if (isPwaInstalled()) return;
+  if (isInstallDismissed()) return;
+
+  const hasMeals = Array.isArray(currentLogs) && currentLogs.length > 0;
+  if (!hasMeals) return;
+
+  const banner = document.getElementById('pwa-install-banner');
+  if (!banner) return;
+  if (banner.classList.contains('visible')) return;
+
+  const delayMs = isFirstMealEvent ? 650 : 1200;
+  setTimeout(() => {
+    if (!isPwaInstalled() && !isInstallDismissed()) {
+      banner.classList.add('visible');
+      banner.setAttribute('aria-hidden', 'false');
+    }
+  }, delayMs);
+}
+
+function dismissInstallBanner() {
+  const banner = document.getElementById('pwa-install-banner');
+  if (banner) {
+    banner.classList.remove('visible');
+    banner.setAttribute('aria-hidden', 'true');
+  }
+  localStorage.setItem('macromix_install_dismissed_at', Date.now().toString());
+}
+
+async function handlePwaInstallAction() {
+  if (deferredInstallPrompt) {
+    try {
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      if (outcome === 'accepted') {
+        const banner = document.getElementById('pwa-install-banner');
+        if (banner) {
+          banner.classList.remove('visible');
+          banner.setAttribute('aria-hidden', 'true');
+        }
+        localStorage.setItem('macromix_pwa_installed', 'true');
+      }
+    } catch (e) {
+      console.warn('[PWA] Prompt error:', e);
+    }
+    deferredInstallPrompt = null;
+  } else {
+    // Check if iOS Safari / WebKit
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    if (isIos) {
+      openIosInstallModal();
+    } else {
+      alert('To install macromix:\nClick the Install icon in your browser address bar or menu.');
     }
   }
+}
+
+function openIosInstallModal() {
+  const modal = document.getElementById('ios-install-modal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeIosInstallModal() {
+  const modal = document.getElementById('ios-install-modal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function handleLinkPasskey() {
+  if (!currentUserHandle) {
+    alert('Please log in or claim your handle first.');
+    return;
+  }
+  try {
+    await passkeyRegister(currentUserHandle);
+    alert('Passkey linked successfully!');
+  } catch (err) {
+    alert('Could not link passkey: ' + (err.message || err));
+  }
+}
+
+async function handleLinkGoogle() {
+  if (!currentUserHandle) {
+    alert('Please log in or claim your handle first.');
+    return;
+  }
+  try {
+    await handleGoogleAuth();
+  } catch (err) {
+    alert('Could not link Google account: ' + (err.message || err));
+  }
+}
+
+async function handleSignOut() {
+  if (!confirm('Are you sure you want to sign out?')) return;
+  try {
+    if (window.__macromixAuth && typeof window.__macromixAuth.signOut === 'function') {
+      await window.__macromixAuth.signOut();
+    }
+  } catch (e) {}
+  localStorage.removeItem('macromix_user_handle');
+  currentUserHandle = null;
+  clearRealtimeListeners(true);
+  closeSettingsModal();
+  const onboardingEl = document.getElementById('onboarding-screen');
+  if (onboardingEl) {
+    onboardingEl.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+  const badgeEl = document.getElementById('tab-pill-me');
+  if (badgeEl) badgeEl.style.display = 'none';
+  AppLogger.log('AUTH', 'User signed out');
+}
+
+// ─── Accessible Event Handlers Setup (H9, M10, M11) ─────────────
+function setupEventListeners() {
+  const bind = (id, event, handler) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener(event, handler);
+  };
+
+  bind('btn-onboard-google', 'click', handleGoogleAuth);
+  bind('btn-onboard-passkey', 'click', handlePasskeyAuth);
+
+  const brand = document.getElementById('brand-wrapper');
+  if (brand) {
+    brand.addEventListener('click', () => switchTab('me'));
+    brand.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        switchTab('me');
+      }
+    });
+  }
+
+  bind('tab-pill-friends', 'click', handleHeaderFriendsClick);
+  bind('tab-pill-me', 'click', () => {
+    if (currentTab !== 'me' || isVisitorMode) switchTab('me');
+  });
+
+  const streak = document.getElementById('streak-badge');
+  if (streak) {
+    streak.addEventListener('click', openSettingsModal);
+    streak.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openSettingsModal();
+      }
+    });
+  }
+
+  bind('btn-visitor-back', 'click', backToFriendsList);
+  bind('btn-date-prev', 'click', () => changeDate(-1));
+  bind('date-label', 'click', resetToToday);
+  bind('btn-date-next', 'click', () => changeDate(1));
+  bind('btn-tap-record', 'click', toggleVoiceRecording);
+
+  const form = document.getElementById('text-log-form');
+  if (form) form.addEventListener('submit', handleTextLog);
+
+  bind('btn-share-profile', 'click', triggerProfileShare);
+
+  const searchInput = document.getElementById('friend-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => handleFriendSearch(e.target.value));
+  }
+
+  bind('btn-close-settings', 'click', closeSettingsModal);
+  bind('btn-save-targets', 'click', saveTargets);
+  bind('btn-save-gemini-key', 'click', saveGeminiApiKeyFromSettings);
+  bind('btn-settings-link-passkey', 'click', handleLinkPasskey);
+  bind('btn-settings-link-google', 'click', handleLinkGoogle);
+  bind('btn-settings-signout', 'click', handleSignOut);
+  bind('btn-close-edit-modal', 'click', closeEditModal);
+  bind('btn-save-item-edit', 'click', saveItemEdit);
+
+  // PWA Install Prompt Listeners
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    checkAndTriggerInstallBanner(false);
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    const banner = document.getElementById('pwa-install-banner');
+    if (banner) {
+      banner.classList.remove('visible');
+      banner.setAttribute('aria-hidden', 'true');
+    }
+    localStorage.setItem('macromix_pwa_installed', 'true');
+  });
+
+  bind('btn-pwa-install-close', 'click', dismissInstallBanner);
+  bind('btn-pwa-install-action', 'click', handlePwaInstallAction);
+  bind('btn-close-ios-install', 'click', closeIosInstallModal);
+  bind('btn-got-it-ios-install', 'click', closeIosInstallModal);
+
+  // Keyboard accessibility: ESC key closes modals (M11)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeSettingsModal();
+      closeEditModal();
+      closeIosInstallModal();
+    }
+  });
 }
 
 function openProfileSettings() {
@@ -3301,5 +3591,34 @@ window.getMealsStorageKey = getMealsStorageKey;
 window.handleHeaderFriendsClick = handleHeaderFriendsClick;
 window.updateHeaderFriendsBtn = updateHeaderFriendsBtn;
 window.renderCurrentUserStreak = renderCurrentUserStreak;
+window.handleGoogleAuth = handleGoogleAuth;
+window.handlePasskeyAuth = handlePasskeyAuth;
+
+// ─── PWA Launch Handler Consumer (Captures deep links into active PWA) ───
+if ('launchQueue' in window) {
+  window.launchQueue.setConsumer(async (launchParams) => {
+    if (!launchParams.targetURL) return;
+    try {
+      const url = new URL(launchParams.targetURL);
+      const path = url.pathname.replace(/\/+$/, '');
+      const match = path.match(/^\/?@?([a-zA-Z0-9_]{3,16})$/);
+      if (match) {
+        const handle = match[1].toLowerCase();
+        const reserved = ['index', 'styles', 'app', 'sw', 'manifest', 'icons', 'api', 'favicon'];
+        if (!reserved.includes(handle)) {
+          if (currentUserHandle && currentUserHandle.toLowerCase() === handle) {
+            setVisitorMode(false);
+            await switchTab('me');
+          } else {
+            await viewFriendProfile(handle);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[PWA] LaunchQueue consumer error:', e);
+    }
+  });
+}
+
 
 

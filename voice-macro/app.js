@@ -19,9 +19,9 @@ const DEFAULT_TARGETS = {
   fib: 30
 };
 
-// Trial API Key fallback for instant zero-setup first 15 calls
-const DEFAULT_TRIAL_KEY = 'AIzaSyCjiSLtWbLgrAduwhyy0vrzmsU15qpaqQs';
-const MAX_TRIAL_CALLS = 15;
+// Trial API Key fallback (must be provided via environment or settings, never committed)
+const DEFAULT_TRIAL_KEY = '';
+const MAX_TRIAL_CALLS = 0;
 
 // State
 let targets = JSON.parse(localStorage.getItem(STORAGE_KEYS.TARGETS)) || DEFAULT_TARGETS;
@@ -589,8 +589,9 @@ Your tasks:
     const timeoutId = setTimeout(() => controller.abort(), 9000);
 
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKeyToUse}`;
+      const url = apiKeyToUse ? `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKeyToUse}` : '/geminiProxy';
       const payload = {
+        model,
         contents: [
           {
             parts: [
