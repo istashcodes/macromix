@@ -1,4 +1,4 @@
-const CACHE_NAME = 'macromix-pwa-v8.1';
+const CACHE_NAME = 'macromix-pwa-v8.2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -92,5 +92,69 @@ self.addEventListener('fetch', (event) => {
           });
       })
     );
+  }
+});
+
+// --- Push Notification & Background Reminder Handlers ---
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = { body: event.data ? event.data.text() : '' };
+  }
+
+  const title = data.title || 'Macromix Daily Reminder 🎯';
+  const options = {
+    body: data.body || "Don't forget to track your macros today!",
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    vibrate: [150, 50, 150],
+    data: {
+      url: data.url || '/'
+    },
+    tag: 'macromix-daily-reminder',
+    renotify: true,
+    actions: [
+      { action: 'open', title: 'Open Macromix ⚡' },
+      { action: 'dismiss', title: 'Dismiss' }
+    ]
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  if (event.action === 'dismiss') return;
+
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const title = event.data.title || 'Macromix Reminder 🎯';
+    const options = {
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      vibrate: [150, 50, 150],
+      tag: 'macromix-daily-reminder',
+      renotify: true,
+      ...event.data.options
+    };
+    event.waitUntil(self.registration.showNotification(title, options));
   }
 });

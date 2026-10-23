@@ -812,6 +812,25 @@ export function subscribeMealsFromFirestore(handle, callback) {
   }
 }
 
+export async function savePushSubscription(handle, subscription) {
+  const database = initFirebaseDB();
+  if (!database || !handle || !subscription) return false;
+  const clean = handle.trim().toLowerCase().replace(/^@+/, '');
+  try {
+    const docRef = doc(database, 'users', clean);
+    const subJson = typeof subscription.toJSON === 'function' ? subscription.toJSON() : subscription;
+    await updateDoc(docRef, {
+      pushSubscription: subJson,
+      pushSubscriptionUpdatedAt: serverTimestamp()
+    });
+    console.log(`[Macromix Firebase] Push subscription saved for @${clean}`);
+    return true;
+  } catch (err) {
+    console.warn(`[Macromix Firebase] Could not save push subscription for @${clean}:`, err);
+    return false;
+  }
+}
+
 // Auto-initialize on load
 initFirebase();
 
@@ -844,7 +863,8 @@ if (typeof window !== 'undefined') {
     getFollowingList,
     subscribeFollowing,
     getMealsStorageKey,
-    completeCustomTokenAuth
+    completeCustomTokenAuth,
+    savePushSubscription
   });
 }
 

@@ -452,6 +452,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadGeminiStatus();
   await loadMealLogs();
   setupSettingsModal();
+  setupNotificationSettings();
+  setupDailyReminderScheduler();
   setupSwipeGestures();
   initFriendsView();
   setupEventListeners();
@@ -2214,6 +2216,7 @@ function openSettingsModal() {
   }
 
   const modal = document.getElementById('settings-modal');
+  updateNotificationSettingsUI();
   if (modal) modal.classList.remove('hidden');
 }
 
@@ -2222,6 +2225,398 @@ function closeSettingsModal() {
   const modal = document.getElementById('settings-modal');
   if (modal) modal.classList.add('hidden');
 }
+
+// --- Push Notifications & Daily Reminder Engine ---
+
+/**
+ * Evaluates whether a daily reminder should be triggered for today.
+ * Rule:
+ * 1. If 0 meal entries logged today -> shouldRemind = true (reason: 'no_entry')
+ * 2. If entries logged today, but user met < 3 of 5 targets at 50% threshold -> shouldRemind = true (reason: 'below_50pct_threshold')
+ * 3. If user met >= 3 of 5 targets at 50% threshold -> shouldRemind = false (reason: 'goals_on_track')
+ */
+function evaluateDailyReminderStatus(todayLogs, targets) {
+  const safeTargets = targets || userTargets || { calories: 2000, protein_g: 150, carbs_g: 200, fat_g: 65, fiber_g: 30 };
+  const logs = Array.isArray(todayLogs) ? todayLogs : [];
+
+  if (logs.length === 0) {
+    return {
+      shouldRemind: true,
+      reason: 'no_entry',
+      metCount: 0,
+      totalTargets: 5,
+      message: "You haven't logged any meals today yet! Tap to track your macros and keep your streak alive 🔥"
+    };
+  }
+
+  let totalCal = 0;
+  let totalProt = 0;
+  let totalCarb = 0;
+  let totalFat = 0;
+  let totalFiber = 0;
+
+  logs.forEach(log => {
+    if (log.items && Array.isArray(log.items) && log.items.length > 0) {
+      log.items.forEach(it => {
+        totalCal += Number(it.calories) || 0;
+        totalProt += Number(it.protein_g) || 0;
+        totalCarb += Number(it.carbs_g) || 0;
+        totalFat += Number(it.fat_g) || 0;
+        totalFiber += Number(it.fiber_g) || 0;
+      });
+    } else {
+      totalCal += Number(log.total_calories) || 0;
+      totalProt += Number(log.total_protein_g) || 0;
+      totalCarb += Number(log.total_carbs_g) || 0;
+      totalFat += Number(log.total_fat_g) || 0;
+      totalFiber += Number(log.total_fiber_g) || 0;
+    }
+  });
+
+  const calTarget = Number(safeTargets.calories) || 2000;
+  const protTarget = Number(safeTargets.protein_g) || 150;
+  const carbTarget = Number(safeTargets.carbs_g) || 200;
+  const fatTarget = Number(safeTargets.fat_g) || 65;
+  const fiberTarget = Number(safeTargets.fiber_g !== undefined ? safeTargets.fiber_g : 30) || 30;
+
+  const calMet50 = totalCal >= (0.5 * calTarget);
+  const protMet50 = totalProt >= (0.5 * protTarget);
+  const carbMet50 = totalCarb >= (0.5 * carbTarget);
+  const fatMet50 = totalFat >= (0.5 * fatTarget);
+  const fiberMet50 = totalFiber >= (0.5 * fiberTarget);
+
+  const metCount = (calMet50 ? 1 : 0) +
+                   (protMet50 ? 1 : 0) +
+                   (carbMet50 ? 1 : 0) +
+                   (fatMet50 ? 1 : 0) +
+                   (fiberMet50 ? 1 : 0);
+
+  if (metCount < 3) {
+    return {
+      shouldRemind: true,
+      reason: 'below_50pct_threshold',
+      metCount,
+      totalTargets: 5,
+      totals: { totalCal, totalProt, totalCarb, totalFat, totalFiber },
+      message: `Daily Macro Reminder: You've only reached 50% on ${metCount} of 5 targets today. Tap to log dinner or a snack! 🎯`
+    };
+  }
+
+  return {
+    shouldRemind: false,
+    reason: 'goals_on_track',
+    metCount,
+    totalTargets: 5,
+    totals: { totalCal, totalProt, totalCarb, totalFat, totalFiber },
+    message: null
+  };
+}
+
+let dailyReminderSchedulerTimeout = null;
+
+function getStoredReminderTime() {
+  return localStorage.getItem('macromix_reminder_time') || '20:00';
+}
+
+function isReminderEnabled() {
+  return localStorage.getItem('macromix_reminders_enabled') !== 'false';
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+async function triggerReminderNotification(title, body, url = '/') {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+    return false;
+  }
+
+  const options = {
+    body,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    vibrate: [150, 50, 150],
+    data: { url },
+    tag: 'macromix-daily-reminder',
+    renotify: true
+  };
+
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      if (reg && reg.showNotification) {
+        await reg.showNotification(title, options);
+        return true;
+      }
+    }
+  } catch (swErr) {
+    console.warn('[Macromix Notifications] ServiceWorker showNotification failed:', swErr);
+  }
+
+  try {
+    new Notification(title, options);
+    return true;
+  } catch (e) {
+    console.warn('[Macromix Notifications] Native Notification failed:', e);
+    return false;
+  }
+}
+
+async function checkAndSendDailyReminder(force = false) {
+  if (isVisitorMode) return { sent: false, reason: 'visitor_mode' };
+
+  if (!force) {
+    if (!isReminderEnabled()) return { sent: false, reason: 'disabled' };
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+      return { sent: false, reason: 'permission_not_granted' };
+    }
+
+    const todayStr = getTodayDateString();
+    const lastReminderDate = localStorage.getItem('macromix_last_reminder_date');
+    if (lastReminderDate === todayStr) {
+      return { sent: false, reason: 'already_sent_today' };
+    }
+
+    // Check if current time has reached the scheduled reminder time
+    const reminderTime = getStoredReminderTime(); // e.g. "20:00"
+    const [remHour, remMin] = reminderTime.split(':').map(Number);
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const targetMinutes = remHour * 60 + (remMin || 0);
+
+    if (currentMinutes < targetMinutes) {
+      return { sent: false, reason: 'too_early' };
+    }
+  }
+
+  const todayStr = getTodayDateString();
+  const todayLogs = currentLogs.filter(l => getLogDate(l) === todayStr);
+  const status = evaluateDailyReminderStatus(todayLogs, userTargets);
+
+  if (status.shouldRemind || force) {
+    const title = 'Macromix Daily Reminder 🎯';
+    const message = status.message || (force ? "Test notification: Tracking your macros keeps streaks alive! 🔥" : "Don't forget to track your macros today!");
+    const sent = await triggerReminderNotification(title, message);
+
+    if (sent && !force) {
+      localStorage.setItem('macromix_last_reminder_date', todayStr);
+      AppLogger.log('REMINDER', 'Daily reminder notification sent', status);
+    }
+    return { sent, status };
+  }
+
+  return { sent: false, status };
+}
+
+function scheduleDailyReminderCheck() {
+  if (dailyReminderSchedulerTimeout) {
+    clearTimeout(dailyReminderSchedulerTimeout);
+    dailyReminderSchedulerTimeout = null;
+  }
+
+  if (!isReminderEnabled()) return;
+
+  const reminderTime = getStoredReminderTime();
+  const [remHour, remMin] = reminderTime.split(':').map(Number);
+  const now = new Date();
+  const nextTarget = new Date();
+  nextTarget.setHours(remHour, remMin || 0, 0, 0);
+
+  // If already past today, schedule for tomorrow
+  if (nextTarget <= now) {
+    nextTarget.setDate(nextTarget.getDate() + 1);
+  }
+
+  const delayMs = Math.max(1000, nextTarget.getTime() - now.getTime());
+  AppLogger.log('REMINDER', `Scheduled daily reminder check in ${Math.round(delayMs / 60000)} minutes`);
+
+  dailyReminderSchedulerTimeout = setTimeout(async () => {
+    await checkAndSendDailyReminder();
+    scheduleDailyReminderCheck();
+  }, delayMs);
+}
+
+async function subscribeWebPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    return null;
+  }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const vapidKey = (window.__ENV && window.__ENV.VAPID_PUBLIC_KEY) || 'BN3icagxCDZ-KDirdp3qKQMNG7HJUinT1EbfaifB2hzqMHd25aD_3PrYKxATLgsmCFERFFJlW_C4wGOHNnGfy_c';
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey)
+      });
+    }
+
+    if (sub && currentUserHandle && window.MacromixFirebase?.savePushSubscription) {
+      await window.MacromixFirebase.savePushSubscription(currentUserHandle, sub);
+    }
+
+    if ('periodicSync' in reg) {
+      try {
+        await reg.periodicSync.register('daily-macro-reminder', {
+          minInterval: 12 * 60 * 60 * 1000
+        });
+      } catch (pe) {}
+    }
+
+    return sub;
+  } catch (err) {
+    console.warn('[Macromix Notifications] Push subscribe error:', err);
+    return null;
+  }
+}
+
+function updateNotificationSettingsUI() {
+  const statusEl = document.getElementById('settings-notification-status');
+  const toggleBtn = document.getElementById('btn-toggle-notifications');
+  const timeInput = document.getElementById('settings-reminder-time');
+
+  if (timeInput) {
+    timeInput.value = getStoredReminderTime();
+  }
+
+  if (typeof Notification === 'undefined') {
+    if (statusEl) {
+      statusEl.textContent = 'Not supported in this browser';
+      statusEl.style.color = '#DC2626';
+    }
+    if (toggleBtn) toggleBtn.disabled = true;
+    return;
+  }
+
+  const perm = Notification.permission;
+  const enabled = isReminderEnabled();
+
+  if (perm === 'granted') {
+    if (statusEl) {
+      statusEl.textContent = enabled ? 'Enabled ✓ (Active)' : 'Disabled in app';
+      statusEl.style.color = enabled ? '#16A34A' : '#64748B';
+    }
+    if (toggleBtn) {
+      toggleBtn.textContent = enabled ? 'Turn Off Reminders' : 'Turn On Reminders 🔔';
+      toggleBtn.style.background = enabled ? '#F1F5F9' : 'var(--fat-color)';
+      toggleBtn.style.color = enabled ? '#000' : '#1E293B';
+    }
+  } else if (perm === 'denied') {
+    if (statusEl) {
+      statusEl.textContent = 'Blocked in browser permissions ✕';
+      statusEl.style.color = '#DC2626';
+    }
+    if (toggleBtn) {
+      toggleBtn.textContent = 'Blocked in Permissions 🔒';
+      toggleBtn.disabled = true;
+    }
+  } else {
+    if (statusEl) {
+      statusEl.textContent = 'Not enabled yet 🔔';
+      statusEl.style.color = '#64748B';
+    }
+    if (toggleBtn) {
+      toggleBtn.textContent = 'Enable Notifications 🔔';
+      toggleBtn.style.background = 'var(--cal-color)';
+      toggleBtn.style.color = '#000';
+    }
+  }
+}
+
+function setupNotificationSettings() {
+  const toggleBtn = document.getElementById('btn-toggle-notifications');
+  const testBtn = document.getElementById('btn-test-notification');
+  const timeInput = document.getElementById('settings-reminder-time');
+  const feedbackEl = document.getElementById('settings-notification-feedback');
+
+  updateNotificationSettingsUI();
+
+  if (timeInput) {
+    timeInput.addEventListener('change', (e) => {
+      const val = e.target.value || '20:00';
+      localStorage.setItem('macromix_reminder_time', val);
+      scheduleDailyReminderCheck();
+      if (feedbackEl) {
+        feedbackEl.style.display = 'block';
+        feedbackEl.style.color = '#16A34A';
+        feedbackEl.textContent = `✓ Daily reminder scheduled for ${val}`;
+        setTimeout(() => { feedbackEl.style.display = 'none'; }, 3000);
+      }
+    });
+  }
+
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', async () => {
+      if (typeof Notification === 'undefined') return;
+
+      if (Notification.permission === 'default') {
+        const perm = await Notification.requestPermission();
+        if (perm === 'granted') {
+          localStorage.setItem('macromix_reminders_enabled', 'true');
+          await subscribeWebPush();
+          scheduleDailyReminderCheck();
+        }
+      } else if (Notification.permission === 'granted') {
+        const currentlyEnabled = isReminderEnabled();
+        localStorage.setItem('macromix_reminders_enabled', currentlyEnabled ? 'false' : 'true');
+        if (!currentlyEnabled) {
+          await subscribeWebPush();
+          scheduleDailyReminderCheck();
+        } else if (dailyReminderSchedulerTimeout) {
+          clearTimeout(dailyReminderSchedulerTimeout);
+        }
+      }
+      updateNotificationSettingsUI();
+    });
+  }
+
+  if (testBtn) {
+    testBtn.addEventListener('click', async () => {
+      if (feedbackEl) {
+        feedbackEl.style.display = 'block';
+        feedbackEl.style.color = '#000';
+        feedbackEl.textContent = 'Testing notification & target evaluation...';
+      }
+
+      if (typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') {
+          if (feedbackEl) {
+            feedbackEl.style.color = '#DC2626';
+            feedbackEl.textContent = 'Notification permission denied in browser.';
+          }
+          updateNotificationSettingsUI();
+          return;
+        }
+      }
+
+      const res = await checkAndSendDailyReminder(true);
+      if (feedbackEl) {
+        const st = res.status || {};
+        feedbackEl.style.color = '#16A34A';
+        feedbackEl.textContent = `✓ Notification triggered! [${st.metCount || 0}/5 targets met at 50%]`;
+        setTimeout(() => { feedbackEl.style.display = 'none'; }, 5000);
+      }
+    });
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      checkAndSendDailyReminder();
+    }
+  });
+}
+
+// Expose globally for testing & external harnesses
+window.evaluateDailyReminderStatus = evaluateDailyReminderStatus;
+window.checkAndSendDailyReminder = checkAndSendDailyReminder;
 
 function openGeminiModal() {
   AppLogger.log('UI', 'Opened Gemini AI Status modal');

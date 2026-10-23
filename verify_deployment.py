@@ -109,7 +109,9 @@ def verify_deployment(base_url: str = DEFAULT_URL, local_key: str = None) -> boo
                 raise AssertionError("env.js script tag missing from index.html")
             if "settings-gemini-key-input" not in html:
                 raise AssertionError("settings-gemini-key-input missing from index.html")
-    results.append(run_test("Asset Check: index.html (env.js & key settings present)", test_index))
+            if "settings-reminder-time" not in html or "btn-toggle-notifications" not in html:
+                raise AssertionError("Daily Push Reminder settings controls missing from index.html")
+    results.append(run_test("Asset Check: index.html (env.js, settings & push controls)", test_index))
 
     # 3. Check env.js
     api_key_from_env = local_key
@@ -127,7 +129,7 @@ def verify_deployment(base_url: str = DEFAULT_URL, local_key: str = None) -> boo
                 api_key_from_env = m.group(1)
     results.append(run_test("Asset Check: env.js (GEMINI_API_KEY served)", test_env))
 
-    # 4. Check app.js for direct inference logic
+    # 4. Check app.js for direct inference & reminder logic
     def test_app():
         req = urllib.request.Request(f"{base_url}/app.js", headers={"User-Agent": "MacromixVerify/1.0"})
         with urllib.request.urlopen(req, timeout=10, context=SSL_CTX) as resp:
@@ -142,9 +144,13 @@ def verify_deployment(base_url: str = DEFAULT_URL, local_key: str = None) -> boo
                 raise AssertionError("thinkingBudget configuration missing from app.js")
             if "25000" not in js and "20000" not in js:
                 raise AssertionError("Client-side timeout should be at least 20000ms in app.js")
-    results.append(run_test("Asset Check: app.js (Direct Gemini API & valid models)", test_app))
+            if "evaluateDailyReminderStatus" not in js:
+                raise AssertionError("evaluateDailyReminderStatus missing from app.js")
+            if "checkAndSendDailyReminder" not in js:
+                raise AssertionError("checkAndSendDailyReminder missing from app.js")
+    results.append(run_test("Asset Check: app.js (Inference & reminder engine present)", test_app))
 
-    # 5. Check sw.js
+    # 5. Check sw.js for caching and push listeners
     def test_sw():
         req = urllib.request.Request(f"{base_url}/sw.js", headers={"User-Agent": "MacromixVerify/1.0"})
         with urllib.request.urlopen(req, timeout=10, context=SSL_CTX) as resp:
@@ -153,9 +159,54 @@ def verify_deployment(base_url: str = DEFAULT_URL, local_key: str = None) -> boo
             js = resp.read().decode("utf-8")
             if "macromix-pwa" not in js:
                 raise AssertionError("Invalid service worker cache name in sw.js")
-    results.append(run_test("Asset Check: sw.js (Cache configuration valid)", test_sw))
+            if "'push'" not in js and '"push"' not in js:
+                raise AssertionError("Push notification listener missing from sw.js")
+            if "'notificationclick'" not in js and '"notificationclick"' not in js:
+                raise AssertionError("Notification click listener missing from sw.js")
+    results.append(run_test("Asset Check: sw.js (Cache & push handlers valid)", test_sw))
 
-    # 6. Check Meal Analysis (Live Inference)
+    # 6. Functional Check: Daily Reminder Logic & 50% Thresholds
+    def test_reminder_logic():
+        import subprocess
+        req = urllib.request.Request(f"{base_url}/app.js", headers={"User-Agent": "MacromixVerify/1.0"})
+        with urllib.request.urlopen(req, timeout=10, context=SSL_CTX) as resp:
+            app_code = resp.read().decode("utf-8")
+
+        m = re.search(r"(function evaluateDailyReminderStatus[\s\S]*?\n\})", app_code)
+        if not m:
+            raise AssertionError("evaluateDailyReminderStatus definition missing from app.js")
+        fn_code = m.group(1)
+
+        test_script = f"""
+        {fn_code}
+        const targets = {{ calories: 2000, protein_g: 150, carbs_g: 200, fat_g: 65, fiber_g: 30 }};
+
+        // 1. 0 meals -> shouldRemind true (no_entry)
+        const t1 = evaluateDailyReminderStatus([], targets);
+        if (!t1.shouldRemind || t1.reason !== 'no_entry') throw new Error('0 meals must trigger no_entry reminder');
+
+        // 2. 1 target met at 50% -> shouldRemind true (< 3 met)
+        const t2 = evaluateDailyReminderStatus([{{ total_calories: 1050, total_protein_g: 20, total_carbs_g: 30, total_fat_g: 10, total_fiber_g: 2 }}], targets);
+        if (!t2.shouldRemind || t2.metCount !== 1) throw new Error('1 target met must trigger below_50pct_threshold reminder');
+
+        // 3. 2 targets met at 50% -> shouldRemind true (< 3 met)
+        const t3 = evaluateDailyReminderStatus([{{ total_calories: 1050, total_protein_g: 80, total_carbs_g: 30, total_fat_g: 10, total_fiber_g: 2 }}], targets);
+        if (!t3.shouldRemind || t3.metCount !== 2) throw new Error('2 targets met must trigger below_50pct_threshold reminder');
+
+        // 4. 3 targets met at 50% -> shouldRemind false (>= 3 met)
+        const t4 = evaluateDailyReminderStatus([{{ total_calories: 1050, total_protein_g: 80, total_carbs_g: 110, total_fat_g: 10, total_fiber_g: 2 }}], targets);
+        if (t4.shouldRemind || t4.metCount !== 3) throw new Error('3 targets met at 50% must NOT trigger reminder');
+
+        // 5. 5 targets met at 50% -> shouldRemind false
+        const t5 = evaluateDailyReminderStatus([{{ total_calories: 2000, total_protein_g: 150, total_carbs_g: 200, total_fat_g: 65, total_fiber_g: 30 }}], targets);
+        if (t5.shouldRemind || t5.metCount !== 5) throw new Error('5 targets met must NOT trigger reminder');
+        """
+        res = subprocess.run(["node", "-e", test_script], capture_output=True, text=True)
+        if res.returncode != 0:
+            raise AssertionError(f"Reminder evaluation unit test failed: {res.stderr or res.stdout}")
+    results.append(run_test("Functional Check: Daily Reminder 50% Target Rules (0 to 5 targets)", test_reminder_logic))
+
+    # 7. Check Meal Analysis (Live Inference)
     def test_inference():
         key_to_test = api_key_from_env or local_key
         if not key_to_test:

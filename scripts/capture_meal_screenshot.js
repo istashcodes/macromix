@@ -178,13 +178,20 @@ async function run() {
 
     console.log('[Action] Entering meal: "2 boiled eggs, sourdough toast, and black coffee"...');
     await client.evaluate(`
-      const input = document.getElementById('manual-text-input');
-      if (input) {
-        input.value = "2 boiled eggs, sourdough toast, and black coffee";
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-      const btn = document.getElementById('btn-submit-log');
-      if (btn) btn.click();
+      setTimeout(() => {
+        const input = document.getElementById('manual-text-input');
+        if (input) {
+          input.value = "2 boiled eggs, sourdough toast, and black coffee";
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        const form = document.getElementById('text-log-form');
+        if (form) {
+          const btn = document.getElementById('btn-submit-log');
+          if (btn) btn.disabled = false;
+          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+      }, 50);
+      true;
     `);
 
     // Poll until meal is logged or timeout
@@ -226,6 +233,29 @@ async function run() {
     fs.mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });
     fs.writeFileSync(OUTPUT_FILE, buffer);
     console.log(`[Success] Screenshot saved to ${OUTPUT_FILE} (${buffer.length} bytes)`);
+
+    // Also capture Settings Modal with Daily Push Reminders UI
+    console.log('[Screenshot] Opening Settings Modal to capture Daily Push Reminders UI...');
+    await client.evaluate(`
+      if (typeof openSettingsModal === 'function') openSettingsModal();
+      const modal = document.getElementById('settings-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        const scrollable = modal.querySelector('.modal-content');
+        if (scrollable) scrollable.scrollTop = 380;
+      }
+    `);
+    await new Promise(r => setTimeout(r, 600));
+
+    const settingsSs = await client.send('Page.captureScreenshot', {
+      format: 'png',
+      fromSurface: true,
+      captureBeyondViewport: false
+    });
+    const settingsBuffer = Buffer.from(settingsSs.data, 'base64');
+    const settingsOut = path.join(ARTIFACT_DIR, 'settings_reminder_screenshot.png');
+    fs.writeFileSync(settingsOut, settingsBuffer);
+    console.log(`[Success] Settings screenshot saved to ${settingsOut} (${settingsBuffer.length} bytes)`);
 
     client.close();
   } finally {
