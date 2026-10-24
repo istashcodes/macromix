@@ -31,7 +31,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=6.1">
+  <link rel="stylesheet" href="styles.css?v=6.2">
 </head>
 <body>
   <!-- Gooey SVG Filter for Header Tab Toggle (gooey-react technique) -->
@@ -131,21 +131,22 @@
       </div>
     </div>
 
-    <!-- Persistent Neo-Brutalist PWA Install Banner (activated post-first meal) -->
-    <div id="pwa-install-banner" class="pwa-install-banner" role="region" aria-label="Install App" aria-hidden="true">
-      <div class="pwa-banner-card">
-        <button type="button" class="pwa-banner-close" id="btn-pwa-install-close" title="Dismiss banner" aria-label="Dismiss banner">✕</button>
-        <img src="icons/icon-192.png" alt="macromix logo" class="pwa-banner-logo">
-        <div class="pwa-banner-content">
-          <div class="pwa-banner-title">
-            <span>INSTALL MACROMIX</span>
-            <span class="pwa-banner-badge">PWA</span>
-          </div>
-          <div class="pwa-banner-desc">Instant 1-tap logging, offline mode &amp; home screen speed</div>
+    <!-- Unified Elevated Top Announcement Banner (Features & PWA Install) -->
+    <div id="top-announcement-banner" class="top-announcement-banner" role="region" aria-label="Announcement" aria-hidden="true">
+      <div class="announcement-card" id="announcement-card">
+        <button type="button" class="announcement-close" id="btn-announcement-close" title="Dismiss banner" aria-label="Dismiss banner">✕</button>
+        <div class="announcement-icon-wrap" id="announcement-icon-wrap">
+          <span class="announcement-icon" id="announcement-icon">🔔</span>
         </div>
-        <button type="button" class="pwa-banner-install-btn" id="btn-pwa-install-action">
-          <span class="pwa-btn-icon">📲</span>
-          <span>INSTALL</span>
+        <div class="announcement-content">
+          <div class="announcement-title-row">
+            <span class="announcement-title" id="announcement-title">Smart Reminders</span>
+            <span class="announcement-badge" id="announcement-badge" style="display: none;"></span>
+          </div>
+          <div class="announcement-desc" id="announcement-desc">Custom times &amp; streak alerts</div>
+        </div>
+        <button type="button" class="announcement-cta-btn" id="btn-announcement-cta">
+          <span id="announcement-cta-text">Turn On ⚡</span>
         </button>
       </div>
     </div>
@@ -424,6 +425,6 @@
   <script src="env.js" onerror="/* optional env.js */"></script>
 
   <!-- Frontend Controller -->
-  <script src="app.js?v=8.2"></script>
+  <script src="app.js?v=8.3"></script>
 </body>
 </html>

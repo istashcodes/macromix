@@ -2051,54 +2051,58 @@ body {
 }
 
 /* ==========================================================================
-   Neo-Brutalist Persistent PWA Install Banner (Below Header)
+   Elevated Neo-Brutalist Top Announcement Banner Space
    ========================================================================== */
 
+.top-announcement-banner,
 .pwa-install-banner {
   width: 100%;
   overflow: hidden;
   max-height: 0;
   opacity: 0;
-  transform: translateY(-16px);
+  transform: translateY(-12px);
   margin-bottom: 0;
-  transition: max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 0.4s ease,
-              transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-              margin-bottom 0.4s ease;
+  transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.35s ease,
+              transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              margin-bottom 0.35s ease;
   pointer-events: none;
 }
 
+.top-announcement-banner.visible,
 .pwa-install-banner.visible {
-  max-height: 200px;
+  max-height: 180px;
   opacity: 1;
   transform: translateY(0);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   pointer-events: auto;
 }
 
+.announcement-card,
 .pwa-banner-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  background-color: var(--brand-yellow, #FFE600);
-  color: #121212;
-  border: 3px solid #121212;
-  box-shadow: 4px 4px 0px #121212;
+  gap: 9px;
+  padding: 8px 11px;
+  background-color: #FFFFFF;
+  color: #111111;
+  border: 3px solid #000000;
+  box-shadow: 4px 4px 0px #000000;
   border-radius: 12px;
   position: relative;
   box-sizing: border-box;
 }
 
+.announcement-close,
 .pwa-banner-close {
-  background: #FFFFFF;
-  color: #121212;
-  border: 2px solid #121212;
-  box-shadow: 2px 2px 0px #121212;
+  background: #F1F5F9;
+  color: #111111;
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px #000000;
   border-radius: 6px;
-  width: 28px;
-  height: 28px;
-  font-size: 13px;
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
   font-weight: 900;
   line-height: 1;
   display: flex;
@@ -2106,99 +2110,122 @@ body {
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
 }
 
+.announcement-close:hover,
 .pwa-banner-close:hover {
   background: #FEE2E2;
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0px #121212;
+  box-shadow: 3px 3px 0px #000000;
 }
 
+.announcement-close:active,
 .pwa-banner-close:active {
-  transform: translate(2px, 2px);
-  box-shadow: 0 0 0 #121212;
+  transform: translate(1px, 1px);
+  box-shadow: 0 0 0 #000000;
 }
 
-.pwa-banner-logo {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  border: 2px solid #121212;
-  box-shadow: 2px 2px 0px #121212;
-  background: #FFFFFF;
+.announcement-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px #000000;
+  background: var(--brand-yellow, #FFE600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  object-fit: contain;
 }
 
+.announcement-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.announcement-content,
 .pwa-banner-content {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
+.announcement-title-row,
 .pwa-banner-title {
-  font-weight: 900;
-  font-size: 0.92rem;
-  letter-spacing: -0.02em;
-  color: #121212;
   display: flex;
   align-items: center;
   gap: 6px;
   line-height: 1.2;
 }
 
-.pwa-banner-badge {
-  background: #121212;
-  color: #FFE600;
-  font-size: 0.65rem;
+.announcement-title {
   font-weight: 900;
-  padding: 1px 5px;
-  border-radius: 4px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.pwa-banner-desc {
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: #2A2A2A;
-  line-height: 1.25;
+  font-size: 0.86rem;
+  letter-spacing: -0.02em;
+  color: #111111;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.pwa-banner-install-btn {
-  background: #121212;
-  color: #FFFFFF;
-  border: 2.5px solid #121212;
-  box-shadow: 3px 3px 0px #121212;
-  border-radius: 8px;
-  padding: 8px 14px;
-  font-size: 0.82rem;
+.announcement-badge,
+.pwa-banner-badge {
+  background: #000000;
+  color: var(--brand-yellow, #FFE600);
+  font-size: 0.60rem;
   font-weight: 900;
-  letter-spacing: 0.03em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.announcement-desc,
+.pwa-banner-desc {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #4B5563;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.announcement-cta-btn,
+.pwa-banner-install-btn {
+  background: #000000;
+  color: var(--brand-yellow, #FFE600);
+  border: 2px solid #000000;
+  box-shadow: 2.5px 2.5px 0px var(--brand-yellow, #FFE600);
+  border-radius: 7px;
+  padding: 6px 11px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   cursor: pointer;
   flex-shrink: 0;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  white-space: nowrap;
+  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
 }
 
+.announcement-cta-btn:hover,
 .pwa-banner-install-btn:hover {
-  background: #262626;
-  color: #FFE600;
+  background: #1A1A1A;
   transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0px #121212;
+  box-shadow: 4px 4px 0px var(--brand-yellow, #FFE600);
 }
 
+.announcement-cta-btn:active,
 .pwa-banner-install-btn:active {
   transform: translate(2px, 2px);
-  box-shadow: 0 0 0 #121212;
+  box-shadow: 0 0 0 #000000;
 }
 
 /* iOS Install Guidance Steps */

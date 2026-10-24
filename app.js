@@ -490,6 +490,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     scheduleDailyReminderCheck();
     setupSwipeGestures();
     await initFriendsView();
+    updateTopAnnouncementBanner();
   } catch (e) {
     console.warn('[Init] Additional feature init note:', e);
   }
@@ -2565,6 +2566,7 @@ function setupNotificationSettings() {
         }
       }
       updateNotificationSettingsUI();
+      updateTopAnnouncementBanner();
     });
   }
 
@@ -3239,6 +3241,7 @@ async function checkUserProfileOnboarding() {
     setupRealtimeMealsSync();
     setupCurrentUserProfileSync();
     updateHeaderFriendsBtn();
+    updateTopAnnouncementBanner();
     return;
   }
 
@@ -3280,6 +3283,7 @@ async function checkUserProfileOnboarding() {
         setupRealtimeMealsSync();
         setupCurrentUserProfileSync();
         updateHeaderFriendsBtn();
+        updateTopAnnouncementBanner();
         return;
       }
     }
@@ -3712,49 +3716,153 @@ async function handleGoogleAuth() {
   }
 }
 
-// ─── Neo-Brutalist PWA Install Prompt Banner ───────────────────────
+// ─── Unified Elevated Top Announcement Banner Manager ─────────────
+const BANNER_SNOOZE_MS = 3 * 24 * 60 * 60 * 1000; // 3 days snooze
+
 let deferredInstallPrompt = null;
+let currentActiveBannerId = null;
 
 function isPwaInstalled() {
-  return window.matchMedia('(display-mode: standalone)').matches ||
-         window.navigator.standalone === true ||
+  return (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+         (typeof navigator !== 'undefined' && navigator.standalone === true) ||
          localStorage.getItem('macromix_pwa_installed') === 'true';
 }
 
-function isInstallDismissed() {
-  const dismissedAt = localStorage.getItem('macromix_install_dismissed_at');
-  if (!dismissedAt) return false;
-  const cooldownMs = 7 * 24 * 60 * 60 * 1000; // 7 days
-  return (Date.now() - parseInt(dismissedAt, 10)) < cooldownMs;
+function isBannerSnoozed(bannerId) {
+  const snoozedUntil = localStorage.getItem(`macromix_banner_snooze_${bannerId}`);
+  if (!snoozedUntil) return false;
+  return Date.now() < parseInt(snoozedUntil, 10);
 }
 
-function checkAndTriggerInstallBanner(isFirstMealEvent = false) {
-  if (isPwaInstalled()) return;
-  if (isInstallDismissed()) return;
+function snoozeBanner(bannerId) {
+  const until = Date.now() + BANNER_SNOOZE_MS;
+  localStorage.setItem(`macromix_banner_snooze_${bannerId}`, until.toString());
+}
 
-  const hasMeals = Array.isArray(currentLogs) && currentLogs.length > 0;
-  if (!hasMeals) return;
-
-  const banner = document.getElementById('pwa-install-banner');
-  if (!banner) return;
-  if (banner.classList.contains('visible')) return;
-
-  const delayMs = isFirstMealEvent ? 650 : 1200;
-  setTimeout(() => {
-    if (!isPwaInstalled() && !isInstallDismissed()) {
-      banner.classList.add('visible');
-      banner.setAttribute('aria-hidden', 'false');
+const FEATURE_BANNERS = [
+  // Priority 1: New Feature Launch (Smart Notifications)
+  {
+    id: 'notifications_v1',
+    icon: '🔔',
+    title: 'Smart Reminders',
+    desc: 'Custom times & streak alerts',
+    ctaText: 'Turn On ⚡',
+    isSatisfied: () => {
+      if (typeof Notification === 'undefined') return true;
+      return Notification.permission === 'granted' && localStorage.getItem('macromix_reminders_enabled') === 'true';
+    },
+    onAction: () => {
+      openSettingsModal();
+      setTimeout(() => {
+        const modal = document.getElementById('settings-modal');
+        if (modal) {
+          const scrollable = modal.querySelector('.modal-content');
+          const reminderCard = document.getElementById('settings-notification-status')?.closest('.form-group');
+          if (scrollable && reminderCard) {
+            scrollable.scrollTo({ top: reminderCard.offsetTop - 20, behavior: 'smooth' });
+          } else if (scrollable) {
+            scrollable.scrollTo({ top: 380, behavior: 'smooth' });
+          }
+        }
+      }, 150);
     }
-  }, delayMs);
+  },
+  // Priority 2: PWA Installation
+  {
+    id: 'pwa_install',
+    badge: 'PWA',
+    icon: '📲',
+    title: 'Install macromix',
+    desc: 'Instant 1-tap logging, offline mode & home screen speed',
+    ctaText: 'Install 📲',
+    isSatisfied: () => isPwaInstalled(),
+    onAction: () => {
+      handlePwaInstallAction();
+    }
+  }
+];
+
+function updateTopAnnouncementBanner() {
+  const container = document.getElementById('top-announcement-banner') || document.getElementById('pwa-install-banner');
+  if (!container) return;
+
+  // Don't show banners in visitor mode or before onboarding is completed
+  if (isVisitorMode || !currentUserHandle) {
+    container.classList.remove('visible');
+    container.setAttribute('aria-hidden', 'true');
+    currentActiveBannerId = null;
+    return;
+  }
+
+  // Find the highest priority banner that is NOT satisfied and NOT snoozed
+  let activeBanner = null;
+  for (const b of FEATURE_BANNERS) {
+    if (b.isSatisfied()) continue; // Completed / already active
+    if (isBannerSnoozed(b.id)) continue; // Currently snoozed
+    activeBanner = b;
+    break; // Priority order: first match wins
+  }
+
+  if (!activeBanner) {
+    container.classList.remove('visible');
+    container.setAttribute('aria-hidden', 'true');
+    currentActiveBannerId = null;
+    return;
+  }
+
+  currentActiveBannerId = activeBanner.id;
+
+  // Populate content
+  const titleEl = document.getElementById('announcement-title');
+  const badgeEl = document.getElementById('announcement-badge');
+  const descEl = document.getElementById('announcement-desc');
+  const iconEl = document.getElementById('announcement-icon');
+  const ctaBtnText = document.getElementById('announcement-cta-text');
+
+  if (titleEl) titleEl.textContent = activeBanner.title;
+  if (badgeEl) {
+    if (activeBanner.badge) {
+      badgeEl.textContent = activeBanner.badge;
+      badgeEl.style.display = '';
+    } else {
+      badgeEl.textContent = '';
+      badgeEl.style.display = 'none';
+    }
+  }
+  if (descEl) descEl.textContent = activeBanner.desc;
+  if (iconEl) iconEl.textContent = activeBanner.icon;
+  if (ctaBtnText) ctaBtnText.textContent = activeBanner.ctaText;
+
+  // Animate in
+  container.classList.add('visible');
+  container.setAttribute('aria-hidden', 'false');
+}
+
+function dismissActiveAnnouncementBanner() {
+  if (currentActiveBannerId) {
+    snoozeBanner(currentActiveBannerId);
+  }
+  const container = document.getElementById('top-announcement-banner') || document.getElementById('pwa-install-banner');
+  if (container) {
+    container.classList.remove('visible');
+    container.setAttribute('aria-hidden', 'true');
+  }
+  currentActiveBannerId = null;
+}
+
+function handleActiveAnnouncementCta() {
+  const banner = FEATURE_BANNERS.find(b => b.id === currentActiveBannerId);
+  if (banner && typeof banner.onAction === 'function') {
+    banner.onAction();
+  }
+}
+
+function checkAndTriggerInstallBanner() {
+  updateTopAnnouncementBanner();
 }
 
 function dismissInstallBanner() {
-  const banner = document.getElementById('pwa-install-banner');
-  if (banner) {
-    banner.classList.remove('visible');
-    banner.setAttribute('aria-hidden', 'true');
-  }
-  localStorage.setItem('macromix_install_dismissed_at', Date.now().toString());
+  dismissActiveAnnouncementBanner();
 }
 
 async function handlePwaInstallAction() {
@@ -3763,12 +3871,8 @@ async function handlePwaInstallAction() {
       deferredInstallPrompt.prompt();
       const { outcome } = await deferredInstallPrompt.userChoice;
       if (outcome === 'accepted') {
-        const banner = document.getElementById('pwa-install-banner');
-        if (banner) {
-          banner.classList.remove('visible');
-          banner.setAttribute('aria-hidden', 'true');
-        }
         localStorage.setItem('macromix_pwa_installed', 'true');
+        updateTopAnnouncementBanner();
       }
     } catch (e) {
       console.warn('[PWA] Prompt error:', e);
@@ -3909,16 +4013,14 @@ function setupEventListeners() {
 
   window.addEventListener('appinstalled', () => {
     deferredInstallPrompt = null;
-    const banner = document.getElementById('pwa-install-banner');
-    if (banner) {
-      banner.classList.remove('visible');
-      banner.setAttribute('aria-hidden', 'true');
-    }
     localStorage.setItem('macromix_pwa_installed', 'true');
+    updateTopAnnouncementBanner();
   });
 
-  bind('btn-pwa-install-close', 'click', dismissInstallBanner);
-  bind('btn-pwa-install-action', 'click', handlePwaInstallAction);
+  bind('btn-announcement-close', 'click', dismissActiveAnnouncementBanner);
+  bind('btn-announcement-cta', 'click', handleActiveAnnouncementCta);
+  bind('btn-pwa-install-close', 'click', dismissActiveAnnouncementBanner);
+  bind('btn-pwa-install-action', 'click', handleActiveAnnouncementCta);
   bind('btn-close-ios-install', 'click', closeIosInstallModal);
   bind('btn-got-it-ios-install', 'click', closeIosInstallModal);
 
@@ -3956,6 +4058,10 @@ window.updateHeaderFriendsBtn = updateHeaderFriendsBtn;
 window.renderCurrentUserStreak = renderCurrentUserStreak;
 window.handleGoogleAuth = handleGoogleAuth;
 window.handlePasskeyAuth = handlePasskeyAuth;
+window.updateTopAnnouncementBanner = updateTopAnnouncementBanner;
+window.dismissActiveAnnouncementBanner = dismissActiveAnnouncementBanner;
+window.handleActiveAnnouncementCta = handleActiveAnnouncementCta;
+window.FEATURE_BANNERS = FEATURE_BANNERS;
 
 // ─── PWA Launch Handler Consumer (Captures deep links into active PWA) ───
 if ('launchQueue' in window) {
