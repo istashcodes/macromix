@@ -439,24 +439,60 @@ async function waitForFirebaseDB(timeoutMs = 3000) {
 // Initialize on DOM Ready
 window.addEventListener('DOMContentLoaded', async () => {
   AppLogger.init();
-  await waitForFirebaseDB();
-  await checkUserProfileOnboarding();
-  cleanContaminatedMealsFromLocalStorage();
-  await checkUrlRoute();
-  updateDateLabel();
-  renderStreak();
   setupInputListeners();
   setupLogButtonCapture();
-  initServiceWorker();
-  await loadTargets();
-  await loadGeminiStatus();
-  await loadMealLogs();
-  setupSettingsModal();
-  setupNotificationSettings();
-  setupDailyReminderScheduler();
-  setupSwipeGestures();
-  initFriendsView();
   setupEventListeners();
+
+  try {
+    await waitForFirebaseDB();
+  } catch (e) {
+    console.warn('[Init] waitForFirebaseDB note:', e);
+  }
+
+  try {
+    await checkUserProfileOnboarding();
+  } catch (e) {
+    console.warn('[Init] checkUserProfileOnboarding error:', e);
+  }
+
+  try {
+    cleanContaminatedMealsFromLocalStorage();
+  } catch (e) {}
+
+  try {
+    await checkUrlRoute();
+  } catch (e) {}
+
+  try {
+    updateDateLabel();
+    renderStreak();
+  } catch (e) {}
+
+  try {
+    initServiceWorker();
+  } catch (e) {}
+
+  try {
+    await loadTargets();
+  } catch (e) {}
+
+  try {
+    await loadGeminiStatus();
+  } catch (e) {}
+
+  try {
+    await loadMealLogs();
+  } catch (e) {}
+
+  try {
+    setupSettingsModal();
+    setupNotificationSettings();
+    scheduleDailyReminderCheck();
+    setupSwipeGestures();
+    await initFriendsView();
+  } catch (e) {
+    console.warn('[Init] Additional feature init note:', e);
+  }
 });
 
 window.addEventListener('popstate', async () => {
@@ -2395,6 +2431,10 @@ function scheduleDailyReminderCheck() {
   }, delayMs);
 }
 
+function setupDailyReminderScheduler() {
+  scheduleDailyReminderCheck();
+}
+
 async function subscribeWebPush() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     return null;
@@ -2538,6 +2578,8 @@ function setupNotificationSettings() {
 // Expose globally for testing & external harnesses
 window.evaluateDailyReminderStatus = evaluateDailyReminderStatus;
 window.checkAndSendDailyReminder = checkAndSendDailyReminder;
+window.scheduleDailyReminderCheck = scheduleDailyReminderCheck;
+window.setupDailyReminderScheduler = setupDailyReminderScheduler;
 
 function openGeminiModal() {
   AppLogger.log('UI', 'Opened Gemini AI Status modal');

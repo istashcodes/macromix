@@ -150,6 +150,10 @@ def verify_deployment(base_url: str = DEFAULT_URL, local_key: str = None) -> boo
                 raise AssertionError("evaluateDailyReminderStatus missing from app.js")
             if "checkAndSendDailyReminder" not in js:
                 raise AssertionError("checkAndSendDailyReminder missing from app.js")
+            if "scheduleDailyReminderCheck" not in js:
+                raise AssertionError("scheduleDailyReminderCheck missing from app.js")
+            if "setupDailyReminderScheduler" not in js:
+                raise AssertionError("setupDailyReminderScheduler missing from app.js")
     results.append(run_test("Asset Check: app.js (Inference & reminder engine present)", test_app))
 
     # 5. Check sw.js for caching and push listeners

@@ -176,13 +176,20 @@ async function run() {
     await client.send('Page.navigate', { url: targetUrl });
     await new Promise(r => setTimeout(r, 2000));
 
-    console.log('[Action] Entering meal: "2 boiled eggs, sourdough toast, and black coffee"...');
+    console.log('[Action] Entering meal via real UI form submission...');
     await client.evaluate(`
-      (async () => {
+      (() => {
         const input = document.getElementById('manual-text-input');
-        if (input) input.value = "2 boiled eggs, sourdough toast, and black coffee";
-        if (typeof processTranscript === 'function') {
-          processTranscript("2 boiled eggs, sourdough toast, and black coffee");
+        const submitBtn = document.getElementById('btn-submit-log');
+        const form = document.getElementById('text-log-form');
+        if (input) {
+          input.value = "2 boiled eggs, sourdough toast, and black coffee";
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (form) {
+          form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        } else if (submitBtn) {
+          submitBtn.click();
         }
         return true;
       })();
