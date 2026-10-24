@@ -367,7 +367,7 @@ def test_e2e_macronomics_app(app_server):
         page.wait_for_selector("#edit-item-modal:not(.hidden)")
         page.locator("#edit-weight-g").fill("50")
         page.locator("#edit-quantity").fill("50")
-        page.locator("button:has-text('Update Item & Recalculate Circles')").click()
+        page.locator("button:has-text('Update my Macromix')").click()
 
         time.sleep(0.5)
         edited_cal = int(page.locator("#val-cal").inner_text())
