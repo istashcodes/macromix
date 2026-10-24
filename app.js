@@ -1515,6 +1515,9 @@ Output strictly a JSON object with this structure:
 
 async function callClientGeminiDirect(transcript, audioBase64 = null) {
   const apiKey = getEffectiveGeminiKey();
+  if (!apiKey) {
+    throw new Error("Gemini API key is not configured. Please ensure env.js is loaded.");
+  }
 
   const modelsToTry = [
     'gemini-flash-latest',
@@ -1524,8 +1527,8 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
   const parts = [];
   if (audioBase64) {
     parts.push({
-      inline_data: {
-        mime_type: 'audio/webm',
+      inlineData: {
+        mimeType: 'audio/webm',
         data: audioBase64
       }
     });
@@ -1549,41 +1552,13 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
   let lastErr = null;
 
   for (const model of modelsToTry) {
-    let controller = null;
-    let timeoutId = null;
     try {
-      if (typeof AbortController !== 'undefined') {
-        controller = new AbortController();
-        timeoutId = setTimeout(() => {
-          controller.abort(new Error("Meal analysis timed out after 25s. Please check your connection and try again."));
-        }, 25000);
-      }
-
-      let res = null;
-
-      // 1. If an API key is available (from env.js or settings), call Gemini direct for fast, resilient inference
-      if (apiKey) {
-        const fetchOpts = {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        };
-        if (controller) fetchOpts.signal = controller.signal;
-
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-        res = await fetch(url, fetchOpts);
-      } else {
-        // 2. Otherwise attempt server proxy if configured
-        const fetchOpts = {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...payload, model })
-        };
-        if (controller) fetchOpts.signal = controller.signal;
-        res = await fetch('/geminiProxy', fetchOpts);
-      }
-
-      if (timeoutId) clearTimeout(timeoutId);
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
       const contentType = res.headers.get('content-type') || '';
       if (res.ok && contentType.includes('application/json')) {
@@ -1615,22 +1590,11 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
         lastErr = new Error(`HTTP ${res.status}: ${cleanErr.slice(0, 100) || res.statusText}`);
       }
     } catch (e) {
-      if (timeoutId) clearTimeout(timeoutId);
-      let errMsg = e.message || '';
-      if (!errMsg || errMsg.includes('signal is aborted') || errMsg.includes('aborted without reason')) {
-        errMsg = (controller && controller.signal && controller.signal.reason && controller.signal.reason.message)
-          ? controller.signal.reason.message
-          : "Meal analysis timed out. Please check your connection and try again.";
-      }
-      lastErr = new Error(errMsg);
+      lastErr = e;
     }
   }
 
   if (!geminiResult) {
-    if (!apiKey) {
-      openSettingsModal();
-      throw new Error("Gemini API key is required. Please paste your Gemini key in Settings to analyze meals.");
-    }
     const safeMsg = lastErr ? (lastErr.message || '').replace(/<[^>]*>?/gm, '').trim() : '';
     throw new Error(safeMsg || "Gemini AI is currently busy. Please wait a few moments and try again.");
   }
@@ -2049,9 +2013,9 @@ function stopRecording() {
 async function processRecordedAudio(audioBase64, capturedTranscript = "") {
   setMicStatus('Analyzing voice...');
   
-  const textToUse = capturedTranscript;
+  const textToUse = (capturedTranscript || "").trim();
   if (textToUse) {
-    await processTranscript(textToUse, audioBase64);
+    await processTranscript(textToUse, null);
     return;
   }
 
@@ -2198,21 +2162,9 @@ function openSettingsModal() {
     if (fatEl && userTargets.fat_g) fatEl.value = userTargets.fat_g;
   }
 
-  const keyInput = document.getElementById('settings-gemini-key-input');
-  const keyStatus = document.getElementById('settings-gemini-key-status');
-  const currentKey = getEffectiveGeminiKey();
-  if (keyInput) {
-    keyInput.value = currentKey || '';
-  }
-  if (keyStatus) {
-    if (currentKey) {
-      const masked = currentKey.length > 8 ? `${currentKey.slice(0, 4)}...${currentKey.slice(-4)}` : '...active';
-      keyStatus.style.color = '#16A34A';
-      keyStatus.textContent = `✓ Active Key: ${masked}`;
-    } else {
-      keyStatus.style.color = '#B45309';
-      keyStatus.textContent = '⚠️ No Gemini key configured. Voice & text AI logging requires an API key.';
-    }
+  const handleEl = document.getElementById('settings-account-handle');
+  if (handleEl) {
+    handleEl.textContent = currentUserHandle ? `@${currentUserHandle}` : '@you';
   }
 
   const modal = document.getElementById('settings-modal');
@@ -2532,7 +2484,6 @@ function updateNotificationSettingsUI() {
 
 function setupNotificationSettings() {
   const toggleBtn = document.getElementById('btn-toggle-notifications');
-  const testBtn = document.getElementById('btn-test-notification');
   const timeInput = document.getElementById('settings-reminder-time');
   const feedbackEl = document.getElementById('settings-notification-feedback');
 
@@ -2574,36 +2525,6 @@ function setupNotificationSettings() {
         }
       }
       updateNotificationSettingsUI();
-    });
-  }
-
-  if (testBtn) {
-    testBtn.addEventListener('click', async () => {
-      if (feedbackEl) {
-        feedbackEl.style.display = 'block';
-        feedbackEl.style.color = '#000';
-        feedbackEl.textContent = 'Testing notification & target evaluation...';
-      }
-
-      if (typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
-        const perm = await Notification.requestPermission();
-        if (perm !== 'granted') {
-          if (feedbackEl) {
-            feedbackEl.style.color = '#DC2626';
-            feedbackEl.textContent = 'Notification permission denied in browser.';
-          }
-          updateNotificationSettingsUI();
-          return;
-        }
-      }
-
-      const res = await checkAndSendDailyReminder(true);
-      if (feedbackEl) {
-        const st = res.status || {};
-        feedbackEl.style.color = '#16A34A';
-        feedbackEl.textContent = `✓ Notification triggered! [${st.metCount || 0}/5 targets met at 50%]`;
-        setTimeout(() => { feedbackEl.style.display = 'none'; }, 5000);
-      }
     });
   }
 
@@ -3933,9 +3854,6 @@ function setupEventListeners() {
 
   bind('btn-close-settings', 'click', closeSettingsModal);
   bind('btn-save-targets', 'click', saveTargets);
-  bind('btn-save-gemini-key', 'click', saveGeminiApiKeyFromSettings);
-  bind('btn-settings-link-passkey', 'click', handleLinkPasskey);
-  bind('btn-settings-link-google', 'click', handleLinkGoogle);
   bind('btn-settings-signout', 'click', handleSignOut);
   bind('btn-close-edit-modal', 'click', closeEditModal);
   bind('btn-save-item-edit', 'click', saveItemEdit);

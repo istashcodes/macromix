@@ -107,11 +107,15 @@ def verify_deployment(base_url: str = DEFAULT_URL, local_key: str = None) -> boo
             html = resp.read().decode("utf-8")
             if "env.js" not in html:
                 raise AssertionError("env.js script tag missing from index.html")
-            if "settings-gemini-key-input" not in html:
-                raise AssertionError("settings-gemini-key-input missing from index.html")
+            if "settings-gemini-key-input" in html:
+                raise AssertionError("settings-gemini-key-input should be removed from index.html")
+            if "btn-test-notification" in html:
+                raise AssertionError("btn-test-notification should be removed from index.html")
             if "settings-reminder-time" not in html or "btn-toggle-notifications" not in html:
                 raise AssertionError("Daily Push Reminder settings controls missing from index.html")
-    results.append(run_test("Asset Check: index.html (env.js, settings & push controls)", test_index))
+            if "settings-account-handle" not in html or "btn-settings-signout" not in html:
+                raise AssertionError("Simplified Account & Signout controls missing from index.html")
+    results.append(run_test("Asset Check: index.html (env.js, simplified settings & push controls)", test_index))
 
     # 3. Check env.js
     api_key_from_env = local_key
@@ -142,8 +146,6 @@ def verify_deployment(base_url: str = DEFAULT_URL, local_key: str = None) -> boo
                 raise AssertionError("gemini-flash-latest missing from app.js")
             if "thinkingBudget" not in js:
                 raise AssertionError("thinkingBudget configuration missing from app.js")
-            if "25000" not in js and "20000" not in js:
-                raise AssertionError("Client-side timeout should be at least 20000ms in app.js")
             if "evaluateDailyReminderStatus" not in js:
                 raise AssertionError("evaluateDailyReminderStatus missing from app.js")
             if "checkAndSendDailyReminder" not in js:

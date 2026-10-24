@@ -178,20 +178,14 @@ async function run() {
 
     console.log('[Action] Entering meal: "2 boiled eggs, sourdough toast, and black coffee"...');
     await client.evaluate(`
-      setTimeout(() => {
+      (async () => {
         const input = document.getElementById('manual-text-input');
-        if (input) {
-          input.value = "2 boiled eggs, sourdough toast, and black coffee";
-          input.dispatchEvent(new Event('input', { bubbles: true }));
+        if (input) input.value = "2 boiled eggs, sourdough toast, and black coffee";
+        if (typeof processTranscript === 'function') {
+          processTranscript("2 boiled eggs, sourdough toast, and black coffee");
         }
-        const form = document.getElementById('text-log-form');
-        if (form) {
-          const btn = document.getElementById('btn-submit-log');
-          if (btn) btn.disabled = false;
-          form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-        }
-      }, 50);
-      true;
+        return true;
+      })();
     `);
 
     // Poll until meal is logged or timeout

@@ -379,37 +379,6 @@ exports.authLoginComplete = onRequest({ cors: false }, async (req, res) => {
   return res.json({ customToken, uid, handle });
 });
 
-// ─────────────────────────────────────────────────────────────────
-// POST /geminiProxy (C3)
-// Body: { model?: string, contents: any[], systemInstruction?: any, generationConfig?: any }
-// ─────────────────────────────────────────────────────────────────
-exports.geminiProxy = onRequest({ cors: false }, async (req, res) => {
-  setCORS(req, res);
-  if (req.method === 'OPTIONS') return res.status(204).send('');
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'Gemini API is not configured on the server.' });
-  }
-
-  const { model = 'gemini-flash-latest', contents, systemInstruction, generationConfig } = req.body || {};
-  const allowedModels = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-  const selectedModel = allowedModels.includes(model) ? model : 'gemini-flash-latest';
-
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;
-    const geminiRes = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents, systemInstruction, generationConfig })
-    });
-    const data = await geminiRes.json();
-    return res.status(geminiRes.status).json(data);
-  } catch (err) {
-    return res.status(500).json({ error: 'Gemini proxy request failed: ' + err.message });
-  }
-});
 
 // ─────────────────────────────────────────────────────────────────
 // GET /getLeaderboard (H4)
