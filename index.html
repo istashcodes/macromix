@@ -99,40 +99,44 @@
   </section>
 
   <div class="app-container">
-    <!-- Header -->
-    <header class="app-header">
-      <div class="brand-wrapper" id="brand-wrapper" role="button" tabindex="0" style="cursor: pointer;" title="Back to My Tracker">
-        <img src="icons/logo-full.png" alt="macromix logo" class="brand-logo-img">
-      </div>
-      <div class="header-actions">
-        <!-- Segmented pill toggle: Friends (left) | @handle (right) -->
-        <div class="header-tab-toggle" id="header-tab-toggle">
-          <div class="goo-layer" id="header-goo-layer" aria-hidden="true">
-            <div class="goo-pill-tail" id="goo-tail"></div>
-            <div class="goo-pill-lead" id="goo-lead"></div>
-          </div>
-          <button type="button" class="tab-pill tab-pill-friends" id="tab-pill-friends" title="Friends">
-            <span>✦ Friends</span>
-          </button>
-          <button type="button" class="tab-pill tab-pill-me" id="tab-pill-me" title="My macromix" style="display:none;">
-            <span class="me-pill-icon" id="me-pill-icon">🏃</span><span id="header-handle-text">you</span>
-          </button>
+    <!-- Header Shell (Fixed top anchor with clean buffer gap) -->
+    <header class="app-header-shell">
+      <div class="app-header">
+        <div class="brand-wrapper" id="brand-wrapper" role="button" tabindex="0" style="cursor: pointer;" title="Back to My Tracker">
+          <img src="icons/logo-full.png" alt="macromix logo" class="brand-logo-img">
         </div>
-        <div class="streak-badge" id="streak-badge" role="button" tabindex="0" title="Daily Macro Targets (click to edit)" style="cursor:pointer;">🔥 0d</div>
+        <div class="header-actions">
+          <!-- Segmented pill toggle: Friends (left) | @handle (right) -->
+          <div class="header-tab-toggle" id="header-tab-toggle">
+            <div class="goo-layer" id="header-goo-layer" aria-hidden="true">
+              <div class="goo-pill-tail" id="goo-tail"></div>
+              <div class="goo-pill-lead" id="goo-lead"></div>
+            </div>
+            <button type="button" class="tab-pill tab-pill-friends" id="tab-pill-friends" title="Friends">
+              <span>✦ Friends</span>
+            </button>
+            <button type="button" class="tab-pill tab-pill-me" id="tab-pill-me" title="My macromix" style="display:none;">
+              <span class="me-pill-icon" id="me-pill-icon">🏃</span><span id="header-handle-text">you</span>
+            </button>
+          </div>
+          <div class="streak-badge" id="streak-badge" role="button" tabindex="0" title="Daily Macro Targets (click to edit)" style="cursor:pointer;">🔥 0d</div>
+        </div>
+      </div>
+
+      <!-- Public Profile Visitor Header Bar (Option 2) -->
+      <div id="visitor-banner" class="visitor-banner hidden">
+        <button type="button" class="btn-visitor-back" id="btn-visitor-back" title="Back to Friends list">Friends</button>
+        <div class="visitor-profile-pill">
+          <span class="visitor-banner-text" id="visitor-banner-text"><strong id="visitor-target-handle">friend</strong>'s macromix</span>
+          <span class="visitor-streak-pill hidden" id="visitor-streak-pill"></span>
+        </div>
       </div>
     </header>
 
-    <!-- Public Profile Visitor Header Bar (Option 2) -->
-    <div id="visitor-banner" class="visitor-banner hidden">
-      <button type="button" class="btn-visitor-back" id="btn-visitor-back" title="Back to Friends list">Friends</button>
-      <div class="visitor-profile-pill">
-        <span class="visitor-banner-text" id="visitor-banner-text"><strong id="visitor-target-handle">friend</strong>'s macromix</span>
-        <span class="visitor-streak-pill hidden" id="visitor-streak-pill"></span>
-      </div>
-    </div>
-
-    <!-- Unified Elevated Top Announcement Banner (Features & PWA Install) -->
-    <div id="top-announcement-banner" class="top-announcement-banner" role="region" aria-label="Announcement" aria-hidden="true">
+    <!-- Scrollable Content Canvas with Top Gradient Dissolve Mask (Option 2) -->
+    <div class="app-scroll-canvas" id="app-scroll-canvas">
+      <!-- Unified Elevated Top Announcement Banner (Features & PWA Install) -->
+      <div id="top-announcement-banner" class="top-announcement-banner" role="region" aria-label="Announcement" aria-hidden="true">
       <div class="announcement-card" id="announcement-card">
         <button type="button" class="announcement-close" id="btn-announcement-close" title="Dismiss banner" aria-label="Dismiss banner">✕</button>
         <div class="announcement-icon-wrap" id="announcement-icon-wrap">
@@ -294,7 +298,8 @@
         </div>
       </div>
     </section>
-  </div>
+    </div> <!-- /.app-scroll-canvas -->
+  </div> <!-- /.app-container -->
 
   <!-- Daily Macro Targets Modal -->
   <div id="settings-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">

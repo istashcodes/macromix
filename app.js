@@ -2919,6 +2919,8 @@ function animateTabSlide(exitEl, enterEl, direction) {
 async function switchTab(tabName, updateUrl = true) {
   const viewMe = document.getElementById('view-me');
   const viewFriends = document.getElementById('view-friends');
+  const scroller = document.getElementById('app-scroll-canvas');
+  if (scroller) scroller.scrollTop = 0;
 
   if (tabName === 'friends') {
     currentTab = 'friends';
@@ -3957,11 +3959,17 @@ function setupEventListeners() {
 
   const brand = document.getElementById('brand-wrapper');
   if (brand) {
-    brand.addEventListener('click', () => switchTab('me'));
+    brand.addEventListener('click', () => {
+      switchTab('me');
+      const scroller = document.getElementById('app-scroll-canvas');
+      if (scroller) scroller.scrollTo({ top: 0, behavior: 'smooth' });
+    });
     brand.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         switchTab('me');
+        const scroller = document.getElementById('app-scroll-canvas');
+        if (scroller) scroller.scrollTo({ top: 0, behavior: 'smooth' });
       }
     });
   }
