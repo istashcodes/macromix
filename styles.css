@@ -124,8 +124,8 @@ body {
   flex-direction: column;
   gap: 16px;
   /* Top Gradient Dissolve: Smoothly fades content to 0% opacity as it approaches the header */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 28px, black 100%);
-  mask-image: linear-gradient(to bottom, transparent 0%, black 28px, black 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 56px, black 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 56px, black 100%);
 }
 
 .app-scroll-canvas::-webkit-scrollbar {
@@ -1968,8 +1968,8 @@ body {
   }
   .app-scroll-canvas {
     padding: 12px 10px max(28px, env(safe-area-inset-bottom, 16px) + 20px) 10px;
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 24px, black 100%);
-    mask-image: linear-gradient(to bottom, transparent 0%, black 24px, black 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 48px, black 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 48px, black 100%);
   }
   .app-header {
     padding: 10px 10px;
@@ -2005,8 +2005,8 @@ body {
   }
   .app-scroll-canvas {
     padding: 10px 8px max(24px, env(safe-area-inset-bottom, 16px) + 16px) 8px;
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 22px, black 100%);
-    mask-image: linear-gradient(to bottom, transparent 0%, black 22px, black 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 44px, black 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 44px, black 100%);
   }
   .app-header {
     padding: 9px 8px;
@@ -2049,8 +2049,8 @@ body {
   }
   .app-scroll-canvas {
     padding: 8px 6px max(20px, env(safe-area-inset-bottom, 16px) + 14px) 6px;
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 18px, black 100%);
-    mask-image: linear-gradient(to bottom, transparent 0%, black 18px, black 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 36px, black 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 36px, black 100%);
   }
   .app-header {
     padding: 7px 6px;
@@ -2090,8 +2090,8 @@ body {
   }
   .app-scroll-canvas {
     padding: 6px 5px max(18px, env(safe-area-inset-bottom, 16px) + 12px) 5px;
-    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 16px, black 100%);
-    mask-image: linear-gradient(to bottom, transparent 0%, black 16px, black 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 32px, black 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 32px, black 100%);
   }
   .app-header {
     padding: 6px 5px;
