@@ -1,14 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Macromix Logo Icon SVG -->
-  <rect width="512" height="512" fill="#ffffff" rx="100"/>
-  <g transform="translate(256, 256)">
-    <!-- Outer Yellow Ring -->
-    <circle cx="0" cy="0" r="207" fill="none" stroke="#f6ba3b" stroke-width="36"/>
-    <!-- Middle Orange Ring -->
-    <circle cx="0" cy="0" r="152" fill="none" stroke="#f0631e" stroke-width="34"/>
-    <!-- Inner Red Ring -->
-    <circle cx="0" cy="0" r="95" fill="none" stroke="#d6293a" stroke-width="33"/>
-    <!-- Center Orange Pointer -->
-    <path d="M 0 46 L -30 11 L 0 25 L 30 11 Z" fill="#e8541e"/>
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@900&amp;display=swap');
+      .font-inter-black {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-weight: 900;
+      }
+    </style>
+  </defs>
+  <rect width="512" height="512" fill="#FFFFFF" rx="116"/>
+  <!-- Concentric Rings centered at cx=228, cy=256 -->
+  <g id="rings">
+    <circle cx="228" cy="256" r="196" fill="none" stroke="#F6BA3B" stroke-width="34"/>
+    <circle cx="228" cy="256" r="148" fill="none" stroke="#F0631E" stroke-width="32"/>
+    <circle cx="228" cy="256" r="98" fill="none" stroke="#D6293A" stroke-width="30"/>
+  </g>
+  <!-- 'm' in Inter 900 starting at center cx=228 and ending at outer yellow border x=424 -->
+  <!-- Width = 196px. Font size = 265px -->
+  <g id="letter-m">
+    <!-- White relief outline for contrast over rings -->
+    <text x="228" y="348" 
+          class="font-inter-black" font-size="265" letter-spacing="-5px"
+          fill="none" stroke="#FFFFFF" stroke-width="40" stroke-linejoin="round">m</text>
+    <!-- Solid Black 'm' -->
+    <text x="228" y="348" 
+          class="font-inter-black" font-size="265" letter-spacing="-5px"
+          fill="#111111">m</text>
   </g>
 </svg>

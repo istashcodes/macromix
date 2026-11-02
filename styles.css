@@ -89,26 +89,28 @@ body {
   top: 0;
   z-index: 100;
   flex-shrink: 0;
-  padding: max(14px, env(safe-area-inset-top, 14px)) 12px 0 12px;
+  padding: max(10px, env(safe-area-inset-top, 10px)) 12px 6px 12px;
   background: var(--bg-main);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   touch-action: none;
 }
 
+/* Floating Capsule Header (Concept 1: The Unified Floating Capsule) */
 .app-header {
   position: relative;
   z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--bg-card);
-  border: 1.5px solid #111111;
-  box-shadow: none;
-  padding: 10px 14px;
-  border-radius: 12px;
-  gap: 8px;
+  background: #FFFFFF;
+  border: 2px solid #111111;
+  box-shadow: 2.5px 2.5px 0px #111111;
+  padding: 5px 8px 5px 10px;
+  border-radius: 999px;
+  gap: 6px;
+  min-width: 0;
 }
 
 /* --- Scrollable Content Canvas with Gradient Dissolve Mask (Option 2) --- */
@@ -143,31 +145,41 @@ body {
 }
 
 .brand-wrapper {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  flex-shrink: 0;
   cursor: pointer;
+  user-select: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+  flex-shrink: 0;
+  transition: transform 0.15s ease-out;
+  outline: none;
+}
+
+.brand-wrapper:active {
+  transform: scale(0.96);
 }
 
 .brand-logo-img {
-  height: 48px;
+  height: 30px;
   width: auto;
   object-fit: contain;
   display: block;
-  margin: -6px -4px;
+  margin: 0;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex-shrink: 0;
   min-width: 0;
   justify-content: flex-end;
 }
 
 #header-handle-text {
-  max-width: 95px;
+  max-width: 70px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -176,32 +188,37 @@ body {
 }
 
 .streak-badge {
-  background: var(--cal-color);
+  background: #FFE600;
   color: #000000;
-  border: 2px solid #000;
-  box-shadow: 2px 2px 0 #000;
-  padding: 4px 9px;
-  border-radius: 20px;
-  font-size: 0.82rem;
+  border: 1.5px solid #000000;
+  box-shadow: 1.5px 1.5px 0px #000000;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 0.74rem;
   font-weight: 900;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 2.5px;
   flex-shrink: 0;
   cursor: pointer;
   user-select: none;
-  transition: transform 0.05s ease, box-shadow 0.05s ease, background 0.1s ease;
+  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out, background 0.1s ease;
+  outline: none;
 }
 
-.streak-badge:hover {
-  background: #f5d800;
+@media (hover: hover) {
+  .streak-badge:hover {
+    background: #F5D800;
+  }
 }
 
 .streak-badge:active {
-  transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 #000;
+  transform: scale(0.96);
+  box-shadow: 0.5px 0.5px 0px #000000;
 }
 
 /* ==========================================================================
@@ -211,17 +228,16 @@ body {
 .header-tab-toggle {
   display: inline-flex;
   align-items: center;
-  background: #111;
-  border: 2px solid #000;
-  box-shadow: 2px 2px 0 #000;
-  border-radius: 24px;
+  background: #111111;
+  border: 1.5px solid #000000;
+  box-shadow: 1.5px 1.5px 0px #000000;
+  border-radius: 999px;
   position: relative;
   overflow: hidden;
   padding: 2px;
-  gap: 2px;
-  flex-shrink: 1;
-  min-width: 0;
+  height: 30px;
   isolation: isolate;
+  flex-shrink: 0;
 }
 
 .goo-layer {
@@ -229,7 +245,7 @@ body {
   inset: 0;
   pointer-events: none;
   filter: url(#gooey-filter);
-  border-radius: 24px;
+  border-radius: 999px;
   overflow: hidden;
   z-index: 1;
 }
@@ -240,8 +256,8 @@ body {
   bottom: 2px;
   left: 0;
   background: #FFE600;
-  border-radius: 20px;
-  transition: transform 0.62s cubic-bezier(0.2, 0.9, 0.3, 1), width 0.58s ease;
+  border-radius: 999px;
+  transition: transform 0.42s cubic-bezier(0.2, 0.9, 0.3, 1), width 0.38s ease;
   transform-origin: center center;
   pointer-events: none;
 }
@@ -252,8 +268,8 @@ body {
   bottom: 2px;
   left: 0;
   background: #FFE600;
-  border-radius: 20px;
-  transition: transform 0.56s cubic-bezier(0.35, 0, 0.25, 1) 0.08s, width 0.56s ease 0.08s;
+  border-radius: 999px;
+  transition: transform 0.38s cubic-bezier(0.35, 0, 0.25, 1) 0.05s, width 0.38s ease 0.05s;
   transform-origin: center center;
   pointer-events: none;
 }
@@ -263,44 +279,66 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 4px 8px;
-  min-width: 78px;
-  border-radius: 20px;
+  gap: 3.5px;
+  padding: 0 8px;
+  min-width: 66px;
+  height: 100%;
+  border-radius: 999px;
   border: none;
   background: transparent;
-  font-size: 0.78rem;
+  font-family: inherit;
+  font-size: 0.72rem;
   font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
   position: relative;
   z-index: 2;
-  color: rgba(255,255,255,0.7);
-  transition: color 0.3s ease 0.15s, transform 0.2s ease;
+  color: rgba(255, 255, 255, 0.7);
+  transition: color 0.25s ease 0.1s, transform 0.15s ease-out;
   text-align: center;
+  outline: none;
 }
 
 .tab-pill-me {
-  gap: 4px;
+  gap: 3.5px;
 }
 
-.tab-pill:hover {
-  color: #fff;
-  background: rgba(255,255,255,0.08);
-}
-
-/* Active/selected pill — crisp black text layered over yellow goo */
 .tab-pill.tab-active {
   background: transparent;
-  color: #000;
+  color: #000000;
   box-shadow: none;
-  transform: none;
 }
 
-.tab-pill.tab-active:hover {
-  background: transparent;
-  color: #000;
+.tab-pill:active {
+  transform: scale(0.96);
+}
+
+@media (hover: hover) {
+  .tab-pill:not(.tab-active):hover {
+    color: #FFFFFF;
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.tab-pill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+/* Reduced Motion preferences (better-ui standard) */
+@media (prefers-reduced-motion: reduce) {
+  .brand-wrapper,
+  .tab-pill,
+  .streak-badge,
+  .goo-pill-lead,
+  .goo-pill-tail {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
 
@@ -2141,35 +2179,40 @@ body {
     mask-image: linear-gradient(to bottom, transparent 0%, black 48px, black 100%);
   }
   .app-header {
-    padding: 10px 10px;
+    padding: 5px 8px 5px 10px;
     gap: 6px;
   }
   .brand-logo-img {
-    height: 44px;
-    margin: -5px -4px;
+    height: 30px;
+    margin: 0;
   }
   .header-actions {
     gap: 5px;
   }
+  .header-tab-toggle {
+    height: 30px;
+  }
   .tab-pill {
-    padding: 3.5px 7px;
-    font-size: 0.75rem;
+    padding: 0 8px;
+    min-width: 66px;
+    font-size: 0.72rem;
   }
   .me-pill-icon {
-    font-size: 0.76rem;
+    font-size: 0.72rem;
   }
   #header-handle-text {
-    max-width: 80px;
+    max-width: 70px;
   }
   .streak-badge {
-    padding: 3.5px 7px;
-    font-size: 0.76rem;
+    height: 30px;
+    padding: 0 8px;
+    font-size: 0.74rem;
   }
 }
 
 @media (max-width: 420px) {
   .app-header-shell {
-    padding: max(8px, env(safe-area-inset-top, 8px)) 8px 0 8px;
+    padding: max(7px, env(safe-area-inset-top, 7px)) 8px 4px 8px;
     gap: 6px;
   }
   .app-scroll-canvas {
@@ -2178,12 +2221,12 @@ body {
     mask-image: linear-gradient(to bottom, transparent 0%, black 44px, black 100%);
   }
   .app-header {
-    padding: 9px 8px;
+    padding: 4px 7px 4px 9px;
     gap: 5px;
   }
   .brand-logo-img {
-    height: 40px;
-    margin: -5px -3px;
+    height: 29px;
+    margin: 0;
   }
   .onboarding-brand-logo-full {
     height: 72px;
@@ -2192,28 +2235,31 @@ body {
     gap: 4px;
   }
   .header-tab-toggle {
+    height: 29px;
     padding: 1.5px;
   }
   .tab-pill {
-    padding: 3px 6px;
-    font-size: 0.72rem;
-    gap: 2px;
+    padding: 0 7px;
+    min-width: 64px;
+    font-size: 0.71rem;
+    gap: 2.5px;
   }
   .me-pill-icon {
     font-size: 0.70rem;
   }
   #header-handle-text {
-    max-width: 72px;
+    max-width: 66px;
   }
   .streak-badge {
-    padding: 3px 6px;
+    height: 29px;
+    padding: 0 7px;
     font-size: 0.72rem;
   }
 }
 
-@media (max-width: 365px) {
+@media (max-width: 370px) {
   .app-header-shell {
-    padding: max(6px, env(safe-area-inset-top, 6px)) 6px 0 6px;
+    padding: max(6px, env(safe-area-inset-top, 6px)) 6px 3px 6px;
     gap: 5px;
   }
   .app-scroll-canvas {
@@ -2222,39 +2268,44 @@ body {
     mask-image: linear-gradient(to bottom, transparent 0%, black 36px, black 100%);
   }
   .app-header {
-    padding: 7px 6px;
+    padding: 4px 6px 4px 8px;
     gap: 4px;
   }
   .brand-logo-img {
-    height: 35px;
-    margin: -4px -3px;
+    height: 27px;
+    margin: 0;
   }
   .onboarding-brand-logo-full {
     height: 64px;
   }
   .header-actions {
-    gap: 3px;
+    gap: 3.5px;
+  }
+  .header-tab-toggle {
+    height: 28px;
   }
   .tab-pill {
-    padding: 2.5px 5px;
-    font-size: 0.68rem;
+    padding: 0 5px;
+    min-width: 60px;
+    font-size: 0.69rem;
     gap: 2px;
   }
   .me-pill-icon {
     font-size: 0.65rem;
   }
   #header-handle-text {
-    max-width: 60px;
+    max-width: 58px;
   }
   .streak-badge {
-    padding: 2.5px 5px;
-    font-size: 0.68rem;
+    height: 28px;
+    padding: 0 6px;
+    font-size: 0.70rem;
   }
 }
 
-@media (max-width: 335px) {
+@media (max-width: 340px) {
   .app-header-shell {
-    padding: max(5px, env(safe-area-inset-top, 5px)) 5px 0 5px;
+    padding: max(5px, env(safe-area-inset-top, 5px)) 5px 2px 5px;
     gap: 4px;
   }
   .app-scroll-canvas {
@@ -2263,30 +2314,35 @@ body {
     mask-image: linear-gradient(to bottom, transparent 0%, black 32px, black 100%);
   }
   .app-header {
-    padding: 6px 5px;
+    padding: 3px 5px 3px 6px;
     gap: 3px;
   }
   .brand-logo-img {
-    height: 30px;
-    margin: -3px -2px;
+    height: 24px;
+    margin: 0;
   }
   .onboarding-brand-logo-full {
     height: 56px;
   }
+  .header-tab-toggle {
+    height: 26px;
+  }
   .tab-pill {
-    padding: 2px 4px;
-    font-size: 0.64rem;
+    padding: 0 4px;
+    min-width: 54px;
+    font-size: 0.65rem;
     gap: 1.5px;
   }
   .me-pill-icon {
     font-size: 0.60rem;
   }
   #header-handle-text {
-    max-width: 50px;
+    max-width: 48px;
   }
   .streak-badge {
-    padding: 2px 4px;
-    font-size: 0.64rem;
+    height: 26px;
+    padding: 0 5px;
+    font-size: 0.66rem;
   }
 }
 
