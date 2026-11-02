@@ -1,4 +1,4 @@
-const CACHE_NAME = 'macromix-pwa-v15.0';
+const CACHE_NAME = 'macromix-pwa-v14.0';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -7,18 +7,12 @@ const ASSETS_TO_CACHE = [
   '/firebase-db.js',
   '/simplewebauthn-browser.min.js',
   '/manifest.json',
-  '/favicon.ico',
-  '/favicon.png',
   '/icons/icon.svg',
-  '/icons/favicon.svg',
-  '/icons/favicon-32.png',
-  '/icons/favicon-64.png',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/icon-maskable-192.png',
   '/icons/icon-maskable-512.png',
   '/icons/logo.png',
-  '/icons/logo-full.svg',
   '/icons/logo-full.png'
 ];
 

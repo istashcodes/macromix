@@ -62,16 +62,12 @@ def test_refined_design_and_swiping_e2e(server_url):
         # Go to app
         page.goto(server_url, timeout=10000)
 
-        test_handle = f"testuser_{int(time.time())}"
-
-        # Bypass onboarding with fresh authenticated handle
-        page.evaluate('''handle => {
-            localStorage.clear();
-            localStorage.setItem('macromix_user_handle', handle);
-            if (window.clearRealtimeListeners) window.clearRealtimeListeners();
+        # Bypass onboarding with authenticated handle
+        page.evaluate('''() => {
+            localStorage.setItem('macromix_user_handle', 'satish');
             const onboarding = document.getElementById('onboarding-screen');
             if (onboarding) onboarding.classList.add('hidden');
-        }''', test_handle)
+        }''')
         page.reload()
         page.wait_for_timeout(800)
 
@@ -107,27 +103,21 @@ def test_refined_design_and_swiping_e2e(server_url):
         print("[Pass] 2. Header pill animation between Me and Friends working smoothly.")
 
         # -------------------------------------------------------------
-        # 3. Verify Zero Shadows on Content Cards & Floating Capsule Header
+        # 3. Verify Zero Shadows on All Cards (Flat Neo-Brutalism)
         # -------------------------------------------------------------
-        content_card_selectors = [
+        card_selectors = [
+            '.app-header',
             '#main-top-card',
             '#voice-tool-card',
             '#timeline-box-section'
         ]
-        for sel in content_card_selectors:
+        for sel in card_selectors:
             shadow = page.evaluate(f'''() => {{
                 const el = document.querySelector("{sel}");
                 return el ? getComputedStyle(el).boxShadow : null;
             }}''')
             assert shadow in ('none', None), f"Expected no box-shadow on {sel}, got: {shadow}"
-
-        # Verify Header Concept 1 has Floating Capsule styling
-        header_radius = page.evaluate('''() => {
-            const el = document.querySelector(".app-header");
-            return el ? getComputedStyle(el).borderRadius : null;
-        }''')
-        assert header_radius in ('999px', '9999px', '50px', '1000px') or 'px' in str(header_radius), f"Expected pill radius, got: {header_radius}"
-        print("[Pass] 3. Zero shadows verified on content cards & Concept 1 capsule header.")
+        print("[Pass] 3. Zero shadows verified across all cards.")
 
         # -------------------------------------------------------------
         # 4. Verify Hidden Left Stack on Top Card
@@ -167,12 +157,12 @@ def test_refined_design_and_swiping_e2e(server_url):
         }''')
 
         # Simulate logging a meal for Today via client state
-        page.evaluate('''handle => {
+        page.evaluate('''() => {
             const todayStr = getTodayDateString();
-            const storageKey = getMealsStorageKey(handle);
+            const storageKey = getMealsStorageKey('satish');
             const testMeal = {
                 id: Date.now(),
-                owner_handle: handle,
+                owner_handle: 'satish',
                 meal_type: 'lunch',
                 logged_date: todayStr,
                 created_at: new Date().toISOString(),
@@ -201,7 +191,7 @@ def test_refined_design_and_swiping_e2e(server_url):
             localStorage.setItem(storageKey, JSON.stringify([testMeal]));
             currentLogs = [testMeal];
             filterAndRenderSelectedDate();
-        }''', test_handle)
+        }''')
         page.wait_for_timeout(500)
 
         # Check that calories & macros updated
