@@ -442,6 +442,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   setupInputListeners();
   setupLogButtonCapture();
   setupEventListeners();
+  setupSwipeGestures();
+  setupSettingsModal();
+  setupNotificationSettings();
 
   try {
     await waitForFirebaseDB();
@@ -485,10 +488,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   } catch (e) {}
 
   try {
-    setupSettingsModal();
-    setupNotificationSettings();
     scheduleDailyReminderCheck();
-    setupSwipeGestures();
     await initFriendsView();
     updateTopAnnouncementBanner();
   } catch (e) {
@@ -2350,7 +2350,7 @@ function setupSettingsModal() {
 
 let isAnimatingDeckTransition = false;
 
-function triggerDeckSwipe(offsetDays, direction = null) {
+function triggerDeckSwipe(offsetDays, direction = null, exitDirection = null) {
   if (offsetDays > 0 && selectedDate >= getTodayDateString()) {
     return; // Cannot go to future past today
   }
@@ -2368,25 +2368,38 @@ function triggerDeckSwipe(offsetDays, direction = null) {
   const targetDate = getOffsetDateString(selectedDate, offsetDays);
   updateUnderCard(targetDate);
 
-  const isPrev = offsetDays < 0;
-  const exitX = isPrev ? '120%' : '-120%';
-  const rot = isPrev ? 12 : -12;
+  // If exitDirection is not provided (e.g. from arrow clicks):
+  // Clicking ◀ (prev): card exits to the right so under card surfaces from left/center
+  // Clicking ▶ (next): card exits to the left so under card surfaces from right/center
+  const exitDir = exitDirection || (offsetDays < 0 ? 'right' : 'left');
+  const exitX = exitDir === 'left' ? '-120%' : '120%';
+  const rot = exitDir === 'left' ? -10 : 10;
 
-  mainCard.style.transition = 'transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.22s ease-out';
+  // Make under card visible and let it surface upwards
+  underCard.style.visibility = 'visible';
+  underCard.style.opacity = '1';
   underCard.style.transition = 'transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1)';
+  mainCard.style.transition = 'transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.22s ease-out';
 
   mainCard.style.transform = `translateX(${exitX}) rotate(${rot}deg)`;
   mainCard.style.opacity = '0';
   underCard.style.transform = 'scale(1.0) translateY(0px)';
 
+  if (edge1) edge1.style.transform = 'translateX(-4px)';
+  if (edge2) edge2.style.transform = 'translateX(-6px)';
+
   setTimeout(() => {
-    changeDate(offsetDays, direction || (isPrev ? 'prev' : 'next'));
+    changeDate(offsetDays, direction || (offsetDays < 0 ? 'prev' : 'next'));
 
     mainCard.style.transition = 'none';
     underCard.style.transition = 'none';
     mainCard.style.transform = 'translateX(0) rotate(0deg)';
     mainCard.style.opacity = '1';
+
+    // Reset under card to recessed state and hide it at rest
     underCard.style.transform = 'scale(0.95) translateY(6px)';
+    underCard.style.opacity = '0';
+    underCard.style.visibility = 'hidden';
 
     if (edge1) edge1.style.transform = 'translateX(0)';
     if (edge2) edge2.style.transform = 'translateX(0)';
@@ -2403,13 +2416,6 @@ function setupSwipeGestures() {
   const underCard = document.getElementById('under-top-card');
   const edge1 = document.getElementById('edge-stack-1');
   const edge2 = document.getElementById('edge-stack-2');
-
-  const targets = [
-    stage,
-    document.querySelector('.circles-container'),
-    document.querySelector('.main-container-card'),
-    document.querySelector('.voice-tool-card')
-  ].filter(Boolean);
 
   // 1:1 Live Drag Tracking on Top Card Stage
   if (stage && mainCard && underCard) {
@@ -2443,7 +2449,7 @@ function setupSwipeGestures() {
       if (!isSwiping) {
         if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) * 0.7) {
           isSwiping = true;
-        } else if (Math.abs(dy) > 25 && Math.abs(dy) > Math.abs(dx) * 1.5) {
+        } else if (Math.abs(dy) > 20 && Math.abs(dy) > Math.abs(dx) * 1.5) {
           isTracking = false;
           return;
         }
@@ -2454,20 +2460,15 @@ function setupSwipeGestures() {
 
         const isToday = (selectedDate >= getTodayDateString());
         let neededDate = null;
-        let moveX = dx;
 
         if (isToday) {
-          // On Today, swiping either direction reveals Yesterday
+          // On Today, dragging either direction reveals Yesterday
           neededDate = getOffsetDateString(selectedDate, -1);
         } else {
           // On past days:
           // dx > 0 (drag right) -> older day (previous)
           // dx < 0 (drag left) -> newer day (next)
-          if (dx > 0) {
-            neededDate = getOffsetDateString(selectedDate, -1);
-          } else {
-            neededDate = getOffsetDateString(selectedDate, 1);
-          }
+          neededDate = (dx > 0) ? getOffsetDateString(selectedDate, -1) : getOffsetDateString(selectedDate, 1);
         }
 
         if (neededDate && neededDate !== preparedTargetDate) {
@@ -2475,19 +2476,23 @@ function setupSwipeGestures() {
           updateUnderCard(neededDate);
         }
 
+        // Under card becomes visible and surfaces dynamically as user drags
+        underCard.style.visibility = 'visible';
+        underCard.style.opacity = '1';
+
         const maxDrag = 220;
-        const progress = Math.min(1.0, Math.abs(moveX) / maxDrag);
-        const rot = (moveX / maxDrag) * 8; // subtle rotation up to 8 deg
+        const progress = Math.min(1.0, Math.abs(dx) / maxDrag);
+        const rot = (dx / maxDrag) * 8; // subtle rotation up to 8 deg
 
-        mainCard.style.transform = `translateX(${moveX}px) rotate(${rot}deg)`;
+        mainCard.style.transform = `translateX(${dx}px) rotate(${rot}deg)`;
 
-        // Under card surfaces upwards as user drags
+        // Under card surfaces upwards as finger moves
         const underScale = 0.95 + (0.05 * progress);
         const underY = 6 * (1 - progress);
         underCard.style.transform = `scale(${underScale}) translateY(${underY}px)`;
 
-        if (edge1) edge1.style.transform = `translateX(${Math.min(8, Math.max(-8, moveX * 0.15))}px)`;
-        if (edge2) edge2.style.transform = `translateX(${Math.min(6, Math.max(-6, moveX * 0.1))}px)`;
+        if (edge1) edge1.style.transform = `translateX(${Math.min(6, Math.max(-6, dx * 0.12))}px)`;
+        if (edge2) edge2.style.transform = `translateX(${Math.min(4, Math.max(-4, dx * 0.08))}px)`;
       }
     };
 
@@ -2497,31 +2502,41 @@ function setupSwipeGestures() {
       const dx = clientX - startX;
       const duration = Date.now() - startTime;
       const threshold = 60;
-      const isFlick = (Math.abs(dx) >= 30 && duration < 240);
+      const isFlick = (Math.abs(dx) >= 30 && duration < 260);
       const isToday = (selectedDate >= getTodayDateString());
 
-      if (Math.abs(dx) >= threshold || isFlick) {
+      if (isSwiping && (Math.abs(dx) >= threshold || isFlick)) {
+        // Exit direction strictly matches the user's drag direction
+        const exitDirection = dx < 0 ? 'left' : 'right';
+
         if (isToday) {
-          // On Today, either direction navigates to Yesterday
-          triggerDeckSwipe(-1, 'prev');
+          // On Today, swiping either direction reveals Yesterday
+          triggerDeckSwipe(-1, 'prev', exitDirection);
         } else {
           if (dx > 0) {
             // Dragged right on past day -> go to older day
-            triggerDeckSwipe(-1, 'prev');
+            triggerDeckSwipe(-1, 'prev', 'right');
           } else {
             // Dragged left on past day -> go to newer day
-            triggerDeckSwipe(1, 'next');
+            triggerDeckSwipe(1, 'next', 'left');
           }
         }
       } else {
         // Cancelled or rubber-band snap back
         mainCard.style.transition = 'transform 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-        underCard.style.transition = 'transform 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-        if (edge1) edge1.style.transform = 'transform 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        underCard.style.transition = 'transform 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.24s ease-out';
+        if (edge1) edge1.style.transition = 'transform 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
         if (edge2) edge2.style.transition = 'transform 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
 
         mainCard.style.transform = 'translateX(0) rotate(0deg)';
         underCard.style.transform = 'scale(0.95) translateY(6px)';
+        underCard.style.opacity = '0';
+        setTimeout(() => {
+          if (!isTracking && !isAnimatingDeckTransition) {
+            underCard.style.visibility = 'hidden';
+          }
+        }, 240);
+
         if (edge1) edge1.style.transform = 'translateX(0)';
         if (edge2) edge2.style.transform = 'translateX(0)';
       }
@@ -2555,6 +2570,8 @@ function setupSwipeGestures() {
       isSwiping = false;
       mainCard.style.transform = 'translateX(0) rotate(0deg)';
       underCard.style.transform = 'scale(0.95) translateY(6px)';
+      underCard.style.opacity = '0';
+      underCard.style.visibility = 'hidden';
       if (edge1) edge1.style.transform = 'translateX(0)';
       if (edge2) edge2.style.transform = 'translateX(0)';
     });
@@ -2574,41 +2591,50 @@ function setupSwipeGestures() {
     });
   }
 
-  // Fallback / swipe support on other targets (and test compatibility)
-  targets.forEach(target => {
-    if (target === stage) return;
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touchStartTime = 0;
+  // Also support swiping on the timeline list section
+  const timelineSection = document.getElementById('timeline-box-section');
+  if (timelineSection) {
+    let tStartX = 0;
+    let tStartY = 0;
+    let tStartTime = 0;
 
-    target.addEventListener('touchstart', (e) => {
-      if (e.target.closest('input, button, textarea, select, .modal-content, a')) return;
+    timelineSection.addEventListener('touchstart', (e) => {
+      if (e.target.closest('input, button, textarea, select, .modal-content, a, .action-btn')) return;
       if (e.touches.length === 1) {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        touchStartTime = Date.now();
+        tStartX = e.touches[0].clientX;
+        tStartY = e.touches[0].clientY;
+        tStartTime = Date.now();
       }
     }, { passive: true });
 
-    target.addEventListener('touchend', (e) => {
-      if (e.changedTouches.length === 1 && touchStartTime > 0) {
-        const deltaX = e.changedTouches[0].clientX - touchStartX;
-        const deltaY = e.changedTouches[0].clientY - touchStartY;
-        const duration = Date.now() - touchStartTime;
-        touchStartTime = 0;
+    timelineSection.addEventListener('touchend', (e) => {
+      if (e.changedTouches.length === 1 && tStartTime > 0) {
+        const deltaX = e.changedTouches[0].clientX - tStartX;
+        const deltaY = e.changedTouches[0].clientY - tStartY;
+        const duration = Date.now() - tStartTime;
+        tStartTime = 0;
 
-        if (Math.abs(deltaX) >= 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2 && duration < 650) {
+        if (Math.abs(deltaX) >= 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2 && duration < 600) {
+          const isToday = (selectedDate >= getTodayDateString());
           if (deltaX < 0) {
-            triggerDeckSwipe(-1, 'prev');
+            // Dragged left
+            if (isToday) {
+              triggerDeckSwipe(-1, 'prev', 'left');
+            } else {
+              triggerDeckSwipe(1, 'next', 'left');
+            }
           } else {
-            if (selectedDate < getTodayDateString()) {
-              triggerDeckSwipe(1, 'next');
+            // Dragged right
+            if (isToday) {
+              triggerDeckSwipe(-1, 'prev', 'right');
+            } else {
+              triggerDeckSwipe(-1, 'prev', 'right');
             }
           }
         }
       }
     }, { passive: true });
-  });
+  }
 }
 
 function openSettingsModal() {
