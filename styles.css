@@ -9,12 +9,12 @@
   --text-dark: #111111;
   --text-muted: #555555;
   --surface-hover: #F0EAE1;
-  --border-color: #000000;
-  --border-thick: 3px solid #000000;
-  --border-extra: 4px solid #000000;
-  --shadow-sm: 3px 3px 0px #000000;
-  --shadow-md: 5px 5px 0px #000000;
-  --shadow-lg: 8px 8px 0px #000000;
+  --border-color: #111111;
+  --border-thick: 1.5px solid #111111;
+  --border-extra: 2px solid #111111;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
   
   /* Macro Palette */
   --brand-yellow: #FFE600; /* Macromix Brand Canary Yellow */
@@ -104,9 +104,9 @@ body {
   align-items: center;
   justify-content: space-between;
   background: var(--bg-card);
-  border: var(--border-thick);
-  box-shadow: var(--shadow-md);
-  padding: 12px 14px;
+  border: 1.5px solid #111111;
+  box-shadow: none;
+  padding: 10px 14px;
   border-radius: 12px;
   gap: 8px;
 }
@@ -386,237 +386,316 @@ body {
   box-shadow: 2px 2px 0px #000;
 }
 
-/* --- The 'Circles' Macro Section --- */
-.circles-container {
-  background: var(--bg-card);
-  border: var(--border-thick);
-  box-shadow: var(--shadow-md);
-  border-radius: 16px;
-  padding: 16px 14px;
+/* ==========================================================================
+   TOP MACRO CARD WITH HIDDEN LEFT STACK (Day Controller)
+   ========================================================================== */
+.top-card-stage {
+  position: relative;
+  margin-left: 8px;
+  margin-right: 2px;
+  flex-shrink: 0;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.top-card-stage:active {
+  cursor: grabbing;
 }
 
-.date-nav-bar {
+.hidden-stack-edge-2 {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: -8px;
+  width: 14px;
+  background: #EAE3D5;
+  border: 1.5px solid #111111;
+  border-radius: 12px 0 0 12px;
+  z-index: 1;
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+.hidden-stack-edge-1 {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: -4px;
+  width: 12px;
+  background: #F3ECE0;
+  border: 1.5px solid #111111;
+  border-radius: 12px 0 0 12px;
+  z-index: 2;
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.main-top-card {
+  position: relative;
+  background: #FFFFFF;
+  border: 1.5px solid #111111;
+  border-radius: 14px;
+  box-shadow: none;
+  z-index: 5;
+  overflow: hidden;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 0 4px;
+  flex-direction: column;
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.date-nav-arrow {
-  background: var(--bg-card);
-  border: var(--border-thick);
-  box-shadow: 2px 2px 0px #000000;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 900;
-  color: var(--text-main);
-  cursor: pointer;
-  width: 38px;
-  height: 34px;
+.card-top-rim {
+  padding: 8px 12px 7px;
+  background: #FAF8F2;
+  border-bottom: 1.5px solid #111111;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rim-btn {
+  background: #FFFFFF;
+  border: 1.5px solid #111111;
+  border-radius: 6px;
+  width: 34px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
-  user-select: none;
-  -webkit-user-select: none;
-  transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.1s ease;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  color: #111111;
+  position: relative;
+  transition: background 0.1s ease, opacity 0.15s ease, transform 0.05s ease;
 }
-
-.date-nav-arrow:hover:not(:disabled):not(.disabled) {
-  background: var(--cal-color);
+.rim-btn::after {
+  content: '';
+  position: absolute;
+  inset: -8px; /* Touch target expansion */
 }
-
-.date-nav-arrow:active:not(:disabled):not(.disabled) {
-  transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0px #000;
-  background: var(--cal-color);
+.rim-btn:hover:not(:disabled):not(.disabled) {
+  background: #FFE600;
 }
-
-.date-nav-arrow:disabled,
-.date-nav-arrow.disabled {
+.rim-btn:active:not(:disabled):not(.disabled) {
+  transform: scale(0.96);
+  background: #FFE600;
+}
+.rim-btn:disabled,
+.rim-btn.disabled {
   opacity: 0.25;
-  background: var(--accent-gray);
-  border-color: #888888;
-  color: #888888;
-  box-shadow: none;
   cursor: not-allowed;
   pointer-events: none;
 }
 
-.date-nav-pill {
-  background: var(--cal-color);
-  color: #000000;
-  border: var(--border-thick);
-  box-shadow: 2px 2px 0px #000;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  font-weight: 900;
-  padding: 4px 18px;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  text-transform: uppercase;
-  transition: transform 0.05s ease;
-}
-
-.date-nav-pill:active {
-  transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0px #000;
-}
-
-.date-divider {
-  border: none;
-  border-top: 2px dashed #000;
-  margin: 10px 0 14px;
-  width: 100%;
-}
-
-.circles-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-}
-
-@media (min-width: 580px) {
-  .circles-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-.circle-card {
-  background: var(--bg-main);
-  border: var(--border-thick);
-  border-radius: 14px;
-  padding: 12px 8px;
+.rim-center {
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-shadow: var(--shadow-sm);
-  position: relative;
+  gap: 1px;
+  cursor: pointer;
+}
+.rim-date {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: #111111;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+.date-nav-pill-inline {
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: #111111;
+  cursor: pointer;
+  padding: 0;
+  text-transform: uppercase;
+}
+.rim-today-dot {
+  width: 6.5px;
+  height: 6.5px;
+  border-radius: 50%;
+  background: #16A34A;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+  display: inline-block;
+  flex-shrink: 0;
+}
+.rim-swipe-hint {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #71717A;
+  letter-spacing: 0.02em;
 }
 
-.circle-svg-wrap {
-  width: 96px;
-  height: 96px;
-  position: relative;
-  margin-bottom: 6px;
+/* Calorie Progress Section */
+.cal-section {
+  padding: 12px 14px 10px;
+  border-bottom: 1.5px solid #111111;
+}
+.cal-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 8px;
+}
+.cal-meta-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cal-title {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #71717A;
+}
+.cal-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111111;
+  font-variant-numeric: tabular-nums;
+}
+.cal-sub strong {
+  font-weight: 800;
+}
+.cal-numbers {
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+.cal-current {
+  font-size: 21px;
+  font-weight: 900;
+  color: #111111;
+  letter-spacing: -0.03em;
+}
+.cal-target {
+  font-size: 11px;
+  font-weight: 700;
+  color: #71717A;
 }
 
-.circle-svg {
+.cal-bar-track {
+  height: 10px;
+  background: #F4EFE6;
+  border: 1.5px solid #111111;
+  border-radius: 999px;
+  position: relative;
+  overflow: hidden;
+}
+.cal-bar-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  background: #FFE600;
+  border-right: 1.5px solid #111111;
+  border-radius: 999px 0 0 999px;
+  width: 0%;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cal-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+  background: rgba(17, 17, 17, 0.18);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* 4 Macro Rings Grid */
+.rings-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 10px 10px 12px;
+  gap: 6px;
+  background: #FFFFFF;
+}
+.ring-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.ring-svg-wrap {
+  width: 54px;
+  height: 54px;
+  position: relative;
+  margin-bottom: 4px;
+}
+.ring-svg-wrap svg {
   width: 100%;
   height: 100%;
   transform: rotate(-90deg);
 }
-
-.circle-bg {
-  stroke: #EAE5D9;
-  stroke-width: 4;
-}
-
-.circle-progress {
-  stroke-width: 4.5;
-  stroke-linecap: round;
-  transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.circle-bg-inner {
-  stroke: #EAE5D9;
-  stroke-width: 2.5;
-}
-
-.circle-progress-inner {
-  stroke-width: 2.8;
-  stroke-linecap: round;
-  transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.circle-card.carb .circle-progress {
+.ring-bg {
+  fill: none;
+  stroke: #F4EFE6;
   stroke-width: 3.2;
 }
-
-.circle-card.carb .circle-bg {
-  stroke-width: 3.2;
+.ring-progress {
+  fill: none;
+  stroke-width: 3.4;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
+.stroke-prot { stroke: #FF5E5B; }
+.stroke-carb { stroke: #0099CC; }
+.stroke-fiber { stroke: #8B5CF6; }
+.stroke-fat { stroke: #2EE59D; }
 
-.circle-inside {
+.ring-val-inside {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  text-align: center;
-}
-
-.circle-inside.carb-inside {
-  gap: 1px;
-}
-
-.macro-val-line {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  line-height: 1.05;
-}
-
-.circle-val-fib {
-  font-size: 0.88rem;
-  font-weight: 800;
-  color: var(--fiber-dark);
-}
-
-.circle-unit-fib {
-  font-size: 0.62rem;
-  font-weight: 800;
-  margin-left: 2px;
-  color: var(--fiber-dark);
-}
-
-.circle-val {
-  font-size: 1.15rem;
+  font-size: 11.5px;
   font-weight: 900;
-  line-height: 1.1;
+  color: #111111;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
-
-.circle-unit {
-  font-size: 0.7rem;
+.ring-unit {
+  font-size: 7.5px;
   font-weight: 700;
-  color: var(--text-muted);
+  color: #71717A;
+  margin-left: 1px;
 }
-
-.circle-name {
-  font-size: 0.85rem;
-  font-weight: 900;
+.ring-name {
+  font-size: 10px;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-top: 2px;
+  color: #111111;
 }
-
-.circle-target {
-  font-size: 0.72rem;
+.ring-target {
+  font-size: 9px;
   font-weight: 700;
-  color: var(--text-muted);
+  color: #71717A;
+  font-variant-numeric: tabular-nums;
 }
-
-/* Card Themes */
-.circle-card.cal { border-top: 6px solid var(--cal-color); }
-.circle-card.prot { border-top: 6px solid var(--prot-color); }
-.circle-card.carb { border-top: 6px solid var(--carb-color); }
-.circle-card.fat { border-top: 6px solid var(--fat-color); }
 
 /* --- Unified Logging & Timeline Container --- */
-.main-container-card {
+.main-container-card,
+.voice-tool-card {
   background: var(--bg-card);
-  border: var(--border-thick);
-  box-shadow: var(--shadow-md);
-  border-radius: 16px;
-  padding: 16px;
+  border: 1.5px solid #111111;
+  box-shadow: none;
+  border-radius: 14px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .mic-status-banner {
@@ -626,7 +705,7 @@ body {
   text-align: center;
   padding: 6px 10px;
   background: #FFF4CC;
-  border: 2px solid #000;
+  border: 1.5px solid #111111;
   border-radius: 6px;
   animation: fadeIn 0.2s ease;
 }
@@ -654,22 +733,22 @@ body {
 .btn-primary {
   flex: 1;
   width: 100%;
-  background: #1A1A1A;
-  color: var(--cal-color);
-  border: 3px solid var(--cal-color);
-  box-shadow: 4px 4px 0px var(--cal-color);
-  border-radius: 12px;
-  padding: 14px 12px;
+  background: #FFE600;
+  color: #111111;
+  border: 1.5px solid #111111;
+  box-shadow: none;
+  border-radius: 10px;
+  padding: 12px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 1.0rem;
+  font-size: 0.95rem;
   font-weight: 900;
-  letter-spacing: 0.035em;
+  letter-spacing: 0.03em;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: transform 0.05s ease, box-shadow 0.05s ease;
+  transition: transform 0.05s ease, background 0.1s ease;
 }
 
 .btn-mic-icon {
@@ -683,23 +762,25 @@ body {
 
 .btn-track-text {
   white-space: nowrap;
-  letter-spacing: 0.035em;
+  letter-spacing: 0.03em;
 }
 
 .btn-brand-mix {
   color: var(--prot-color);
   font-weight: 900;
-  letter-spacing: 0.035em;
+  letter-spacing: 0.03em;
 }
 
-.btn-primary:active, .btn-primary.recording {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0px var(--cal-color);
+.btn-primary:active {
+  transform: scale(0.99);
+  background: #F0D800;
 }
 
 .btn-primary.recording {
   background: var(--prot-color);
   color: #FFF;
+  border-color: #111111;
+  box-shadow: none;
   animation: pulse-red 1s infinite;
 }
 
@@ -710,13 +791,13 @@ body {
 }
 
 .btn-secondary {
-  flex: 1; /* White push & hold button (~30% width) */
+  flex: 1;
   background: #FFFFFF;
   color: #000;
-  border: var(--border-thick);
-  box-shadow: var(--shadow-sm);
+  border: 1.5px solid #111111;
+  box-shadow: none;
   border-radius: 10px;
-  padding: 14px 10px;
+  padding: 12px 10px;
   font-size: 0.9rem;
   font-weight: 800;
   cursor: pointer;
@@ -727,8 +808,7 @@ body {
 }
 
 .btn-secondary:active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0px #000;
+  transform: scale(0.98);
   background: #F0EDE4;
 }
 
@@ -745,14 +825,15 @@ body {
   box-sizing: border-box;
   flex: 1;
   background: #FFFFFF;
-  border: var(--border-thick);
+  border: 1.5px solid #111111;
   border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 0.92rem;
+  padding: 9px 12px;
+  font-size: 0.90rem;
   font-weight: 700;
   font-family: inherit;
   color: #000;
   outline: none;
+  box-shadow: none;
 }
 
 .neo-input:focus {
@@ -761,20 +842,24 @@ body {
 }
 
 .btn-log {
-  background: var(--fat-color);
-  border: var(--border-thick);
-  box-shadow: var(--shadow-sm);
+  background: #111111;
+  color: #FFE600;
+  border: 1.5px solid #111111;
+  box-shadow: none;
   border-radius: 8px;
-  padding: 10px 16px;
+  padding: 9px 16px;
   font-weight: 900;
   font-size: 0.88rem;
   cursor: pointer;
   transition: all 0.1s ease;
 }
 
+.btn-log:hover:not(:disabled) {
+  background: #222222;
+}
+
 .btn-log:active:not(:disabled) {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0px #000;
+  transform: scale(0.98);
 }
 
 .btn-log:disabled,
@@ -783,7 +868,6 @@ body {
   cursor: not-allowed !important;
   pointer-events: none !important;
   transform: none !important;
-  box-shadow: 1px 1px 0px #000 !important;
   background: #A0A0A0 !important;
   filter: grayscale(0.6);
 }
@@ -791,37 +875,62 @@ body {
 /* --- Chronological Meal Timeline (LOGGED MEALS Box) --- */
 .timeline-box {
   background: #FFFFFF;
-  border: 2px solid #000;
-  border-radius: 12px;
-  padding: 14px;
+  border: 1.5px solid #111111;
+  border-radius: 14px;
+  padding: 12px 14px 14px;
+  box-shadow: none;
 }
 
 .timeline-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
+}
+
+.timeline-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .timeline-title {
-  font-size: 1.05rem;
+  font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
+  color: #111111;
+}
+
+.meals-total-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #FAF8F2;
+  border: 1.5px solid #111111;
+  color: #111111;
+  font-variant-numeric: tabular-nums;
 }
 
 .refresh-btn {
-  border-radius: 8px;
-  padding: 4px 8px;
-  font-size: 1rem;
+  border: 1.5px solid #111111;
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 0.9rem;
+  box-shadow: none;
+  background: #FFFFFF;
+  cursor: pointer;
 }
 
 .meal-group {
-  margin-bottom: 14px;
-  border: 2px solid #000;
+  margin-bottom: 10px;
+  border: 1.5px solid #111111;
   border-radius: 10px;
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
+  background: #FFFFFF;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
 }
 
 .meal-group-header {

@@ -775,7 +775,24 @@ function formatDateLabel(dateStr) {
   return dateStr;
 }
 
-function changeDate(offsetDays) {
+function formatRimDate(dateStr) {
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+    const dateFormatted = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+    if (dateStr === getTodayDateString()) {
+      return `TODAY · ${dayName}, ${dateFormatted}`;
+    }
+    if (dateStr === getYesterdayDateString()) {
+      return `YESTERDAY · ${dayName}, ${dateFormatted}`;
+    }
+    return `${dayName}, ${dateFormatted}`;
+  }
+  return dateStr;
+}
+
+function changeDate(offsetDays, direction = null) {
   if (offsetDays > 0 && selectedDate >= getTodayDateString()) {
     return; // Next arrow is not clickable when on today
   }
@@ -783,17 +800,24 @@ function changeDate(offsetDays) {
   const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
   d.setDate(d.getDate() + offsetDays);
   
-  selectedDate = getLocalDateString(d);
+  const targetDateStr = getLocalDateString(d);
+  if (offsetDays > 0 && targetDateStr > getTodayDateString()) {
+    selectedDate = getTodayDateString();
+  } else {
+    selectedDate = targetDateStr;
+  }
 
+  const dir = direction || (offsetDays < 0 ? 'prev' : 'next');
   updateDateLabel();
-  filterAndRenderSelectedDate();
+  filterAndRenderSelectedDate(dir);
   AppLogger.log('UI', `Date switched to ${selectedDate} (${formatDateLabel(selectedDate)})`);
 }
 
 function resetToToday() {
+  const wasNotToday = (selectedDate !== getTodayDateString());
   selectedDate = getTodayDateString();
   updateDateLabel();
-  filterAndRenderSelectedDate();
+  filterAndRenderSelectedDate(wasNotToday ? 'next' : null);
   AppLogger.log('UI', 'Date reset to TODAY');
 }
 
@@ -812,12 +836,44 @@ function updateDateNavButtons() {
   }
 }
 
+function updateInputBarContext() {
+  const isToday = (selectedDate >= getTodayDateString());
+  const inputEl = document.getElementById('manual-text-input');
+  const recordBtnText = document.getElementById('btn-track-text-main');
+  const dateName = formatDateLabel(selectedDate);
+
+  if (inputEl) {
+    if (isToday) {
+      inputEl.placeholder = 'Or type e.g. 200g veg pulao and some veggies';
+    } else {
+      inputEl.placeholder = `Add forgotten meal for ${dateName.toLowerCase()}...`;
+    }
+  }
+  if (recordBtnText) {
+    if (isToday) {
+      recordBtnText.innerHTML = 'Track your macro<span class="btn-brand-mix">mix</span>';
+    } else {
+      recordBtnText.innerHTML = `+ Log for <span style="text-transform: capitalize;">${dateName.toLowerCase()}</span>`;
+    }
+  }
+}
+
 function updateDateLabel() {
   const labelEl = document.getElementById('date-label');
   if (labelEl) {
-    labelEl.textContent = formatDateLabel(selectedDate);
+    labelEl.textContent = formatRimDate(selectedDate);
+  }
+  const isToday = (selectedDate >= getTodayDateString());
+  const dot = document.getElementById('today-indicator');
+  if (dot) {
+    dot.style.display = isToday ? 'inline-block' : 'none';
+  }
+  const hint = document.getElementById('swipe-hint');
+  if (hint) {
+    hint.textContent = isToday ? '‹ Swipe for past days ›' : '‹ Swipe for earlier · Swipe right for later ›';
   }
   updateDateNavButtons();
+  updateInputBarContext();
 }
 
 function getLogDate(log) {
@@ -932,9 +988,9 @@ function renderStreak() {
   }
 }
 
-function filterAndRenderSelectedDate() {
+function filterAndRenderSelectedDate(direction = null) {
   const filtered = currentLogs.filter(log => getLogDate(log) === selectedDate);
-  renderTimeline(filtered);
+  renderTimeline(filtered, direction);
   updateCirclesProgress(filtered);
   renderStreak();
 }
@@ -977,7 +1033,7 @@ function updateCirclesProgress(logsToUse = null) {
   const fiberEl = document.getElementById('val-fiber');
   const fatEl = document.getElementById('val-fat');
 
-  if (calEl) calEl.textContent = totalCal;
+  if (calEl) calEl.textContent = totalCal.toLocaleString();
   if (protEl) protEl.textContent = totalProt;
   if (carbEl) carbEl.textContent = totalCarb;
   if (fiberEl) fiberEl.textContent = totalFiber;
@@ -988,13 +1044,42 @@ function updateCirclesProgress(logsToUse = null) {
   setCircleOffset('circle-carb', totalCarb, userTargets.carbs_g);
   setCircleOffset('circle-fiber', totalFiber, userTargets.fiber_g !== undefined ? userTargets.fiber_g : 30);
   setCircleOffset('circle-fat', totalFat, userTargets.fat_g);
+
+  // Update Calorie Remaining subtitle text
+  const calSub = document.getElementById('cal-status-sub');
+  if (calSub) {
+    const diff = (userTargets.calories || 2000) - totalCal;
+    if (diff > 0) {
+      calSub.innerHTML = `<strong>${diff.toLocaleString()} kcal left</strong> to goal`;
+    } else if (diff === 0) {
+      calSub.innerHTML = `<strong>Goal Achieved ✓</strong>`;
+    } else {
+      calSub.innerHTML = `<strong>${Math.abs(diff).toLocaleString()} kcal over</strong> goal`;
+    }
+  }
+
+  // Update meals total badge
+  const totalBadge = document.getElementById('meals-total-badge');
+  if (totalBadge) {
+    const validLogs = logs.filter(log => log.items && log.items.length > 0);
+    const count = validLogs.reduce((sum, l) => sum + (l.items ? l.items.length : 1), 0);
+    totalBadge.textContent = `${count} item${count === 1 ? '' : 's'} · ${totalCal.toLocaleString()} kcal`;
+  }
 }
 
 function setCircleOffset(elementId, current, target) {
   const el = document.getElementById(elementId);
   if (!el) return;
   const pct = Math.min(100, Math.max(0, (current / (target || 1)) * 100));
-  const offset = 100 - pct;
+
+  if (elementId === 'circle-cal' || el.classList.contains('cal-bar-fill')) {
+    el.style.width = pct + '%';
+    return;
+  }
+
+  // SVG rings (radius 14.2 -> circumference 89.22)
+  const maxCircumference = 89.2;
+  const offset = maxCircumference - (pct / 100) * maxCircumference;
   el.style.strokeDashoffset = offset;
 }
 
@@ -1277,75 +1362,111 @@ function formatItemCommentary(prepState) {
   return chosen.slice(0, 10);
 }
 
-function renderTimeline(logsToUse = null) {
+function renderTimeline(logsToUse = null, direction = null) {
   const container = document.getElementById('meal-timeline-content');
   if (!container) return;
   const logs = logsToUse !== null ? logsToUse : currentLogs.filter(l => getLogDate(l) === selectedDate);
   const validLogs = logs.filter(log => log.items && log.items.length > 0);
-  if (!validLogs || validLogs.length === 0) {
-    if (selectedDate === getTodayDateString()) {
-      container.innerHTML = `<div class="empty-state">${isVisitorMode ? `No meals logged yet today by ${viewedHandle || 'user'}.` : 'No meals logged yet today. Tap the mic or type above!'}</div>`;
-    } else {
-      container.innerHTML = `<div class="empty-state">No meals logged ${formatDateLabel(selectedDate)}.</div>`;
+
+  const buildHtml = () => {
+    if (!validLogs || validLogs.length === 0) {
+      if (selectedDate === getTodayDateString()) {
+        return `<div class="empty-state">${isVisitorMode ? `No meals logged yet today by ${viewedHandle || 'user'}.` : 'No meals logged yet today. Tap the mic or type above!'}</div>`;
+      } else {
+        return `<div class="empty-state">No meals logged ${formatDateLabel(selectedDate)}.</div>`;
+      }
     }
-    return;
-  }
 
-  let html = '';
-  validLogs.forEach(log => {
-    html += `
-      <div class="meal-group" id="log-${log.id}">
-        <div class="meal-items-list">
-    `;
+    let html = '';
+    validLogs.forEach(log => {
+      html += `
+        <div class="meal-group" id="log-${log.id}">
+          <div class="meal-items-list">
+      `;
 
-    log.items.forEach(it => {
-      const qtyStr = formatItemQuantity(it.quantity, it.unit);
-      const commentary = formatItemCommentary(it.preparation_state);
-      const subText = commentary ? `${qtyStr} • ${commentary}` : qtyStr;
+      log.items.forEach(it => {
+        const qtyStr = formatItemQuantity(it.quantity, it.unit);
+        const commentary = formatItemCommentary(it.preparation_state);
+        const subText = commentary ? `${qtyStr} • ${commentary}` : qtyStr;
+
+        html += `
+          <div class="meal-item-row" id="item-${it.id}">
+            <div class="meal-item-top-line">
+              <div class="meal-item-title-wrap">
+                <span class="meal-item-title">${escapeHtml(it.food_name)}</span>
+                <span class="macro-chip cal">${Math.round(it.calories)} kcal</span>
+              </div>
+              ${!isVisitorMode ? `
+              <div class="item-actions">
+                <button type="button" class="item-action-btn edit-item-btn" data-id="${it.id}" data-food="${escapeHtml(it.food_name)}" data-quantity="${it.quantity}" data-unit="${escapeHtml(it.unit)}" data-weight="${it.standardized_weight_g}" title="Edit Portion">✏️</button>
+                <button type="button" class="item-action-btn delete-item-btn" data-id="${it.id}" title="Delete Item">🗑️</button>
+              </div>` : ''}
+            </div>
+            <div class="meal-item-bottom-line">
+              <span class="meal-item-sub">${escapeHtml(subText)}</span>
+              <div class="meal-item-macros">
+                <span class="macro-chip prot">${Math.round(it.protein_g)}p</span>
+                <span class="macro-chip carb">${Math.round(it.carbs_g)}c</span>
+                <span class="macro-chip fib">${Math.round(it.fiber_g || 0)}fib</span>
+                <span class="macro-chip fat">${Math.round(it.fat_g)}fat</span>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      if (log.raw_transcript && log.raw_transcript.trim()) {
+        html += `
+          <details class="transcript-details">
+            <summary class="transcript-summary">💬 Original Transcript</summary>
+            <div class="transcript-content">"${escapeHtml(log.raw_transcript.trim())}"</div>
+          </details>
+        `;
+      }
 
       html += `
-        <div class="meal-item-row" id="item-${it.id}">
-          <div class="meal-item-top-line">
-            <div class="meal-item-title-wrap">
-              <span class="meal-item-title">${escapeHtml(it.food_name)}</span>
-              <span class="macro-chip cal">${Math.round(it.calories)} kcal</span>
-            </div>
-            ${!isVisitorMode ? `
-            <div class="item-actions">
-              <button type="button" class="item-action-btn edit-item-btn" data-id="${it.id}" data-food="${escapeHtml(it.food_name)}" data-quantity="${it.quantity}" data-unit="${escapeHtml(it.unit)}" data-weight="${it.standardized_weight_g}" title="Edit Portion">✏️</button>
-              <button type="button" class="item-action-btn delete-item-btn" data-id="${it.id}" title="Delete Item">🗑️</button>
-            </div>` : ''}
-          </div>
-          <div class="meal-item-bottom-line">
-            <span class="meal-item-sub">${escapeHtml(subText)}</span>
-            <div class="meal-item-macros">
-              <span class="macro-chip prot">${Math.round(it.protein_g)}p</span>
-              <span class="macro-chip carb">${Math.round(it.carbs_g)}c</span>
-              <span class="macro-chip fib">${Math.round(it.fiber_g || 0)}fib</span>
-              <span class="macro-chip fat">${Math.round(it.fat_g)}fat</span>
-            </div>
           </div>
         </div>
       `;
     });
+    return html;
+  };
 
-    if (log.raw_transcript && log.raw_transcript.trim()) {
-      html += `
-        <details class="transcript-details">
-          <summary class="transcript-summary">💬 Original Transcript</summary>
-          <div class="transcript-content">"${escapeHtml(log.raw_transcript.trim())}"</div>
-        </details>
-      `;
-    }
+  if (!direction) {
+    container.innerHTML = buildHtml();
+    setupTimelineDelegation();
+    return;
+  }
 
-    html += `
-        </div>
-      </div>
-    `;
+  // Directional Staggered Content Ripple
+  const existingCards = container.querySelectorAll('.meal-group');
+  const exitOffset = direction === 'prev' ? '16px' : '-16px';
+  const enterOffset = direction === 'prev' ? '-16px' : '16px';
+
+  existingCards.forEach(card => {
+    card.style.transform = `translateX(${exitOffset})`;
+    card.style.opacity = '0';
   });
 
-  container.innerHTML = html;
-  setupTimelineDelegation();
+  setTimeout(() => {
+    container.innerHTML = buildHtml();
+    setupTimelineDelegation();
+
+    const newCards = container.querySelectorAll('.meal-group');
+    newCards.forEach((card, idx) => {
+      card.style.opacity = '0';
+      card.style.transform = `translateX(${enterOffset})`;
+      card.style.transition = 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease';
+      card.style.transitionDelay = `${idx * 40}ms`;
+
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          card.style.opacity = '1';
+          card.style.transform = 'translateX(0)';
+        }, 20);
+      });
+    });
+  }, 100);
 }
 
 function setupTimelineDelegation() {
@@ -2129,23 +2250,151 @@ function setupSettingsModal() {
   });
 }
 
-// --- Touch Swipe Gestures for Day Navigation ---
+// --- Touch & Mouse Swipe Gestures for Day Navigation ---
 function setupSwipeGestures() {
-  const swipeTargets = [
+  const stage = document.getElementById('top-card-stage');
+  const mainCard = document.getElementById('main-top-card');
+  const edge1 = document.getElementById('edge-stack-1');
+  const edge2 = document.getElementById('edge-stack-2');
+
+  const targets = [
+    stage,
     document.querySelector('.circles-container'),
-    document.querySelector('.main-container-card')
+    document.querySelector('.main-container-card'),
+    document.querySelector('.voice-tool-card')
   ].filter(Boolean);
 
-  swipeTargets.forEach(target => {
+  // 1:1 Live Drag Tracking on Top Card Stage
+  if (stage && mainCard) {
+    let startX = 0;
+    let startY = 0;
+    let startTime = 0;
+    let isTracking = false;
+    let isSwiping = false;
+
+    const onStart = (clientX, clientY) => {
+      startX = clientX;
+      startY = clientY;
+      startTime = Date.now();
+      isTracking = true;
+      isSwiping = false;
+      mainCard.style.transition = 'none';
+      if (edge1) edge1.style.transition = 'none';
+      if (edge2) edge2.style.transition = 'none';
+    };
+
+    const onMove = (clientX, clientY, e) => {
+      if (!isTracking) return;
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+
+      if (!isSwiping) {
+        if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy) * 0.7) {
+          isSwiping = true;
+        } else if (Math.abs(dy) > 25 && Math.abs(dy) > Math.abs(dx) * 1.5) {
+          isTracking = false;
+          return;
+        }
+      }
+
+      if (isSwiping) {
+        if (e && e.cancelable && e.preventDefault) e.preventDefault();
+        const isToday = (selectedDate >= getTodayDateString());
+        let moveX = dx;
+        // Damped rubber-band when dragging left while already on Today
+        if (isToday && dx < 0) {
+          moveX = dx * 0.15;
+        }
+        mainCard.style.transform = `translateX(${moveX}px)`;
+        if (edge1) edge1.style.transform = `translateX(${Math.min(8, Math.max(-8, moveX * 0.2))}px)`;
+        if (edge2) edge2.style.transform = `translateX(${Math.min(6, Math.max(-6, moveX * 0.12))}px)`;
+      }
+    };
+
+    const onEnd = (clientX, clientY) => {
+      if (!isTracking) return;
+      isTracking = false;
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+      const duration = Date.now() - startTime;
+
+      mainCard.style.transition = 'transform 0.24s cubic-bezier(0.16, 1, 0.3, 1)';
+      if (edge1) edge1.style.transition = 'transform 0.24s cubic-bezier(0.16, 1, 0.3, 1)';
+      if (edge2) edge2.style.transition = 'transform 0.24s cubic-bezier(0.16, 1, 0.3, 1)';
+      mainCard.style.transform = 'translateX(0)';
+      if (edge1) edge1.style.transform = 'translateX(0)';
+      if (edge2) edge2.style.transform = 'translateX(0)';
+
+      if (Math.abs(dx) >= 30 && duration < 1200) {
+        if (dx > 0) {
+          // Dragged/swiped right -> go to previous day
+          changeDate(-1, 'prev');
+          AppLogger.log('UI', 'Swiped right: navigated to previous day');
+        } else {
+          // Dragged/swiped left -> go to next day
+          if (selectedDate < getTodayDateString()) {
+            changeDate(1, 'next');
+            AppLogger.log('UI', 'Swiped left: navigated to next day');
+          }
+        }
+      }
+      isSwiping = false;
+    };
+
+    stage.addEventListener('touchstart', (e) => {
+      if (e.target.closest('button, input, textarea, a, .rim-btn')) return;
+      if (e.touches.length === 1) {
+        onStart(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: true });
+
+    stage.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 1) {
+        onMove(e.touches[0].clientX, e.touches[0].clientY, e);
+      }
+    }, { passive: false });
+
+    stage.addEventListener('touchend', (e) => {
+      const touch = e.changedTouches && e.changedTouches.length ? e.changedTouches[0] : (e.touches && e.touches.length ? e.touches[0] : null);
+      if (touch) {
+        onEnd(touch.clientX, touch.clientY);
+      } else {
+        onEnd(startX, startY);
+      }
+    }, { passive: true });
+
+    stage.addEventListener('touchcancel', () => {
+      isTracking = false;
+      isSwiping = false;
+      mainCard.style.transform = 'translateX(0)';
+      if (edge1) edge1.style.transform = 'translateX(0)';
+      if (edge2) edge2.style.transform = 'translateX(0)';
+    });
+
+    // Mouse drag support for testing & desktop convenience
+    stage.addEventListener('mousedown', (e) => {
+      if (e.target.closest('button, input, textarea, a, .rim-btn')) return;
+      onStart(e.clientX, e.clientY);
+      const moveHandler = (ev) => onMove(ev.clientX, ev.clientY, ev);
+      const upHandler = (ev) => {
+        onEnd(ev.clientX, ev.clientY);
+        window.removeEventListener('mousemove', moveHandler);
+        window.removeEventListener('mouseup', upHandler);
+      };
+      window.addEventListener('mousemove', moveHandler);
+      window.addEventListener('mouseup', upHandler);
+    });
+  }
+
+  // Fallback / swipe support on other targets (and test compatibility)
+  targets.forEach(target => {
+    if (target === stage) return;
     let touchStartX = 0;
     let touchStartY = 0;
     let touchStartTime = 0;
 
     target.addEventListener('touchstart', (e) => {
-      // Ignore if user touches an interactive control or inside an open modal
-      if (e.target.closest('input, button, textarea, select, .modal-content, a')) {
-        return;
-      }
+      if (e.target.closest('input, button, textarea, select, .modal-content, a')) return;
       if (e.touches.length === 1) {
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
@@ -2158,19 +2407,15 @@ function setupSwipeGestures() {
         const deltaX = e.changedTouches[0].clientX - touchStartX;
         const deltaY = e.changedTouches[0].clientY - touchStartY;
         const duration = Date.now() - touchStartTime;
-
         touchStartTime = 0;
 
-        // Verify gesture: min distance 45px, predominantly horizontal, < 600ms
-        if (Math.abs(deltaX) >= 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3 && duration < 600) {
+        if (Math.abs(deltaX) >= 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2 && duration < 650) {
           if (deltaX > 0) {
-            // Swiped right (dragging previous day in from left) -> Go to Previous Day
-            changeDate(-1);
+            changeDate(-1, 'prev');
             AppLogger.log('UI', 'Swiped right: navigated to previous day');
           } else {
-            // Swiped left (dragging next day in from right) -> Go to Next Day
             if (selectedDate < getTodayDateString()) {
-              changeDate(1);
+              changeDate(1, 'next');
               AppLogger.log('UI', 'Swiped left: navigated to next day');
             }
           }
@@ -3991,9 +4236,11 @@ function setupEventListeners() {
   }
 
   bind('btn-visitor-back', 'click', backToFriendsList);
-  bind('btn-date-prev', 'click', () => changeDate(-1));
+  bind('btn-date-prev', 'click', () => changeDate(-1, 'prev'));
   bind('date-label', 'click', resetToToday);
-  bind('btn-date-next', 'click', () => changeDate(1));
+  bind('date-label-wrap', 'click', resetToToday);
+  bind('btn-date-next', 'click', () => changeDate(1, 'next'));
+  bind('refresh-logs-btn', 'click', () => filterAndRenderSelectedDate());
   bind('btn-tap-record', 'click', toggleVoiceRecording);
 
   const form = document.getElementById('text-log-form');
