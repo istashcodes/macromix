@@ -31,7 +31,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=12.0">
+  <link rel="stylesheet" href="styles.css?v=13.0">
 </head>
 <body>
   <!-- Gooey SVG Filter for Header Tab Toggle (gooey-react technique) -->
@@ -180,7 +180,7 @@
           <div class="cal-section">
             <div class="cal-header-row">
               <div class="cal-meta-left">
-                <span class="cal-title">Calories Remaining</span>
+                <span class="cal-title">Calories</span>
                 <span class="cal-sub" id="under-cal-status-sub"><strong>0 kcal left</strong> to goal</span>
               </div>
               <div class="cal-numbers">
@@ -198,21 +198,6 @@
 
           <!-- 4 Macro Rings Grid (2x2) -->
           <div class="rings-grid">
-            <!-- Protein -->
-            <div class="ring-col circle-card prot">
-              <div class="ring-svg-wrap">
-                <svg viewBox="0 0 36 36">
-                  <circle class="ring-bg" cx="18" cy="18" r="14.2" />
-                  <circle class="ring-progress stroke-prot" id="under-circle-prot" cx="18" cy="18" r="14.2" stroke-dasharray="89.2, 89.2" stroke-dashoffset="89.2" />
-                </svg>
-                <div class="ring-val-inside"><span id="under-val-prot">0</span><span class="ring-unit">g</span></div>
-              </div>
-              <div class="ring-meta">
-                <span class="ring-name circle-name">Protein</span>
-                <span class="ring-target" id="under-tgt-prot">/ 150g</span>
-              </div>
-            </div>
-
             <!-- Carbs -->
             <div class="ring-col circle-card carb">
               <div class="ring-svg-wrap">
@@ -225,6 +210,21 @@
               <div class="ring-meta">
                 <span class="ring-name circle-name">Carbs</span>
                 <span class="ring-target" id="under-tgt-carb">/ 200g</span>
+              </div>
+            </div>
+
+            <!-- Protein -->
+            <div class="ring-col circle-card prot">
+              <div class="ring-svg-wrap">
+                <svg viewBox="0 0 36 36">
+                  <circle class="ring-bg" cx="18" cy="18" r="14.2" />
+                  <circle class="ring-progress stroke-prot" id="under-circle-prot" cx="18" cy="18" r="14.2" stroke-dasharray="89.2, 89.2" stroke-dashoffset="89.2" />
+                </svg>
+                <div class="ring-val-inside"><span id="under-val-prot">0</span><span class="ring-unit">g</span></div>
+              </div>
+              <div class="ring-meta">
+                <span class="ring-name circle-name">Protein</span>
+                <span class="ring-target" id="under-tgt-prot">/ 150g</span>
               </div>
             </div>
 
@@ -278,7 +278,7 @@
           <div class="cal-section">
             <div class="cal-header-row">
               <div class="cal-meta-left">
-                <span class="cal-title">Calories Remaining</span>
+                <span class="cal-title">Calories</span>
                 <span class="cal-sub" id="cal-status-sub"><strong>0 kcal left</strong> to goal</span>
               </div>
               <div class="cal-numbers">
@@ -296,21 +296,6 @@
 
           <!-- 4 Macro Rings Grid (2x2 Grid) -->
           <div class="rings-grid">
-            <!-- Protein -->
-            <div class="ring-col circle-card prot">
-              <div class="ring-svg-wrap">
-                <svg viewBox="0 0 36 36">
-                  <circle class="ring-bg" cx="18" cy="18" r="14.2" />
-                  <circle class="ring-progress stroke-prot" id="circle-prot" cx="18" cy="18" r="14.2" stroke-dasharray="89.2, 89.2" stroke-dashoffset="89.2" />
-                </svg>
-                <div class="ring-val-inside"><span id="val-prot">0</span><span class="ring-unit">g</span></div>
-              </div>
-              <div class="ring-meta">
-                <span class="ring-name circle-name">Protein</span>
-                <span class="ring-target" id="tgt-prot">/ 150g</span>
-              </div>
-            </div>
-
             <!-- Carbs -->
             <div class="ring-col circle-card carb">
               <div class="ring-svg-wrap">
@@ -323,6 +308,21 @@
               <div class="ring-meta">
                 <span class="ring-name circle-name">Carbs</span>
                 <span class="ring-target" id="tgt-carb">/ 200g</span>
+              </div>
+            </div>
+
+            <!-- Protein -->
+            <div class="ring-col circle-card prot">
+              <div class="ring-svg-wrap">
+                <svg viewBox="0 0 36 36">
+                  <circle class="ring-bg" cx="18" cy="18" r="14.2" />
+                  <circle class="ring-progress stroke-prot" id="circle-prot" cx="18" cy="18" r="14.2" stroke-dasharray="89.2, 89.2" stroke-dashoffset="89.2" />
+                </svg>
+                <div class="ring-val-inside"><span id="val-prot">0</span><span class="ring-unit">g</span></div>
+              </div>
+              <div class="ring-meta">
+                <span class="ring-name circle-name">Protein</span>
+                <span class="ring-target" id="tgt-prot">/ 150g</span>
               </div>
             </div>
 
@@ -543,7 +543,7 @@
   </div>
 
   <!-- Firebase Cloud Firestore Integration -->
-  <script type="module" src="firebase-db.js?v=12.0"></script>
+  <script type="module" src="firebase-db.js?v=13.0"></script>
 
   <!-- SimpleWebAuthn Browser SDK -->
   <script src="simplewebauthn-browser.min.js"></script>
@@ -552,6 +552,6 @@
   <script src="env.js" onerror="/* optional env.js */"></script>
 
   <!-- Frontend Controller -->
-  <script src="app.js?v=12.0"></script>
+  <script src="app.js?v=13.0"></script>
 </body>
 </html>

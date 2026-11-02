@@ -2439,10 +2439,10 @@ function triggerDeckSwipe(offsetDays, direction = null, exitDirection = null) {
 
   mainCard.style.transform = `translateX(${exitX}) rotate(${rot}deg)`;
   mainCard.style.opacity = '0';
-  underCard.style.transform = 'scale(1.0) translateY(0px)';
+  underCard.style.transform = 'translateY(0)';
 
-  if (edge1) edge1.style.transform = 'translateX(-4px)';
-  if (edge2) edge2.style.transform = 'translateX(-6px)';
+  if (edge1) edge1.style.transform = 'translateX(0)';
+  if (edge2) edge2.style.transform = 'translateX(0)';
 
   setTimeout(() => {
     changeDate(offsetDays, direction || (offsetDays < 0 ? 'prev' : 'next'));
@@ -2453,7 +2453,7 @@ function triggerDeckSwipe(offsetDays, direction = null, exitDirection = null) {
     mainCard.style.opacity = '1';
 
     // Reset under card to recessed state and hide it at rest
-    underCard.style.transform = 'scale(0.95) translateY(6px)';
+    underCard.style.transform = 'translateY(0)';
     underCard.style.opacity = '0';
     underCard.style.visibility = 'hidden';
 
@@ -2528,7 +2528,7 @@ function setupSwipeGestures() {
             // Keep under card strictly hidden
             underCard.style.visibility = 'hidden';
             underCard.style.opacity = '0';
-            underCard.style.transform = 'scale(0.95) translateY(6px)';
+            underCard.style.transform = 'translateY(0)';
             return;
           }
 
@@ -2556,14 +2556,10 @@ function setupSwipeGestures() {
         const rot = (dx / maxDrag) * 8; // subtle rotation up to 8 deg
 
         mainCard.style.transform = `translateX(${dx}px) rotate(${rot}deg)`;
+        underCard.style.transform = 'translateY(0)';
 
-        // Under card surfaces upwards as finger moves
-        const underScale = 0.95 + (0.05 * progress);
-        const underY = 6 * (1 - progress);
-        underCard.style.transform = `scale(${underScale}) translateY(${underY}px)`;
-
-        if (edge1) edge1.style.transform = `translateX(${Math.min(6, Math.max(-6, dx * 0.12))}px)`;
-        if (edge2) edge2.style.transform = `translateX(${Math.min(4, Math.max(-4, dx * 0.08))}px)`;
+        if (edge1) edge1.style.transform = 'translateX(0)';
+        if (edge2) edge2.style.transform = 'translateX(0)';
       }
     };
 
@@ -2617,7 +2613,7 @@ function setupSwipeGestures() {
         if (edge2) edge2.style.transition = 'transform 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
 
         mainCard.style.transform = 'translateX(0) rotate(0deg)';
-        underCard.style.transform = 'scale(0.95) translateY(6px)';
+        underCard.style.transform = 'translateY(0)';
         underCard.style.opacity = '0';
         setTimeout(() => {
           if (!isTracking && !isAnimatingDeckTransition) {
@@ -2657,7 +2653,7 @@ function setupSwipeGestures() {
       isTracking = false;
       isSwiping = false;
       mainCard.style.transform = 'translateX(0) rotate(0deg)';
-      underCard.style.transform = 'scale(0.95) translateY(6px)';
+      underCard.style.transform = 'translateY(0)';
       underCard.style.opacity = '0';
       underCard.style.visibility = 'hidden';
       if (edge1) edge1.style.transform = 'translateX(0)';
