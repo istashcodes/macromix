@@ -441,6 +441,23 @@ body {
   display: flex;
   flex-direction: column;
   transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.main-top-card.under-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  transform: scale(0.95) translateY(6px);
+  transform-origin: center bottom;
+  pointer-events: none;
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
 }
 
 .card-top-rim {
@@ -612,25 +629,31 @@ body {
   pointer-events: none;
 }
 
-/* 4 Macro Rings Grid */
+/* 4 Macro Rings Grid (2 in a row, 2 rows) */
 .rings-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  padding: 10px 10px 12px;
-  gap: 6px;
+  grid-template-columns: repeat(2, 1fr);
+  padding: 8px 10px 10px;
+  gap: 8px;
   background: #FFFFFF;
 }
 .ring-col {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  text-align: center;
+  gap: 10px;
+  background: #FAF8F2;
+  border: 1.5px solid #111111;
+  border-radius: 9px;
+  padding: 6px 10px;
+  text-align: left;
 }
 .ring-svg-wrap {
-  width: 54px;
-  height: 54px;
+  width: 50px;
+  height: 50px;
   position: relative;
-  margin-bottom: 4px;
+  margin-bottom: 0;
+  flex-shrink: 0;
 }
 .ring-svg-wrap svg {
   width: 100%;
@@ -639,7 +662,7 @@ body {
 }
 .ring-bg {
   fill: none;
-  stroke: #F4EFE6;
+  stroke: #EAE5D8;
   stroke-width: 3.2;
 }
 .ring-progress {
@@ -659,30 +682,38 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 900;
   color: #111111;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 .ring-unit {
-  font-size: 7.5px;
+  font-size: 8px;
   font-weight: 700;
   color: #71717A;
   margin-left: 1px;
 }
+.ring-meta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
 .ring-name {
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: #111111;
+  line-height: 1.2;
 }
 .ring-target {
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 700;
   color: #71717A;
   font-variant-numeric: tabular-nums;
+  line-height: 1.2;
 }
 
 /* --- Unified Logging & Timeline Container --- */

@@ -992,6 +992,7 @@ function filterAndRenderSelectedDate(direction = null) {
   const filtered = currentLogs.filter(log => getLogDate(log) === selectedDate);
   renderTimeline(filtered, direction);
   updateCirclesProgress(filtered);
+  updateUnderCard(getOffsetDateString(selectedDate, -1));
   renderStreak();
 }
 
@@ -1072,7 +1073,7 @@ function setCircleOffset(elementId, current, target) {
   if (!el) return;
   const pct = Math.min(100, Math.max(0, (current / (target || 1)) * 100));
 
-  if (elementId === 'circle-cal' || el.classList.contains('cal-bar-fill')) {
+  if (elementId === 'circle-cal' || elementId === 'under-circle-cal' || el.classList.contains('cal-bar-fill')) {
     el.style.width = pct + '%';
     return;
   }
@@ -1081,6 +1082,91 @@ function setCircleOffset(elementId, current, target) {
   const maxCircumference = 89.2;
   const offset = maxCircumference - (pct / 100) * maxCircumference;
   el.style.strokeDashoffset = offset;
+}
+
+function getOffsetDateString(baseDateStr, offsetDays) {
+  if (!baseDateStr) return getTodayDateString();
+  const parts = baseDateStr.split('-');
+  const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+  d.setDate(d.getDate() + offsetDays);
+  return getLocalDateString(d);
+}
+
+function updateUnderCard(targetDate) {
+  const underCard = document.getElementById('under-top-card');
+  if (!underCard || !targetDate) return;
+
+  const underDateLabel = document.getElementById('under-date-label');
+  const underTodayIndicator = document.getElementById('under-today-indicator');
+  if (underDateLabel) {
+    underDateLabel.textContent = formatRimDate(targetDate);
+  }
+  if (underTodayIndicator) {
+    underTodayIndicator.style.display = (targetDate === getTodayDateString()) ? 'inline-block' : 'none';
+  }
+
+  const logs = currentLogs.filter(l => getLogDate(l) === targetDate);
+  let totalCal = 0;
+  let totalProt = 0;
+  let totalCarb = 0;
+  let totalFat = 0;
+  let totalFiber = 0;
+
+  logs.forEach(log => {
+    if (log.items && Array.isArray(log.items) && log.items.length > 0) {
+      log.items.forEach(it => {
+        totalCal += Number(it.calories) || 0;
+        totalProt += Number(it.protein_g) || 0;
+        totalCarb += Number(it.carbs_g) || 0;
+        totalFat += Number(it.fat_g) || 0;
+        totalFiber += Number(it.fiber_g) || 0;
+      });
+    } else {
+      totalCal += Number(log.total_calories) || 0;
+      totalProt += Number(log.total_protein_g) || 0;
+      totalCarb += Number(log.total_carbs_g) || 0;
+      totalFat += Number(log.total_fat_g) || 0;
+      totalFiber += Number(log.total_fiber_g) || 0;
+    }
+  });
+
+  totalCal = Math.round(totalCal);
+  totalProt = Math.round(totalProt);
+  totalCarb = Math.round(totalCarb);
+  totalFat = Math.round(totalFat);
+  totalFiber = Math.round(totalFiber);
+
+  const underCal = document.getElementById('under-val-cal');
+  const underTgtCal = document.getElementById('under-tgt-cal');
+  const underProt = document.getElementById('under-val-prot');
+  const underCarb = document.getElementById('under-val-carb');
+  const underFiber = document.getElementById('under-val-fiber');
+  const underFat = document.getElementById('under-val-fat');
+
+  if (underCal) underCal.textContent = totalCal.toLocaleString();
+  if (underTgtCal) underTgtCal.textContent = `/ ${(userTargets.calories || 2000).toLocaleString()}`;
+  if (underProt) underProt.textContent = totalProt;
+  if (underCarb) underCarb.textContent = totalCarb;
+  if (underFiber) underFiber.textContent = totalFiber;
+  if (underFat) underFat.textContent = totalFat;
+
+  setCircleOffset('under-circle-cal', totalCal, userTargets.calories);
+  setCircleOffset('under-circle-prot', totalProt, userTargets.protein_g);
+  setCircleOffset('under-circle-carb', totalCarb, userTargets.carbs_g);
+  setCircleOffset('under-circle-fiber', totalFiber, userTargets.fiber_g !== undefined ? userTargets.fiber_g : 30);
+  setCircleOffset('under-circle-fat', totalFat, userTargets.fat_g);
+
+  const underCalSub = document.getElementById('under-cal-status-sub');
+  if (underCalSub) {
+    const diff = (userTargets.calories || 2000) - totalCal;
+    if (diff > 0) {
+      underCalSub.innerHTML = `<strong>${diff.toLocaleString()} kcal left</strong> to goal`;
+    } else if (diff === 0) {
+      underCalSub.innerHTML = `<strong>Goal Achieved ✓</strong>`;
+    } else {
+      underCalSub.innerHTML = `<strong>${Math.abs(diff).toLocaleString()} kcal over</strong> goal`;
+    }
+  }
 }
 
 let unsubscribeMealsListener = null;
@@ -1508,11 +1594,11 @@ async function deleteFoodItem(itemId) {
 
   const storageKey = getMealsStorageKey(currentUserHandle);
   let stored = localStorage.getItem(storageKey);
+  let parentMealId = null;
+  let updatedParentMeal = null;
   if (stored) {
     try {
       let meals = JSON.parse(stored);
-      let parentMealId = null;
-      let updatedParentMeal = null;
       meals.forEach(m => {
         if ((m.items || []).some(it => it.id === itemId)) {
           parentMealId = m.id;
@@ -1522,23 +1608,30 @@ async function deleteFoodItem(itemId) {
           m.total_carbs_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.carbs_g) || 0), 0) * 10) / 10;
           m.total_fiber_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.fiber_g) || 0), 0) * 10) / 10;
           m.total_fat_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.fat_g) || 0), 0) * 10) / 10;
+          m.updated_at = new Date().toISOString();
           if (m.items.length > 0) updatedParentMeal = m;
         }
       });
       meals = meals.filter(m => m.items && m.items.length > 0);
       localStorage.setItem(storageKey, JSON.stringify(meals));
       currentLogs = meals;
-
-      if (currentUserHandle && window.MacromixFirebase && parentMealId) {
-        if (updatedParentMeal) {
-          window.MacromixFirebase.saveMealToFirestore(currentUserHandle, updatedParentMeal);
-        } else {
-          window.MacromixFirebase.deleteMealFromFirestore(currentUserHandle, parentMealId);
-        }
-      }
     } catch (err) {}
   }
-  await loadMealLogs();
+
+  filterAndRenderSelectedDate();
+
+  if (currentUserHandle && window.MacromixFirebase && parentMealId) {
+    try {
+      if (updatedParentMeal) {
+        await window.MacromixFirebase.saveMealToFirestore(currentUserHandle, updatedParentMeal);
+      } else {
+        await window.MacromixFirebase.deleteMealFromFirestore(currentUserHandle, parentMealId);
+      }
+    } catch (err) {
+      console.warn('[macromix] Firestore meal deletion sync notice:', err);
+    }
+  }
+
   AppLogger.log('UI', `Food item #${itemId} deleted successfully`);
 }
 
@@ -1565,11 +1658,16 @@ async function deleteMealLog(logId) {
     } catch (err) {}
   }
 
+  filterAndRenderSelectedDate();
+
   if (currentUserHandle && window.MacromixFirebase) {
-    window.MacromixFirebase.deleteMealFromFirestore(currentUserHandle, logId);
+    try {
+      await window.MacromixFirebase.deleteMealFromFirestore(currentUserHandle, logId);
+    } catch (err) {
+      console.warn('[macromix] Firestore meal deletion sync notice:', err);
+    }
   }
 
-  await loadMealLogs();
   AppLogger.log('UI', `Meal log #${logId} deleted successfully`);
 }
 
@@ -2250,10 +2348,59 @@ function setupSettingsModal() {
   });
 }
 
-// --- Touch & Mouse Swipe Gestures for Day Navigation ---
+let isAnimatingDeckTransition = false;
+
+function triggerDeckSwipe(offsetDays, direction = null) {
+  if (offsetDays > 0 && selectedDate >= getTodayDateString()) {
+    return; // Cannot go to future past today
+  }
+  const mainCard = document.getElementById('main-top-card');
+  const underCard = document.getElementById('under-top-card');
+  const edge1 = document.getElementById('edge-stack-1');
+  const edge2 = document.getElementById('edge-stack-2');
+
+  if (isAnimatingDeckTransition || !mainCard || !underCard) {
+    changeDate(offsetDays, direction);
+    return;
+  }
+
+  isAnimatingDeckTransition = true;
+  const targetDate = getOffsetDateString(selectedDate, offsetDays);
+  updateUnderCard(targetDate);
+
+  const isPrev = offsetDays < 0;
+  const exitX = isPrev ? '120%' : '-120%';
+  const rot = isPrev ? 12 : -12;
+
+  mainCard.style.transition = 'transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.22s ease-out';
+  underCard.style.transition = 'transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1)';
+
+  mainCard.style.transform = `translateX(${exitX}) rotate(${rot}deg)`;
+  mainCard.style.opacity = '0';
+  underCard.style.transform = 'scale(1.0) translateY(0px)';
+
+  setTimeout(() => {
+    changeDate(offsetDays, direction || (isPrev ? 'prev' : 'next'));
+
+    mainCard.style.transition = 'none';
+    underCard.style.transition = 'none';
+    mainCard.style.transform = 'translateX(0) rotate(0deg)';
+    mainCard.style.opacity = '1';
+    underCard.style.transform = 'scale(0.95) translateY(6px)';
+
+    if (edge1) edge1.style.transform = 'translateX(0)';
+    if (edge2) edge2.style.transform = 'translateX(0)';
+
+    updateUnderCard(getOffsetDateString(selectedDate, -1));
+    isAnimatingDeckTransition = false;
+  }, 260);
+}
+
+// --- Touch & Mouse Swipe Gestures for Day Navigation with Stacked Card Surfacing ---
 function setupSwipeGestures() {
   const stage = document.getElementById('top-card-stage');
   const mainCard = document.getElementById('main-top-card');
+  const underCard = document.getElementById('under-top-card');
   const edge1 = document.getElementById('edge-stack-1');
   const edge2 = document.getElementById('edge-stack-2');
 
@@ -2265,26 +2412,31 @@ function setupSwipeGestures() {
   ].filter(Boolean);
 
   // 1:1 Live Drag Tracking on Top Card Stage
-  if (stage && mainCard) {
+  if (stage && mainCard && underCard) {
     let startX = 0;
     let startY = 0;
     let startTime = 0;
     let isTracking = false;
     let isSwiping = false;
+    let preparedTargetDate = null;
 
     const onStart = (clientX, clientY) => {
+      if (isAnimatingDeckTransition) return;
       startX = clientX;
       startY = clientY;
       startTime = Date.now();
       isTracking = true;
       isSwiping = false;
+      preparedTargetDate = null;
+
       mainCard.style.transition = 'none';
+      underCard.style.transition = 'none';
       if (edge1) edge1.style.transition = 'none';
       if (edge2) edge2.style.transition = 'none';
     };
 
     const onMove = (clientX, clientY, e) => {
-      if (!isTracking) return;
+      if (!isTracking || isAnimatingDeckTransition) return;
       const dx = clientX - startX;
       const dy = clientY - startY;
 
@@ -2299,44 +2451,79 @@ function setupSwipeGestures() {
 
       if (isSwiping) {
         if (e && e.cancelable && e.preventDefault) e.preventDefault();
+
         const isToday = (selectedDate >= getTodayDateString());
+        let neededDate = null;
         let moveX = dx;
-        // Damped rubber-band when dragging left while already on Today
-        if (isToday && dx < 0) {
-          moveX = dx * 0.15;
+
+        if (isToday) {
+          // On Today, swiping either direction reveals Yesterday
+          neededDate = getOffsetDateString(selectedDate, -1);
+        } else {
+          // On past days:
+          // dx > 0 (drag right) -> older day (previous)
+          // dx < 0 (drag left) -> newer day (next)
+          if (dx > 0) {
+            neededDate = getOffsetDateString(selectedDate, -1);
+          } else {
+            neededDate = getOffsetDateString(selectedDate, 1);
+          }
         }
-        mainCard.style.transform = `translateX(${moveX}px)`;
-        if (edge1) edge1.style.transform = `translateX(${Math.min(8, Math.max(-8, moveX * 0.2))}px)`;
-        if (edge2) edge2.style.transform = `translateX(${Math.min(6, Math.max(-6, moveX * 0.12))}px)`;
+
+        if (neededDate && neededDate !== preparedTargetDate) {
+          preparedTargetDate = neededDate;
+          updateUnderCard(neededDate);
+        }
+
+        const maxDrag = 220;
+        const progress = Math.min(1.0, Math.abs(moveX) / maxDrag);
+        const rot = (moveX / maxDrag) * 8; // subtle rotation up to 8 deg
+
+        mainCard.style.transform = `translateX(${moveX}px) rotate(${rot}deg)`;
+
+        // Under card surfaces upwards as user drags
+        const underScale = 0.95 + (0.05 * progress);
+        const underY = 6 * (1 - progress);
+        underCard.style.transform = `scale(${underScale}) translateY(${underY}px)`;
+
+        if (edge1) edge1.style.transform = `translateX(${Math.min(8, Math.max(-8, moveX * 0.15))}px)`;
+        if (edge2) edge2.style.transform = `translateX(${Math.min(6, Math.max(-6, moveX * 0.1))}px)`;
       }
     };
 
     const onEnd = (clientX, clientY) => {
-      if (!isTracking) return;
+      if (!isTracking || isAnimatingDeckTransition) return;
       isTracking = false;
       const dx = clientX - startX;
-      const dy = clientY - startY;
       const duration = Date.now() - startTime;
+      const threshold = 60;
+      const isFlick = (Math.abs(dx) >= 30 && duration < 240);
+      const isToday = (selectedDate >= getTodayDateString());
 
-      mainCard.style.transition = 'transform 0.24s cubic-bezier(0.16, 1, 0.3, 1)';
-      if (edge1) edge1.style.transition = 'transform 0.24s cubic-bezier(0.16, 1, 0.3, 1)';
-      if (edge2) edge2.style.transition = 'transform 0.24s cubic-bezier(0.16, 1, 0.3, 1)';
-      mainCard.style.transform = 'translateX(0)';
-      if (edge1) edge1.style.transform = 'translateX(0)';
-      if (edge2) edge2.style.transform = 'translateX(0)';
-
-      if (Math.abs(dx) >= 30 && duration < 1200) {
-        if (dx > 0) {
-          // Dragged/swiped right -> go to previous day
-          changeDate(-1, 'prev');
-          AppLogger.log('UI', 'Swiped right: navigated to previous day');
+      if (Math.abs(dx) >= threshold || isFlick) {
+        if (isToday) {
+          // On Today, either direction navigates to Yesterday
+          triggerDeckSwipe(-1, 'prev');
         } else {
-          // Dragged/swiped left -> go to next day
-          if (selectedDate < getTodayDateString()) {
-            changeDate(1, 'next');
-            AppLogger.log('UI', 'Swiped left: navigated to next day');
+          if (dx > 0) {
+            // Dragged right on past day -> go to older day
+            triggerDeckSwipe(-1, 'prev');
+          } else {
+            // Dragged left on past day -> go to newer day
+            triggerDeckSwipe(1, 'next');
           }
         }
+      } else {
+        // Cancelled or rubber-band snap back
+        mainCard.style.transition = 'transform 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        underCard.style.transition = 'transform 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        if (edge1) edge1.style.transform = 'transform 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        if (edge2) edge2.style.transition = 'transform 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+        mainCard.style.transform = 'translateX(0) rotate(0deg)';
+        underCard.style.transform = 'scale(0.95) translateY(6px)';
+        if (edge1) edge1.style.transform = 'translateX(0)';
+        if (edge2) edge2.style.transform = 'translateX(0)';
       }
       isSwiping = false;
     };
@@ -2366,7 +2553,8 @@ function setupSwipeGestures() {
     stage.addEventListener('touchcancel', () => {
       isTracking = false;
       isSwiping = false;
-      mainCard.style.transform = 'translateX(0)';
+      mainCard.style.transform = 'translateX(0) rotate(0deg)';
+      underCard.style.transform = 'scale(0.95) translateY(6px)';
       if (edge1) edge1.style.transform = 'translateX(0)';
       if (edge2) edge2.style.transform = 'translateX(0)';
     });
@@ -2410,13 +2598,11 @@ function setupSwipeGestures() {
         touchStartTime = 0;
 
         if (Math.abs(deltaX) >= 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2 && duration < 650) {
-          if (deltaX > 0) {
-            changeDate(-1, 'prev');
-            AppLogger.log('UI', 'Swiped right: navigated to previous day');
+          if (deltaX < 0) {
+            triggerDeckSwipe(-1, 'prev');
           } else {
             if (selectedDate < getTodayDateString()) {
-              changeDate(1, 'next');
-              AppLogger.log('UI', 'Swiped left: navigated to next day');
+              triggerDeckSwipe(1, 'next');
             }
           }
         }
@@ -2845,9 +3031,11 @@ function openEditModal(itemId, foodName, qty, unit, weightG) {
   AppLogger.log('UI', `Opened edit drawer for item #${itemId} (${foodName})`, { itemId, foodName, qty, unit, weightG });
   document.getElementById('edit-item-id').value = itemId;
   document.getElementById('edit-food-name-label').textContent = foodName;
-  document.getElementById('edit-quantity').value = qty;
-  document.getElementById('edit-unit').value = unit;
-  document.getElementById('edit-weight-g').value = weightG;
+  const numQty = parseFloat(qty) || 1;
+  const numWeight = parseFloat(weightG) > 0 ? parseFloat(weightG) : numQty;
+  document.getElementById('edit-quantity').value = numQty;
+  document.getElementById('edit-unit').value = unit || 'g';
+  document.getElementById('edit-weight-g').value = numWeight;
 
   document.getElementById('edit-item-modal').classList.remove('hidden');
 }
@@ -2861,11 +3049,14 @@ async function saveItemEdit() {
   if (isVisitorMode) return;
   const itemId = parseInt(document.getElementById('edit-item-id').value, 10);
   const qty = parseFloat(document.getElementById('edit-quantity').value);
-  const weightG = parseFloat(document.getElementById('edit-weight-g').value);
+  let weightG = parseFloat(document.getElementById('edit-weight-g').value);
 
-  if (!itemId || isNaN(qty) || isNaN(weightG) || qty <= 0 || weightG <= 0) {
-    alert("Quantity and standardized weight must be positive numbers greater than 0.");
+  if (!itemId || isNaN(qty) || qty <= 0) {
+    alert("Please enter a valid quantity greater than 0.");
     return;
+  }
+  if (isNaN(weightG) || weightG <= 0) {
+    weightG = qty;
   }
 
   AppLogger.log('UI', `User saving portion edit for item #${itemId}`, { quantity: qty, standardized_weight_g: weightG });
@@ -2885,6 +3076,7 @@ async function saveItemEdit() {
 
   const storageKey = getMealsStorageKey(currentUserHandle);
   let stored = localStorage.getItem(storageKey);
+  let editedMeal = null;
   if (stored) {
     try {
       let meals = JSON.parse(stored);
@@ -2892,8 +3084,8 @@ async function saveItemEdit() {
         let hasEdit = false;
         (m.items || []).forEach(it => {
           if (it.id === itemId) {
-            const oldWeight = (it.standardized_weight_g && it.standardized_weight_g > 0) ? it.standardized_weight_g : weightG;
-            const ratio = weightG / oldWeight;
+            const oldWeight = (it.standardized_weight_g && it.standardized_weight_g > 0) ? it.standardized_weight_g : (it.quantity > 0 ? it.quantity : weightG);
+            const ratio = oldWeight > 0 ? (weightG / oldWeight) : 1;
             it.quantity = qty;
             it.standardized_weight_g = weightG;
             it.calories = Math.round((it.calories || 0) * ratio * 10) / 10;
@@ -2910,22 +3102,26 @@ async function saveItemEdit() {
           m.total_carbs_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.carbs_g) || 0), 0) * 10) / 10;
           m.total_fiber_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.fiber_g) || 0), 0) * 10) / 10;
           m.total_fat_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.fat_g) || 0), 0) * 10) / 10;
+          m.updated_at = new Date().toISOString();
+          editedMeal = m;
         }
       });
       localStorage.setItem(storageKey, JSON.stringify(meals));
       currentLogs = meals;
-
-      if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.saveMealToFirestore === 'function') {
-        const editedMeal = meals.find(m => (m.items || []).some(it => it.id === itemId));
-        if (editedMeal) {
-          window.MacromixFirebase.saveMealToFirestore(currentUserHandle, editedMeal);
-        }
-      }
     } catch (err) {}
   }
 
   closeEditModal();
-  await loadMealLogs();
+  filterAndRenderSelectedDate();
+
+  if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.saveMealToFirestore === 'function' && editedMeal) {
+    try {
+      await window.MacromixFirebase.saveMealToFirestore(currentUserHandle, editedMeal);
+    } catch (err) {
+      console.warn('[macromix] Firestore meal edit sync error:', err);
+    }
+  }
+
   AppLogger.log('UI', `Item #${itemId} portion updated successfully`);
 }
 
@@ -4236,11 +4432,22 @@ function setupEventListeners() {
   }
 
   bind('btn-visitor-back', 'click', backToFriendsList);
-  bind('btn-date-prev', 'click', () => changeDate(-1, 'prev'));
+  bind('btn-date-prev', 'click', () => {
+    if (typeof triggerDeckSwipe === 'function') {
+      triggerDeckSwipe(-1, 'prev');
+    } else {
+      changeDate(-1, 'prev');
+    }
+  });
   bind('date-label', 'click', resetToToday);
   bind('date-label-wrap', 'click', resetToToday);
-  bind('btn-date-next', 'click', () => changeDate(1, 'next'));
-  bind('refresh-logs-btn', 'click', () => filterAndRenderSelectedDate());
+  bind('btn-date-next', 'click', () => {
+    if (typeof triggerDeckSwipe === 'function') {
+      triggerDeckSwipe(1, 'next');
+    } else {
+      changeDate(1, 'next');
+    }
+  });
   bind('btn-tap-record', 'click', toggleVoiceRecording);
 
   const form = document.getElementById('text-log-form');

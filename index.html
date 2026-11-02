@@ -157,11 +157,109 @@
 
     <!-- TAB 1: ME (Personal Macro Tracker) -->
     <main id="view-me" class="app-tab-view active">
-      <!-- TOP MACRO CARD (DAY CONTROLLER) WITH HIDDEN LEFT STACK -->
+      <!-- TOP MACRO CARD (DAY CONTROLLER) WITH LAYERED DECK STACK -->
       <div class="top-card-stage circles-container" id="top-card-stage">
         <div class="hidden-stack-edge-2" id="edge-stack-2" aria-hidden="true"></div>
         <div class="hidden-stack-edge-1" id="edge-stack-1" aria-hidden="true"></div>
 
+        <!-- UNDER CARD (SURFACES UPWARDS AS TOP CARD PEELS AWAY) -->
+        <section class="main-top-card under-card" id="under-top-card" aria-hidden="true">
+          <!-- Card Top Rim (Date Navigator) -->
+          <div class="card-top-rim">
+            <div class="rim-center">
+              <div class="rim-date">
+                <span class="rim-today-dot" id="under-today-indicator"></span>
+                <span id="under-date-label" class="date-nav-pill-inline">YESTERDAY</span>
+              </div>
+              <div class="rim-swipe-hint" id="under-swipe-hint">Underneath Deck</div>
+            </div>
+          </div>
+
+          <!-- Horizontal Calorie Progress Section -->
+          <div class="cal-section">
+            <div class="cal-header-row">
+              <div class="cal-meta-left">
+                <span class="cal-title">Calories Remaining</span>
+                <span class="cal-sub" id="under-cal-status-sub"><strong>0 kcal left</strong> to goal</span>
+              </div>
+              <div class="cal-numbers">
+                <span class="cal-current" id="under-val-cal">0</span>
+                <span class="cal-target" id="under-tgt-cal">/ 2000</span>
+              </div>
+            </div>
+
+            <div class="cal-bar-track">
+              <div class="cal-bar-fill" id="under-circle-cal"></div>
+              <div class="cal-tick" style="left: 50%;"></div>
+              <div class="cal-tick" style="left: 75%;"></div>
+            </div>
+          </div>
+
+          <!-- 4 Macro Rings Grid (2x2) -->
+          <div class="rings-grid">
+            <!-- Protein -->
+            <div class="ring-col circle-card prot">
+              <div class="ring-svg-wrap">
+                <svg viewBox="0 0 36 36">
+                  <circle class="ring-bg" cx="18" cy="18" r="14.2" />
+                  <circle class="ring-progress stroke-prot" id="under-circle-prot" cx="18" cy="18" r="14.2" stroke-dasharray="89.2, 89.2" stroke-dashoffset="89.2" />
+                </svg>
+                <div class="ring-val-inside"><span id="under-val-prot">0</span><span class="ring-unit">g</span></div>
+              </div>
+              <div class="ring-meta">
+                <span class="ring-name circle-name">Protein</span>
+                <span class="ring-target" id="under-tgt-prot">/ 150g</span>
+              </div>
+            </div>
+
+            <!-- Carbs -->
+            <div class="ring-col circle-card carb">
+              <div class="ring-svg-wrap">
+                <svg viewBox="0 0 36 36">
+                  <circle class="ring-bg" cx="18" cy="18" r="14.2" />
+                  <circle class="ring-progress stroke-carb" id="under-circle-carb" cx="18" cy="18" r="14.2" stroke-dasharray="89.2, 89.2" stroke-dashoffset="89.2" />
+                </svg>
+                <div class="ring-val-inside"><span id="under-val-carb">0</span><span class="ring-unit">g</span></div>
+              </div>
+              <div class="ring-meta">
+                <span class="ring-name circle-name">Carbs</span>
+                <span class="ring-target" id="under-tgt-carb">/ 200g</span>
+              </div>
+            </div>
+
+            <!-- Fiber -->
+            <div class="ring-col circle-card fiber">
+              <div class="ring-svg-wrap">
+                <svg viewBox="0 0 36 36">
+                  <circle class="ring-bg" cx="18" cy="18" r="14.2" />
+                  <circle class="ring-progress stroke-fiber" id="under-circle-fiber" cx="18" cy="18" r="14.2" stroke-dasharray="89.2, 89.2" stroke-dashoffset="89.2" />
+                </svg>
+                <div class="ring-val-inside"><span id="under-val-fiber">0</span><span class="ring-unit">g</span></div>
+              </div>
+              <div class="ring-meta">
+                <span class="ring-name circle-name">Fiber</span>
+                <span class="ring-target" id="under-tgt-fiber">/ 30g</span>
+              </div>
+            </div>
+
+            <!-- Fat -->
+            <div class="ring-col circle-card fat">
+              <div class="ring-svg-wrap">
+                <svg viewBox="0 0 36 36">
+                  <circle class="ring-bg" cx="18" cy="18" r="14.2" />
+                  <circle class="ring-progress stroke-fat" id="under-circle-fat" cx="18" cy="18" r="14.2" stroke-dasharray="89.2, 89.2" stroke-dashoffset="89.2" />
+                </svg>
+                <div class="ring-val-inside"><span id="under-val-fat">0</span><span class="ring-unit">g</span></div>
+              </div>
+              <div class="ring-meta">
+                <span class="ring-name circle-name">Fat</span>
+                <span class="ring-target" id="under-tgt-fat">/ 65g</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TOP ACTIVE CARD (MAIN CARD) -->
         <section class="main-top-card" id="main-top-card" aria-label="Daily Macro Summary">
           <!-- Card Top Rim (Date Navigator) -->
           <div class="card-top-rim">
@@ -196,7 +294,7 @@
             </div>
           </div>
 
-          <!-- 4 Macro Rings Grid Below -->
+          <!-- 4 Macro Rings Grid (2x2 Grid) -->
           <div class="rings-grid">
             <!-- Protein -->
             <div class="ring-col circle-card prot">
@@ -207,8 +305,10 @@
                 </svg>
                 <div class="ring-val-inside"><span id="val-prot">0</span><span class="ring-unit">g</span></div>
               </div>
-              <span class="ring-name circle-name">Protein</span>
-              <span class="ring-target" id="tgt-prot">/ 150g</span>
+              <div class="ring-meta">
+                <span class="ring-name circle-name">Protein</span>
+                <span class="ring-target" id="tgt-prot">/ 150g</span>
+              </div>
             </div>
 
             <!-- Carbs -->
@@ -220,8 +320,10 @@
                 </svg>
                 <div class="ring-val-inside"><span id="val-carb">0</span><span class="ring-unit">g</span></div>
               </div>
-              <span class="ring-name circle-name">Carbs</span>
-              <span class="ring-target" id="tgt-carb">/ 200g</span>
+              <div class="ring-meta">
+                <span class="ring-name circle-name">Carbs</span>
+                <span class="ring-target" id="tgt-carb">/ 200g</span>
+              </div>
             </div>
 
             <!-- Fiber -->
@@ -233,8 +335,10 @@
                 </svg>
                 <div class="ring-val-inside"><span id="val-fiber">0</span><span class="ring-unit">g</span></div>
               </div>
-              <span class="ring-name circle-name">Fiber</span>
-              <span class="ring-target" id="tgt-fiber">/ 30g</span>
+              <div class="ring-meta">
+                <span class="ring-name circle-name">Fiber</span>
+                <span class="ring-target" id="tgt-fiber">/ 30g</span>
+              </div>
             </div>
 
             <!-- Fat -->
@@ -246,8 +350,10 @@
                 </svg>
                 <div class="ring-val-inside"><span id="val-fat">0</span><span class="ring-unit">g</span></div>
               </div>
-              <span class="ring-name circle-name">Fat</span>
-              <span class="ring-target" id="tgt-fat">/ 65g</span>
+              <div class="ring-meta">
+                <span class="ring-name circle-name">Fat</span>
+                <span class="ring-target" id="tgt-fat">/ 65g</span>
+              </div>
             </div>
           </div>
         </section>
@@ -276,7 +382,6 @@
             <span class="timeline-title">LOGGED MEALS</span>
             <span class="meals-total-badge" id="meals-total-badge">0 meals · 0 kcal</span>
           </div>
-          <button type="button" class="icon-btn refresh-btn" id="refresh-logs-btn" title="Refresh Logs">🔄</button>
         </div>
         <div id="meal-timeline-content" class="logged-meals-container">
           <div class="empty-state">No meals logged yet today. Tap the mic or type above!</div>

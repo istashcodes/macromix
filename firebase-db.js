@@ -747,17 +747,23 @@ export async function syncLocalMealsWithFirestore(handle) {
       return true;
     });
 
-    // 3. Upload only genuinely unsynced local meals belonging to this handle via writeBatch (M1)
+    // 3. Upload genuinely unsynced or locally edited meals belonging to this handle via writeBatch (M1)
     const batch = writeBatch(database);
     let batchCount = 0;
     for (const localMeal of localMeals) {
-      if (localMeal && localMeal.id && !remoteMap.has(String(localMeal.id))) {
+      if (localMeal && localMeal.id) {
         if (!localMeal.owner_handle || localMeal.owner_handle.toLowerCase() === clean) {
           localMeal.owner_handle = clean;
-          const mealRef = doc(database, 'users', clean, 'meals', String(localMeal.id));
-          batch.set(mealRef, sanitizeForFirestore(localMeal), { merge: true });
-          remoteMap.set(String(localMeal.id), localMeal);
-          batchCount++;
+          const remoteCopy = remoteMap.get(String(localMeal.id));
+          const localTime = new Date(localMeal.updated_at || localMeal.created_at || 0).getTime();
+          const remoteTime = remoteCopy ? new Date(remoteCopy.updated_at || remoteCopy.created_at || 0).getTime() : 0;
+
+          if (!remoteCopy || localTime > remoteTime) {
+            const mealRef = doc(database, 'users', clean, 'meals', String(localMeal.id));
+            batch.set(mealRef, sanitizeForFirestore(localMeal), { merge: true });
+            remoteMap.set(String(localMeal.id), localMeal);
+            batchCount++;
+          }
         }
       }
     }
