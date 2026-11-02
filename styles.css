@@ -259,10 +259,13 @@ body {
 }
 
 .tab-pill {
+  flex: 1 1 0px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 4px 10px;
+  padding: 4px 8px;
+  min-width: 78px;
   border-radius: 20px;
   border: none;
   background: transparent;
@@ -275,10 +278,11 @@ body {
   z-index: 2;
   color: rgba(255,255,255,0.7);
   transition: color 0.3s ease 0.15s, transform 0.2s ease;
+  text-align: center;
 }
 
 .tab-pill-me {
-  gap: 0.28em;
+  gap: 4px;
 }
 
 .tab-pill:hover {
@@ -1715,17 +1719,18 @@ body {
    ========================================================================== */
 
 .me-pill-icon {
-  display: inline-block;
-  margin-right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 1px;
   line-height: 1;
-  font-size: 0.82rem;
-  filter: grayscale(1) brightness(10); /* white silhouette on black bg */
-  transition: filter 0.25s ease;
+  flex-shrink: 0;
+  vertical-align: -1px;
+  color: inherit;
 }
 
-/* Black silhouette when pill is active (yellow bg) */
 .tab-pill.tab-active .me-pill-icon {
-  filter: grayscale(1) brightness(0);
+  color: #000;
 }
 
 @keyframes gentleBob {

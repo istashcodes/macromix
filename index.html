@@ -31,7 +31,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=13.0">
+  <link rel="stylesheet" href="styles.css?v=14.0">
 </head>
 <body>
   <!-- Gooey SVG Filter for Header Tab Toggle (gooey-react technique) -->
@@ -113,10 +113,13 @@
               <div class="goo-pill-lead" id="goo-lead"></div>
             </div>
             <button type="button" class="tab-pill tab-pill-friends" id="tab-pill-friends" title="Friends">
-              <span>✦ Friends</span>
+              <span class="pill-label">✦ Friends</span>
             </button>
             <button type="button" class="tab-pill tab-pill-me" id="tab-pill-me" title="My macromix" style="display:none;">
-              <span id="header-handle-text">Me</span>
+              <svg id="me-pill-icon" class="me-pill-icon" viewBox="0 0 20 20" width="13" height="13" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+              </svg>
+              <span id="header-handle-text" class="pill-label">Me</span>
             </button>
           </div>
           <div class="streak-badge" id="streak-badge" role="button" tabindex="0" title="Daily Macro Targets (click to edit)" style="cursor:pointer;">🔥 0d</div>
@@ -543,7 +546,7 @@
   </div>
 
   <!-- Firebase Cloud Firestore Integration -->
-  <script type="module" src="firebase-db.js?v=13.0"></script>
+  <script type="module" src="firebase-db.js?v=14.0"></script>
 
   <!-- SimpleWebAuthn Browser SDK -->
   <script src="simplewebauthn-browser.min.js"></script>
@@ -552,6 +555,6 @@
   <script src="env.js" onerror="/* optional env.js */"></script>
 
   <!-- Frontend Controller -->
-  <script src="app.js?v=13.0"></script>
+  <script src="app.js?v=14.0"></script>
 </body>
 </html>
