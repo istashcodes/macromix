@@ -31,7 +31,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=11.0">
+  <link rel="stylesheet" href="styles.css?v=12.0">
 </head>
 <body>
   <!-- Gooey SVG Filter for Header Tab Toggle (gooey-react technique) -->
@@ -116,7 +116,7 @@
               <span>✦ Friends</span>
             </button>
             <button type="button" class="tab-pill tab-pill-me" id="tab-pill-me" title="My macromix" style="display:none;">
-              <span class="me-pill-icon" id="me-pill-icon">🏃</span><span id="header-handle-text">you</span>
+              <span id="header-handle-text">Me</span>
             </button>
           </div>
           <div class="streak-badge" id="streak-badge" role="button" tabindex="0" title="Daily Macro Targets (click to edit)" style="cursor:pointer;">🔥 0d</div>
@@ -172,7 +172,6 @@
                 <span class="rim-today-dot" id="under-today-indicator"></span>
                 <span id="under-date-label" class="date-nav-pill-inline">YESTERDAY</span>
               </div>
-              <div class="rim-swipe-hint" id="under-swipe-hint">‹ Swipe for past days ›</div>
             </div>
             <div class="rim-btn date-nav-arrow" style="visibility: hidden;" aria-hidden="true">▶</div>
           </div>
@@ -271,7 +270,6 @@
                 <span class="rim-today-dot" id="today-indicator"></span>
                 <span id="date-label" class="date-nav-pill-inline">TODAY</span>
               </div>
-              <div class="rim-swipe-hint" id="swipe-hint">‹ Swipe for past days ›</div>
             </div>
             <button type="button" class="rim-btn date-nav-arrow disabled" id="btn-date-next" title="Next Day" aria-label="Next Day" disabled>▶</button>
           </div>
@@ -545,7 +543,7 @@
   </div>
 
   <!-- Firebase Cloud Firestore Integration -->
-  <script type="module" src="firebase-db.js?v=11.0"></script>
+  <script type="module" src="firebase-db.js?v=12.0"></script>
 
   <!-- SimpleWebAuthn Browser SDK -->
   <script src="simplewebauthn-browser.min.js"></script>
@@ -554,6 +552,6 @@
   <script src="env.js" onerror="/* optional env.js */"></script>
 
   <!-- Frontend Controller -->
-  <script src="app.js?v=11.0"></script>
+  <script src="app.js?v=12.0"></script>
 </body>
 </html>

@@ -868,10 +868,6 @@ function updateDateLabel() {
   if (dot) {
     dot.style.display = isToday ? 'inline-block' : 'none';
   }
-  const hint = document.getElementById('swipe-hint');
-  if (hint) {
-    hint.textContent = isToday ? '‹ Swipe for past days ›' : '‹ Swipe for earlier · Swipe right for later ›';
-  }
   updateDateNavButtons();
   updateInputBarContext();
 }
@@ -988,15 +984,15 @@ function renderStreak() {
   }
 }
 
-function filterAndRenderSelectedDate(direction = null) {
+function filterAndRenderSelectedDate(direction = null, animateFromZero = true) {
   const filtered = currentLogs.filter(log => getLogDate(log) === selectedDate);
   renderTimeline(filtered, direction);
-  updateCirclesProgress(filtered);
+  updateCirclesProgress(filtered, animateFromZero);
   updateUnderCard(getOffsetDateString(selectedDate, -1));
   renderStreak();
 }
 
-function updateCirclesProgress(logsToUse = null) {
+function updateCirclesProgress(logsToUse = null, animateFromZero = false) {
   const logs = logsToUse !== null ? logsToUse : currentLogs.filter(l => getLogDate(l) === selectedDate);
   let totalCal = 0;
   let totalProt = 0;
@@ -1040,11 +1036,71 @@ function updateCirclesProgress(logsToUse = null) {
   if (fiberEl) fiberEl.textContent = totalFiber;
   if (fatEl) fatEl.textContent = totalFat;
 
-  setCircleOffset('circle-cal', totalCal, userTargets.calories);
-  setCircleOffset('circle-prot', totalProt, userTargets.protein_g);
-  setCircleOffset('circle-carb', totalCarb, userTargets.carbs_g);
-  setCircleOffset('circle-fiber', totalFiber, userTargets.fiber_g !== undefined ? userTargets.fiber_g : 30);
-  setCircleOffset('circle-fat', totalFat, userTargets.fat_g);
+  const calTgt = userTargets.calories || 2000;
+  const protTgt = userTargets.protein_g || 150;
+  const carbTgt = userTargets.carbs_g || 200;
+  const fiberTgt = userTargets.fiber_g !== undefined ? userTargets.fiber_g : 30;
+  const fatTgt = userTargets.fat_g || 65;
+
+  if (animateFromZero) {
+    const maxCircumference = 89.2;
+    const calcOffset = (cur, tgt) => {
+      const pct = Math.min(100, Math.max(0, (cur / (tgt || 1)) * 100));
+      return maxCircumference - (pct / 100) * maxCircumference;
+    };
+    const targetCalPct = Math.min(100, Math.max(0, (totalCal / (calTgt || 1)) * 100));
+    const targetProtOffset = calcOffset(totalProt, protTgt);
+    const targetCarbOffset = calcOffset(totalCarb, carbTgt);
+    const targetFiberOffset = calcOffset(totalFiber, fiberTgt);
+    const targetFatOffset = calcOffset(totalFat, fatTgt);
+
+    const items = [
+      { id: 'circle-cal', isCal: true, target: targetCalPct },
+      { id: 'circle-prot', isCal: false, target: targetProtOffset },
+      { id: 'circle-carb', isCal: false, target: targetCarbOffset },
+      { id: 'circle-fiber', isCal: false, target: targetFiberOffset },
+      { id: 'circle-fat', isCal: false, target: targetFatOffset }
+    ];
+
+    // Immediately snap to 0 with transition disabled
+    items.forEach(it => {
+      const el = document.getElementById(it.id);
+      if (!el) return;
+      el.style.transition = 'none';
+      if (it.isCal) {
+        el.style.width = '0%';
+      } else {
+        el.style.strokeDashoffset = '89.2';
+      }
+    });
+
+    // Force layout reflow
+    const mainCard = document.getElementById('main-top-card');
+    if (mainCard) void mainCard.offsetHeight;
+
+    // Animate smoothly to actual target values
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        items.forEach(it => {
+          const el = document.getElementById(it.id);
+          if (!el) return;
+          if (it.isCal) {
+            el.style.transition = 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+            el.style.width = it.target + '%';
+          } else {
+            el.style.transition = 'stroke-dashoffset 0.65s cubic-bezier(0.16, 1, 0.3, 1)';
+            el.style.strokeDashoffset = it.target;
+          }
+        });
+      });
+    });
+  } else {
+    setCircleOffset('circle-cal', totalCal, calTgt);
+    setCircleOffset('circle-prot', totalProt, protTgt);
+    setCircleOffset('circle-carb', totalCarb, carbTgt);
+    setCircleOffset('circle-fiber', totalFiber, fiberTgt);
+    setCircleOffset('circle-fat', totalFat, fatTgt);
+  }
 
   // Update Calorie Remaining subtitle text
   const calSub = document.getElementById('cal-status-sub');
@@ -2462,7 +2518,22 @@ function setupSwipeGestures() {
         let neededDate = null;
 
         if (isToday) {
-          // On Today, dragging either direction reveals Yesterday
+          // On Today: User CANNOT swipe right-to-left (dx < 0, toward tomorrow)
+          if (dx < 0) {
+            // Apply rubber-band resistance clamp (maximum ~18px)
+            const blockedDx = Math.max(-18, dx * 0.12);
+            mainCard.style.transform = `translateX(${blockedDx}px) rotate(${blockedDx * 0.12}deg)`;
+            mainCard.classList.add('swipe-blocked');
+
+            // Keep under card strictly hidden
+            underCard.style.visibility = 'hidden';
+            underCard.style.opacity = '0';
+            underCard.style.transform = 'scale(0.95) translateY(6px)';
+            return;
+          }
+
+          // Otherwise dragging left-to-right (dx > 0) is valid and reveals Yesterday
+          mainCard.classList.remove('swipe-blocked');
           neededDate = getOffsetDateString(selectedDate, -1);
         } else {
           // On past days:
@@ -2505,13 +2576,30 @@ function setupSwipeGestures() {
       const isFlick = (Math.abs(dx) >= 30 && duration < 260);
       const isToday = (selectedDate >= getTodayDateString());
 
-      if (isSwiping && (Math.abs(dx) >= threshold || isFlick)) {
-        // Exit direction strictly matches the user's drag direction
-        const exitDirection = dx < 0 ? 'left' : 'right';
+      // If user attempted to swipe right-to-left on Today (toward future date)
+      if (isToday && dx < 0) {
+        mainCard.classList.remove('swipe-blocked');
+        mainCard.style.transition = 'transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        mainCard.style.transform = 'translateX(0) rotate(0deg)';
+        underCard.style.opacity = '0';
+        underCard.style.visibility = 'hidden';
 
+        if (Math.abs(dx) >= 15) {
+          mainCard.classList.add('shake-blocked');
+          setTimeout(() => {
+            mainCard.classList.remove('shake-blocked');
+          }, 350);
+        }
+        isSwiping = false;
+        return;
+      }
+
+      if (isSwiping && (Math.abs(dx) >= threshold || isFlick)) {
         if (isToday) {
-          // On Today, swiping either direction reveals Yesterday
-          triggerDeckSwipe(-1, 'prev', exitDirection);
+          // On Today, ONLY swiping left to right (dx > 0) navigates to Yesterday
+          if (dx > 0) {
+            triggerDeckSwipe(-1, 'prev', 'right');
+          }
         } else {
           if (dx > 0) {
             // Dragged right on past day -> go to older day
@@ -2617,19 +2705,20 @@ function setupSwipeGestures() {
         if (Math.abs(deltaX) >= 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2 && duration < 600) {
           const isToday = (selectedDate >= getTodayDateString());
           if (deltaX < 0) {
-            // Dragged left
+            // Dragged right to left (toward future)
             if (isToday) {
-              triggerDeckSwipe(-1, 'prev', 'left');
+              // Blocked on Today! Play micro shake
+              const mainCard = document.getElementById('main-top-card');
+              if (mainCard) {
+                mainCard.classList.add('shake-blocked');
+                setTimeout(() => mainCard.classList.remove('shake-blocked'), 350);
+              }
             } else {
               triggerDeckSwipe(1, 'next', 'left');
             }
           } else {
-            // Dragged right
-            if (isToday) {
-              triggerDeckSwipe(-1, 'prev', 'right');
-            } else {
-              triggerDeckSwipe(-1, 'prev', 'right');
-            }
+            // Dragged left to right -> Previous day (Yesterday)
+            triggerDeckSwipe(-1, 'prev', 'right');
           }
         }
       }
@@ -3285,9 +3374,9 @@ function setVisitorMode(isVisitor, targetHandle = null) {
   const handleText = document.getElementById('header-handle-text');
   const pillMe = document.getElementById('tab-pill-me');
 
-  // Always show/update the Me pill with the logged-in handle
-  if (handleText && currentUserHandle) {
-    handleText.textContent = currentUserHandle.replace(/^@+/, '');
+  // Always show/update the Me pill with 'Me'
+  if (handleText) {
+    handleText.textContent = 'Me';
   }
   if (pillMe) {
     pillMe.style.display = currentUserHandle ? '' : 'none';
@@ -3698,7 +3787,7 @@ async function checkUserProfileOnboarding() {
   const cachedHandle = localStorage.getItem('macromix_user_handle');
   if (cachedHandle) {
     currentUserHandle = cachedHandle;
-    if (badgeText) badgeText.textContent = cachedHandle.replace(/^@+/, '');
+    if (badgeText) badgeText.textContent = 'Me';
     if (badgeEl) badgeEl.style.display = '';
     if (onboardingEl) onboardingEl.classList.add('hidden');
     document.body.style.overflow = '';
@@ -3859,7 +3948,7 @@ async function registerHandleOnboarding(handle, authMethod = 'passkey') {
 
   const pillMe = document.getElementById('tab-pill-me');
   const badgeText = document.getElementById('header-handle-text');
-  if (badgeText) badgeText.textContent = clean.replace(/^@+/, '');
+  if (badgeText) badgeText.textContent = 'Me';
   if (pillMe) pillMe.style.display = '';
 
   const onboardingEl = document.getElementById('onboarding-screen');

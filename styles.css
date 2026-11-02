@@ -464,7 +464,7 @@ body {
 }
 
 .card-top-rim {
-  padding: 8px 12px 7px;
+  padding: 10px 14px 9px;
   background: #FAF8F2;
   border-bottom: 1.5px solid #111111;
   display: flex;
@@ -476,12 +476,12 @@ body {
   background: #FFFFFF;
   border: 1.5px solid #111111;
   border-radius: 6px;
-  width: 34px;
-  height: 28px;
+  width: 36px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   cursor: pointer;
   color: #111111;
@@ -509,19 +509,18 @@ body {
 
 .rim-center {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 1px;
+  justify-content: center;
   cursor: pointer;
 }
 .rim-date {
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 900;
-  letter-spacing: 0.05em;
+  letter-spacing: -0.01em;
   color: #111111;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   text-transform: uppercase;
   font-variant-numeric: tabular-nums;
 }
@@ -529,55 +528,52 @@ body {
   background: transparent;
   border: none;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 900;
-  letter-spacing: 0.05em;
+  letter-spacing: -0.01em;
   color: #111111;
   cursor: pointer;
   padding: 0;
   text-transform: uppercase;
 }
 .rim-today-dot {
-  width: 6.5px;
-  height: 6.5px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #16A34A;
-  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+  box-shadow: 0 0 0 2.5px rgba(22, 163, 74, 0.25);
   display: inline-block;
   flex-shrink: 0;
 }
 .rim-swipe-hint {
-  font-size: 9.5px;
-  font-weight: 700;
-  color: #71717A;
-  letter-spacing: 0.02em;
+  display: none !important;
 }
 
 /* Calorie Progress Section */
 .cal-section {
-  padding: 12px 14px 10px;
+  padding: 13px 14px 11px;
   border-bottom: 1.5px solid #111111;
 }
 .cal-header-row {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: 8px;
+  margin-bottom: 9px;
 }
 .cal-meta-left {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 .cal-title {
-  font-size: 10.5px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: #71717A;
+  letter-spacing: 0.06em;
+  color: #555555;
 }
 .cal-sub {
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 600;
   color: #111111;
   font-variant-numeric: tabular-nums;
@@ -589,22 +585,23 @@ body {
   font-variant-numeric: tabular-nums;
   display: flex;
   align-items: baseline;
-  gap: 3px;
+  gap: 4px;
 }
 .cal-current {
-  font-size: 21px;
+  font-size: 26px;
   font-weight: 900;
   color: #111111;
   letter-spacing: -0.03em;
+  line-height: 1;
 }
 .cal-target {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
-  color: #71717A;
+  color: #666666;
 }
 
 .cal-bar-track {
-  height: 10px;
+  height: 12px;
   background: #F4EFE6;
   border: 1.5px solid #111111;
   border-radius: 999px;
@@ -620,7 +617,7 @@ body {
   border-right: 1.5px solid #111111;
   border-radius: 999px 0 0 999px;
   width: 0%;
-  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .cal-tick {
   position: absolute;
@@ -636,24 +633,24 @@ body {
 .rings-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  padding: 8px 10px 10px;
-  gap: 8px;
+  padding: 10px 12px 12px;
+  gap: 9px;
   background: #FFFFFF;
 }
 .ring-col {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   background: #FAF8F2;
   border: 1.5px solid #111111;
-  border-radius: 9px;
-  padding: 6px 10px;
+  border-radius: 10px;
+  padding: 8px 12px;
   text-align: left;
 }
 .ring-svg-wrap {
-  width: 50px;
-  height: 50px;
+  width: 54px;
+  height: 54px;
   position: relative;
   margin-bottom: 0;
   flex-shrink: 0;
@@ -666,13 +663,13 @@ body {
 .ring-bg {
   fill: none;
   stroke: #EAE5D8;
-  stroke-width: 3.2;
+  stroke-width: 3.4;
 }
 .ring-progress {
   fill: none;
-  stroke-width: 3.4;
+  stroke-width: 3.6;
   stroke-linecap: round;
-  transition: stroke-dashoffset 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: stroke-dashoffset 0.65s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .stroke-prot { stroke: #FF5E5B; }
 .stroke-carb { stroke: #0099CC; }
@@ -685,15 +682,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 900;
   color: #111111;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 .ring-unit {
-  font-size: 8px;
-  font-weight: 700;
+  font-size: 9.5px;
+  font-weight: 800;
   color: #71717A;
   margin-left: 1px;
 }
@@ -702,21 +699,41 @@ body {
   flex-direction: column;
   justify-content: center;
   min-width: 0;
+  gap: 1px;
 }
 .ring-name {
-  font-size: 10.5px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 900;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   color: #111111;
   line-height: 1.2;
 }
 .ring-target {
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 700;
   color: #71717A;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
+}
+
+/* Blocked swipe micro-effect on Today (swiping right to left into future) */
+.main-top-card.swipe-blocked {
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.45) !important;
+  transition: transform 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease !important;
+}
+
+@keyframes blocked-shake {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(2px); }
+  100% { transform: translateX(0); }
+}
+
+.main-top-card.shake-blocked {
+  animation: blocked-shake 0.32s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
 /* --- Unified Logging & Timeline Container --- */
