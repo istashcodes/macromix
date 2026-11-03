@@ -488,6 +488,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   } catch (e) {}
 
   try {
+    triggerEmptyStateCardJiggle();
+  } catch (e) {}
+
+  try {
     scheduleDailyReminderCheck();
     await initFriendsView();
     updateTopAnnouncementBanner();
@@ -990,6 +994,7 @@ function filterAndRenderSelectedDate(direction = null, animateFromZero = true) {
   updateCirclesProgress(filtered, animateFromZero);
   updateUnderCard(getOffsetDateString(selectedDate, -1));
   renderStreak();
+  triggerEmptyStateCardJiggle();
 }
 
 function updateCirclesProgress(logsToUse = null, animateFromZero = false) {
@@ -2484,6 +2489,11 @@ function setupSwipeGestures() {
 
     const onStart = (clientX, clientY) => {
       if (isAnimatingDeckTransition) return;
+      if (_cardJiggleTimeout) {
+        clearTimeout(_cardJiggleTimeout);
+        _cardJiggleTimeout = null;
+      }
+      mainCard.classList.remove('top-card-jiggle');
       startX = clientX;
       startY = clientY;
       startTime = Date.now();
@@ -2720,6 +2730,41 @@ function setupSwipeGestures() {
       }
     }, { passive: true });
   }
+}
+
+// --- Empty State Top Card Swipe Discovery Jiggle (Option 2: Tactile Desk Shake) ---
+let _cardJiggleTimeout = null;
+
+function triggerEmptyStateCardJiggle(force = false) {
+  if (isVisitorMode || (currentTab && currentTab !== 'me')) return;
+  if (!force && selectedDate !== getTodayDateString()) return;
+
+  const onboardingEl = document.getElementById('onboarding-screen');
+  if (onboardingEl && !onboardingEl.classList.contains('hidden')) return;
+
+  const todayStr = getTodayDateString();
+  const todayMeals = currentLogs.filter(l => getLogDate(l) === todayStr);
+  if (!force && todayMeals.length > 0) return;
+
+  if (!force && sessionStorage.getItem('macromix_card_jiggle_shown')) return;
+  sessionStorage.setItem('macromix_card_jiggle_shown', 'true');
+
+  const card = document.getElementById('main-top-card');
+  if (!card) return;
+
+  if (_cardJiggleTimeout) {
+    clearTimeout(_cardJiggleTimeout);
+  }
+
+  _cardJiggleTimeout = setTimeout(() => {
+    card.classList.remove('top-card-jiggle');
+    void card.offsetWidth; // force reflow
+    card.classList.add('top-card-jiggle');
+
+    card.addEventListener('animationend', () => {
+      card.classList.remove('top-card-jiggle');
+    }, { once: true });
+  }, 450);
 }
 
 function openSettingsModal() {
@@ -3962,6 +4007,7 @@ async function registerHandleOnboarding(handle, authMethod = 'passkey') {
   await loadMealLogs();
   currentUserStreak = calculateStreak();
   updateHeaderFriendsBtn();
+  triggerEmptyStateCardJiggle();
 
   // If the user arrived via a friend's profile link, navigate to that profile now that they are authenticated!
   const pendingShareHandle = sessionStorage.getItem('macromix_pending_share_handle') || parseUrlHandle();
@@ -4632,6 +4678,7 @@ window.renderCurrentUserStreak = renderCurrentUserStreak;
 window.handleGoogleAuth = handleGoogleAuth;
 window.handlePasskeyAuth = handlePasskeyAuth;
 window.updateTopAnnouncementBanner = updateTopAnnouncementBanner;
+window.triggerEmptyStateCardJiggle = triggerEmptyStateCardJiggle;
 window.dismissActiveAnnouncementBanner = dismissActiveAnnouncementBanner;
 window.handleActiveAnnouncementCta = handleActiveAnnouncementCta;
 window.FEATURE_BANNERS = FEATURE_BANNERS;
