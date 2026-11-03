@@ -1,4 +1,4 @@
-const CACHE_NAME = 'macromix-pwa-v14.0';
+const CACHE_NAME = 'macromix-pwa-v15.0';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -7,7 +7,10 @@ const ASSETS_TO_CACHE = [
   '/firebase-db.js',
   '/simplewebauthn-browser.min.js',
   '/manifest.json',
+  '/favicon.ico',
+  '/favicon.png',
   '/icons/icon.svg',
+  '/icons/icon-32.png',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/icon-maskable-192.png',
@@ -105,7 +108,7 @@ self.addEventListener('push', (event) => {
     data = { body: event.data ? event.data.text() : '' };
   }
 
-  const title = data.title || 'Macromix Daily Reminder 🎯';
+  const title = data.title || 'macromix Daily Reminder 🎯';
   const options = {
     body: data.body || "Don't forget to track your macros today!",
     icon: '/icons/icon-192.png',
@@ -117,7 +120,7 @@ self.addEventListener('push', (event) => {
     tag: 'macromix-daily-reminder',
     renotify: true,
     actions: [
-      { action: 'open', title: 'Open Macromix ⚡' },
+      { action: 'open', title: 'Open macromix ⚡' },
       { action: 'dismiss', title: 'Dismiss' }
     ]
   };
@@ -146,7 +149,7 @@ self.addEventListener('notificationclick', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
-    const title = event.data.title || 'Macromix Reminder 🎯';
+    const title = event.data.title || 'macromix Reminder 🎯';
     const options = {
       icon: '/icons/icon-192.png',
       badge: '/icons/icon-192.png',

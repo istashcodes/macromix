@@ -1,14 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Macromix Logo Icon SVG -->
-  <rect width="512" height="512" fill="#ffffff" rx="100"/>
-  <g transform="translate(256, 256)">
-    <!-- Outer Yellow Ring -->
-    <circle cx="0" cy="0" r="207" fill="none" stroke="#f6ba3b" stroke-width="36"/>
-    <!-- Middle Orange Ring -->
-    <circle cx="0" cy="0" r="152" fill="none" stroke="#f0631e" stroke-width="34"/>
-    <!-- Inner Red Ring -->
-    <circle cx="0" cy="0" r="95" fill="none" stroke="#d6293a" stroke-width="33"/>
-    <!-- Center Orange Pointer -->
-    <path d="M 0 46 L -30 11 L 0 25 L 30 11 Z" fill="#e8541e"/>
+  <rect width="512" height="512" fill="#FFFFFF" rx="116"/>
+  <!-- Concentric Rings -->
+  <circle cx="256" cy="256" r="202" fill="none" stroke="#F6BA3B" stroke-width="34"/>
+  <circle cx="256" cy="256" r="152" fill="none" stroke="#F0631E" stroke-width="32"/>
+  <circle cx="256" cy="256" r="102" fill="none" stroke="#D6293A" stroke-width="30"/>
+
+  <!-- Centered Bold 'm' in inner circle with crisp white separation -->
+  <g transform="translate(127, 172)">
+    <path d="M 14 140 L 14 36 L 44 36 L 44 55 C 54 38 72 28 94 28 C 118 28 132 40 140 58 C 150 38 170 28 194 28 C 226 28 244 46 244 82 L 244 140 L 214 140 L 214 88 C 214 65 204 53 186 53 C 168 53 156 66 156 88 L 156 140 L 126 140 L 126 88 C 126 65 116 53 98 53 C 80 53 68 66 68 88 L 68 140 Z" 
+          fill="none" stroke="#FFFFFF" stroke-width="16" stroke-linejoin="round"/>
+    <path d="M 14 140 L 14 36 L 44 36 L 44 55 C 54 38 72 28 94 28 C 118 28 132 40 140 58 C 150 38 170 28 194 28 C 226 28 244 46 244 82 L 244 140 L 214 140 L 214 88 C 214 65 204 53 186 53 C 168 53 156 66 156 88 L 156 140 L 126 140 L 126 88 C 126 65 116 53 98 53 C 80 53 68 66 68 88 L 68 140 Z" 
+          fill="#111111"/>
   </g>
 </svg>

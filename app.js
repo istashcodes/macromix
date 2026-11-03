@@ -2932,7 +2932,7 @@ async function checkAndSendDailyReminder(force = false) {
   const status = evaluateDailyReminderStatus(todayLogs, userTargets);
 
   if (status.shouldRemind || force) {
-    const title = 'Macromix Daily Reminder 🎯';
+    const title = 'macromix Daily Reminder 🎯';
     const message = status.message || (force ? "Test notification: Tracking your macros keeps streaks alive! 🔥" : "Don't forget to track your macros today!");
     const sent = await triggerReminderNotification(title, message);
 
@@ -3685,7 +3685,7 @@ async function handleFriendSearch(query) {
           </div>
         </div>
         <div class="friend-card-actions">
-          <button type="button" class="btn-friend-action btn-macromix" onclick="viewFriendProfile('${escapeHtml(u.handle)}')">Macromix</button>
+          <button type="button" class="btn-friend-action btn-macromix" onclick="viewFriendProfile('${escapeHtml(u.handle)}')">macromix</button>
           <button type="button" class="btn-friend-action btn-follow ${isFollowing ? 'following' : ''}" onclick="toggleFollowUser('${escapeHtml(u.handle)}', this)">
             ${isFollowing ? '✓ Following' : '+ Follow'}
           </button>
@@ -3730,7 +3730,7 @@ async function renderFollowingList() {
           </div>
         </div>
         <div class="friend-card-actions">
-          <button type="button" class="btn-friend-action btn-macromix" onclick="viewFriendProfile('${escapeHtml(friendHandle)}')">Macromix</button>
+          <button type="button" class="btn-friend-action btn-macromix" onclick="viewFriendProfile('${escapeHtml(friendHandle)}')">macromix</button>
           <button type="button" class="btn-friend-action btn-follow following" onclick="toggleFollowUser('${escapeHtml(friendHandle)}', this)">✓ Following</button>
         </div>
       </div>
