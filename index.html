@@ -34,7 +34,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=14.0">
+  <link rel="stylesheet" href="styles.css?v=15.1">
 </head>
 <body>
   <!-- Gooey SVG Filter for Header Tab Toggle (gooey-react technique) -->
@@ -108,23 +108,25 @@
         <div class="brand-wrapper" id="brand-wrapper" role="button" tabindex="0" style="cursor: pointer;" title="Back to My Tracker">
           <img src="icons/logo-full.png" alt="macromix logo" class="brand-logo-img">
         </div>
-        <div class="header-actions">
-          <!-- Segmented pill toggle: Friends (left) | @handle (right) -->
-          <div class="header-tab-toggle" id="header-tab-toggle">
-            <div class="goo-layer" id="header-goo-layer" aria-hidden="true">
-              <div class="goo-pill-tail" id="goo-tail"></div>
-              <div class="goo-pill-lead" id="goo-lead"></div>
-            </div>
-            <button type="button" class="tab-pill tab-pill-friends" id="tab-pill-friends" title="Friends">
-              <span class="pill-label">✦ Friends</span>
-            </button>
-            <button type="button" class="tab-pill tab-pill-me" id="tab-pill-me" title="My macromix" style="display:none;">
-              <svg id="me-pill-icon" class="me-pill-icon" viewBox="0 0 20 20" width="13" height="13" fill="currentColor" aria-hidden="true">
-                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-              </svg>
-              <span id="header-handle-text" class="pill-label">Me</span>
-            </button>
+
+        <!-- Segmented pill toggle: Me (left) | Friends (right) - Centrally aligned between logo and streak badge -->
+        <div class="header-tab-toggle" id="header-tab-toggle">
+          <div class="goo-layer" id="header-goo-layer" aria-hidden="true">
+            <div class="goo-pill-tail" id="goo-tail"></div>
+            <div class="goo-pill-lead" id="goo-lead"></div>
           </div>
+          <button type="button" class="tab-pill tab-pill-me tab-active" id="tab-pill-me" title="My macromix" style="display:none;">
+            <svg id="me-pill-icon" class="me-pill-icon" viewBox="0 0 20 20" width="13" height="13" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+            </svg>
+            <span id="header-handle-text" class="pill-label">Me</span>
+          </button>
+          <button type="button" class="tab-pill tab-pill-friends" id="tab-pill-friends" title="Friends">
+            <span class="pill-label">✦ Friends</span>
+          </button>
+        </div>
+
+        <div class="header-actions">
           <div class="streak-badge" id="streak-badge" role="button" tabindex="0" title="Daily Macro Targets (click to edit)" style="cursor:pointer;">🔥 0d</div>
         </div>
       </div>

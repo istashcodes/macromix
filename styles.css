@@ -222,6 +222,7 @@ body {
   flex-shrink: 1;
   min-width: 0;
   isolation: isolate;
+  margin: 0 auto;
 }
 
 .goo-layer {

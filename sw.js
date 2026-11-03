@@ -1,4 +1,4 @@
-const CACHE_NAME = 'macromix-pwa-v15.0';
+const CACHE_NAME = 'macromix-pwa-v15.1';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
