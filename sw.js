@@ -1,4 +1,4 @@
-const CACHE_NAME = 'macromix-pwa-v15.3';
+const CACHE_NAME = 'macromix-pwa-v15.4';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -15,6 +15,11 @@ const ASSETS_TO_CACHE = [
   '/icons/icon-512.png',
   '/icons/icon-maskable-192.png',
   '/icons/icon-maskable-512.png',
+  '/icons/icon-192.png?v=15.4',
+  '/icons/icon-512.png?v=15.4',
+  '/icons/icon-maskable-192.png?v=15.4',
+  '/icons/icon-maskable-512.png?v=15.4',
+  '/icons/icon.svg?v=15.4',
   '/icons/logo.png',
   '/icons/logo-full.png'
 ];
