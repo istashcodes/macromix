@@ -179,7 +179,7 @@ body {
   background: var(--cal-color);
   color: #000000;
   border: 2px solid #000;
-  box-shadow: 2px 2px 0 #000;
+  box-shadow: 2.5px 2.5px 0 #000;
   padding: 4px 9px;
   border-radius: 20px;
   font-size: 0.82rem;
@@ -192,16 +192,18 @@ body {
   flex-shrink: 0;
   cursor: pointer;
   user-select: none;
-  transition: transform 0.05s ease, box-shadow 0.05s ease, background 0.1s ease;
+  transition: transform 0.08s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.08s cubic-bezier(0.2, 0.9, 0.3, 1), background 0.1s ease;
 }
 
 .streak-badge:hover {
   background: #f5d800;
 }
 
-.streak-badge:active {
-  transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 #000;
+.streak-badge:active,
+.streak-badge.badge-pushed {
+  transform: translate(2px, 2px) scale(0.96);
+  box-shadow: 0px 0px 0 #000;
+  background: #ECCB00;
 }
 
 /* ==========================================================================
@@ -498,6 +500,7 @@ body {
 .rim-btn {
   background: #FFFFFF;
   border: 1.5px solid #111111;
+  box-shadow: 1.5px 1.5px 0 #111111;
   border-radius: 6px;
   width: 36px;
   height: 30px;
@@ -509,7 +512,8 @@ body {
   cursor: pointer;
   color: #111111;
   position: relative;
-  transition: background 0.1s ease, opacity 0.15s ease, transform 0.05s ease;
+  user-select: none;
+  transition: background 0.1s ease, opacity 0.15s ease, transform 0.06s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.06s cubic-bezier(0.2, 0.9, 0.3, 1);
 }
 .rim-btn::after {
   content: '';
@@ -520,11 +524,13 @@ body {
   background: #FFE600;
 }
 .rim-btn:active:not(:disabled):not(.disabled) {
-  transform: scale(0.96);
+  transform: translate(1px, 1px);
+  box-shadow: 0.5px 0.5px 0 #111111;
   background: #FFE600;
 }
 .rim-btn:disabled,
 .rim-btn.disabled {
+  box-shadow: none !important;
   opacity: 0.25;
   cursor: not-allowed;
   pointer-events: none;
@@ -813,7 +819,7 @@ body {
   background: #FFE600;
   color: #111111;
   border: 1.5px solid #111111;
-  box-shadow: none;
+  box-shadow: 2px 2px 0 #111111;
   border-radius: 10px;
   padding: 12px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -825,7 +831,8 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: transform 0.05s ease, background 0.1s ease;
+  user-select: none;
+  transition: transform 0.06s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.06s cubic-bezier(0.2, 0.9, 0.3, 1), background 0.1s ease;
 }
 
 .btn-mic-icon {
@@ -849,7 +856,8 @@ body {
 }
 
 .btn-primary:active {
-  transform: scale(0.99);
+  transform: translate(1.5px, 1.5px);
+  box-shadow: 0.5px 0.5px 0 #111111;
   background: #F0D800;
 }
 
@@ -857,7 +865,7 @@ body {
   background: var(--prot-color);
   color: #FFF;
   border-color: #111111;
-  box-shadow: none;
+  box-shadow: 0.5px 0.5px 0 #111111;
   animation: pulse-red 1s infinite;
 }
 
@@ -922,13 +930,14 @@ body {
   background: #111111;
   color: #FFE600;
   border: 1.5px solid #111111;
-  box-shadow: none;
+  box-shadow: 2px 2px 0 #111111;
   border-radius: 8px;
   padding: 9px 16px;
   font-weight: 900;
   font-size: 0.88rem;
   cursor: pointer;
-  transition: all 0.1s ease;
+  user-select: none;
+  transition: transform 0.06s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.06s cubic-bezier(0.2, 0.9, 0.3, 1), background 0.1s ease;
 }
 
 .btn-log:hover:not(:disabled) {
@@ -936,11 +945,13 @@ body {
 }
 
 .btn-log:active:not(:disabled) {
-  transform: scale(0.98);
+  transform: translate(1.5px, 1.5px);
+  box-shadow: 0.5px 0.5px 0 #111111;
 }
 
 .btn-log:disabled,
 .btn-log.btn-disabled {
+  box-shadow: none !important;
   opacity: 0.55;
   cursor: not-allowed !important;
   pointer-events: none !important;

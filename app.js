@@ -4579,10 +4579,18 @@ function setupEventListeners() {
 
   const streak = document.getElementById('streak-badge');
   if (streak) {
-    streak.addEventListener('click', openSettingsModal);
+    const triggerStreakPush = () => {
+      streak.classList.add('badge-pushed');
+      setTimeout(() => streak.classList.remove('badge-pushed'), 200);
+    };
+    streak.addEventListener('click', () => {
+      triggerStreakPush();
+      openSettingsModal();
+    });
     streak.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
+        triggerStreakPush();
         openSettingsModal();
       }
     });
