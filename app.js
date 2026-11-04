@@ -406,8 +406,9 @@ function setMicStatus(text, isError = false) {
 function updateLogButtonState() {
   const submitBtn = document.getElementById('btn-submit-log');
   if (!submitBtn) return;
+  if (isProcessingLog) return; // Keep in-flight logging state intact
   const inputVal = manualTextInput ? manualTextInput.value.trim() : '';
-  const canLog = inputVal.length > 0 && !isProcessingLog && !isRecording;
+  const canLog = inputVal.length > 0 && !isRecording;
   submitBtn.disabled = !canLog;
   if (canLog) {
     submitBtn.classList.remove('btn-disabled');
@@ -1159,11 +1160,28 @@ function updateUnderCard(targetDate) {
 
   const underDateLabel = document.getElementById('under-date-label');
   const underTodayIndicator = document.getElementById('under-today-indicator');
+  const underPrevBtn = document.getElementById('under-btn-date-prev');
+  const underNextBtn = document.getElementById('under-btn-date-next');
+
   if (underDateLabel) {
     underDateLabel.textContent = formatRimDate(targetDate);
   }
   if (underTodayIndicator) {
     underTodayIndicator.style.display = (targetDate === getTodayDateString()) ? 'inline-block' : 'none';
+  }
+  if (underNextBtn) {
+    const isFuture = (targetDate >= getTodayDateString());
+    if (isFuture) {
+      underNextBtn.classList.add('disabled');
+      underNextBtn.disabled = true;
+    } else {
+      underNextBtn.classList.remove('disabled');
+      underNextBtn.disabled = false;
+    }
+  }
+  if (underPrevBtn) {
+    underPrevBtn.classList.remove('disabled');
+    underPrevBtn.disabled = false;
   }
 
   const logs = currentLogs.filter(l => getLogDate(l) === targetDate);
@@ -1756,9 +1774,8 @@ async function handleTextLog(e) {
   isProcessingLog = true;
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.classList.add('btn-disabled');
+    submitBtn.classList.add('btn-logging');
     submitBtn.style.pointerEvents = 'none';
-    submitBtn.innerHTML = 'Logging... ⏳';
   }
   if (btnTapRecord) {
     btnTapRecord.disabled = true;
@@ -1783,7 +1800,8 @@ async function handleTextLog(e) {
       manualTextInput.placeholder = 'Or type e.g. 200g veg pulao and some veggies';
     }
     if (submitBtn) {
-      submitBtn.innerHTML = 'Log ⚡';
+      submitBtn.classList.remove('btn-logging');
+      submitBtn.innerHTML = '<span class="btn-log-text">Log</span> <span class="btn-log-bolt" aria-hidden="true">⚡</span>';
     }
     updateLogButtonState();
     if (btnTapRecord) {
@@ -1797,9 +1815,12 @@ async function handleTextLog(e) {
 // --- Gemini Client Fallback & Processing Pipeline ---
 const GEMINI_SYSTEM_PROMPT = `You are a high-precision nutritional voice assistant.
 CRITICAL INSTRUCTION: Analyze the audio or text carefully.
-1. If the input is conversational speech, questions, commands, background chatter, or does NOT describe actual food or drink consumed (for example: "we will not take one hour to search for a movie", "hello", "play music", "turn on lights"), you MUST set "is_food": false and "items": [].
+1. SILENCE, NOISE & NON-FOOD REJECTION:
+   - If the audio is silent, inaudible, contains only ambient background noise, clicks, mic static, or does NOT contain clear human speech explicitly describing food or beverages consumed, you MUST set "raw_transcript": "", "is_food": false, and "items": [].
+   - If the input is conversational speech, questions, commands, background chatter, or does NOT describe actual food or drink consumed (for example: "we will not take one hour to search for a movie", "hello", "play music", "turn on lights"), you MUST set "is_food": false and "items": [].
+   - ABSOLUTE GUARDRAIL: NEVER guess, assume, or hallucinate food items (such as pistachios, banana, or chicken) from silence, background static, or examples in this prompt.
 2. If and only if the input mentions edible food or beverages consumed, set "is_food": true, transcribe what was eaten, extract each food item entity, and compute precise macronutrients (calories, protein, carbs, fat, fiber).
-3. If an input lists multiple foods or describes a composite dish with distinct specified ingredient portions (for example: "chicken biryani with 300g rice and 100g chicken", "salad with 150g chicken and 2 tbsp dressing", "150g chicken, 250g rice, 10 pistas, 15 almonds"), you MUST itemize each distinct component ingredient with its portion as a separate item in the "items" array (e.g. "biryani rice" 300g, "chicken" 100g, "pistachios" 10, "almonds" 15).
+3. If an input lists multiple foods or describes a composite dish with distinct specified ingredient portions (for example: "chicken biryani with 300g rice and 100g chicken", "salad with 150g chicken and 2 tbsp dressing"), you MUST itemize each distinct component ingredient with its portion as a separate item in the "items" array.
 
 Output strictly a JSON object with this structure:
 {
@@ -1853,7 +1874,7 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
   if (transcript) {
     parts.push({ text: transcript });
   } else {
-    parts.push({ text: "Please transcribe the audio and calculate exact macronutrients in JSON." });
+    parts.push({ text: "Listen carefully to the audio. If the audio is silent, inaudible, contains background noise, or does not contain a person speaking about food consumed, return is_food: false and items: []. Do not guess or hallucinate any food. Otherwise transcribe the meal and calculate exact macronutrients in JSON." });
   }
 
   const payload = {
@@ -1933,9 +1954,8 @@ async function processTranscript(transcript, audioBase64 = null) {
     isProcessingLog = true;
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.classList.add('btn-disabled');
+      submitBtn.classList.add('btn-logging');
       submitBtn.style.pointerEvents = 'none';
-      submitBtn.innerHTML = 'Logging... ⏳';
     }
     if (btnTapRecord) {
       btnTapRecord.disabled = true;
@@ -2166,7 +2186,8 @@ async function processTranscript(transcript, audioBase64 = null) {
       manualTextInput.placeholder = 'Or type e.g. 200g veg pulao and some veggies';
     }
     if (submitBtn) {
-      submitBtn.innerHTML = 'Log ⚡';
+      submitBtn.classList.remove('btn-logging');
+      submitBtn.innerHTML = '<span class="btn-log-text">Log</span> <span class="btn-log-bolt" aria-hidden="true">⚡</span>';
     }
     updateLogButtonState();
     if (btnTapRecord) {
@@ -2245,6 +2266,9 @@ function initSpeechRecognition() {
   return sr;
 }
 
+let voiceRecordingStartTime = 0;
+let maxObservedAudioVolume = 0;
+
 async function startRecording() {
   if (isProcessingLog) return;
   AppLogger.log('UI', 'User started microphone recording');
@@ -2258,6 +2282,8 @@ async function startRecording() {
 
   isRecording = true;
   liveTranscript = '';
+  voiceRecordingStartTime = Date.now();
+  maxObservedAudioVolume = 0;
   btnTapRecord.classList.add('recording');
   btnTapRecord.textContent = '⏹️ Stop Recording';
   setMicStatus('Listening... Speak food item & portion');
@@ -2288,14 +2314,32 @@ async function startRecording() {
     stopAudioVolumeTracker();
 
     const capturedTranscript = liveTranscript.trim();
+    const durationMs = voiceRecordingStartTime ? (Date.now() - voiceRecordingStartTime) : 0;
 
     if (isProcessingLog) return;
+
+    // Guard against immediate stop or silence (resolves ghost food items like pistachio/banana)
+    if (!capturedTranscript) {
+      if (durationMs < 900 || audioBlob.size < 1200 || maxObservedAudioVolume < 5) {
+        setMicStatus("No speech detected. Please speak what you ate.", true);
+        AppLogger.log('UI', 'Recording discarded: duration too short or silent', {
+          durationMs,
+          blobSize: audioBlob.size,
+          maxVolume: maxObservedAudioVolume
+        });
+        return;
+      }
+    }
 
     // Convert blob to base64
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
     reader.onloadend = async () => {
-      const base64Audio = reader.result.split(',')[1];
+      const base64Audio = reader.result ? reader.result.split(',')[1] : null;
+      if (!base64Audio || base64Audio.length < 500) {
+        setMicStatus("No speech detected. Please speak what you ate.", true);
+        return;
+      }
       await processRecordedAudio(base64Audio, capturedTranscript);
     };
   };
@@ -2336,6 +2380,11 @@ async function processRecordedAudio(audioBase64, capturedTranscript = "") {
     return;
   }
 
+  if (!audioBase64 || audioBase64.length < 500) {
+    setMicStatus("No speech detected. Please speak what you ate.", true);
+    return;
+  }
+
   // Fallback if browser SpeechRecognition was not available
   if (currentEngine === 'gemini') {
     await processTranscript("", audioBase64);
@@ -2370,6 +2419,7 @@ function startAudioVolumeTracker() {
     }
 
     const avgVolume = volumeSum / bufferLength;
+    maxObservedAudioVolume = Math.max(maxObservedAudioVolume, avgVolume);
     if (avgVolume > 12) {
       resetSilenceTimer();
     }
@@ -2436,29 +2486,29 @@ function triggerDeckSwipe(offsetDays, direction = null, exitDirection = null) {
   const exitX = exitDir === 'left' ? '-120%' : '120%';
   const rot = exitDir === 'left' ? -10 : 10;
 
-  // Make under card visible and let it surface upwards
+  // Make under card visible and let it surface upwards with zoom in effect
   underCard.style.visibility = 'visible';
   underCard.style.opacity = '1';
-  underCard.style.transition = 'transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1)';
-  mainCard.style.transition = 'transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.22s ease-out';
+  underCard.style.transition = 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease';
+  mainCard.style.transition = 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease-out';
 
-  mainCard.style.transform = `translateX(${exitX}) rotate(${rot}deg)`;
+  mainCard.style.transform = `translateX(${exitX}) rotate(${rot}deg) scale(0.96)`;
   mainCard.style.opacity = '0';
-  underCard.style.transform = 'translateY(0)';
+  underCard.style.transform = 'scale(1) translateY(0)';
 
-  if (edge1) edge1.style.transform = 'translateX(0)';
-  if (edge2) edge2.style.transform = 'translateX(0)';
+  if (edge1) edge1.style.transform = 'scale(1.02) translateX(-2px)';
+  if (edge2) edge2.style.transform = 'scale(1.02) translateX(-3px)';
 
   setTimeout(() => {
     changeDate(offsetDays, direction || (offsetDays < 0 ? 'prev' : 'next'));
 
     mainCard.style.transition = 'none';
     underCard.style.transition = 'none';
-    mainCard.style.transform = 'translateX(0) rotate(0deg)';
+    mainCard.style.transform = 'translateX(0) rotate(0deg) scale(1)';
     mainCard.style.opacity = '1';
 
     // Reset under card to recessed state and hide it at rest
-    underCard.style.transform = 'translateY(0)';
+    underCard.style.transform = 'scale(0.93) translateY(8px)';
     underCard.style.opacity = '0';
     underCard.style.visibility = 'hidden';
 
@@ -2467,7 +2517,7 @@ function triggerDeckSwipe(offsetDays, direction = null, exitDirection = null) {
 
     updateUnderCard(getOffsetDateString(selectedDate, -1));
     isAnimatingDeckTransition = false;
-  }, 260);
+  }, 270);
 }
 
 // --- Touch & Mouse Swipe Gestures for Day Navigation with Stacked Card Surfacing ---
@@ -2557,19 +2607,24 @@ function setupSwipeGestures() {
           updateUnderCard(neededDate);
         }
 
-        // Under card becomes visible and surfaces dynamically as user drags
+        // Under card becomes visible and surfaces dynamically as user drags with zoom-in effect
         underCard.style.visibility = 'visible';
-        underCard.style.opacity = '1';
 
-        const maxDrag = 220;
+        const maxDrag = 180;
         const progress = Math.min(1.0, Math.abs(dx) / maxDrag);
-        const rot = (dx / maxDrag) * 8; // subtle rotation up to 8 deg
+        const rot = (dx / maxDrag) * 7; // subtle rotation up to 7 deg
 
         mainCard.style.transform = `translateX(${dx}px) rotate(${rot}deg)`;
-        underCard.style.transform = 'translateY(0)';
+        
+        // Dynamic zoom-in surfacing from below (0.93 -> 1.0, translateY 8px -> 0px)
+        const currentScale = 0.93 + (0.07 * progress);
+        const currentY = 8 * (1 - progress);
+        const currentOpacity = 0.65 + (0.35 * progress);
+        underCard.style.transform = `scale(${currentScale.toFixed(3)}) translateY(${currentY.toFixed(1)}px)`;
+        underCard.style.opacity = currentOpacity.toFixed(2);
 
-        if (edge1) edge1.style.transform = 'translateX(0)';
-        if (edge2) edge2.style.transform = 'translateX(0)';
+        if (edge1) edge1.style.transform = `scale(${1 + 0.02 * progress}) translateX(${-2 * progress}px)`;
+        if (edge2) edge2.style.transform = `scale(${1 + 0.02 * progress}) translateX(${-3 * progress}px)`;
       }
     };
 
@@ -2623,7 +2678,7 @@ function setupSwipeGestures() {
         if (edge2) edge2.style.transition = 'transform 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
 
         mainCard.style.transform = 'translateX(0) rotate(0deg)';
-        underCard.style.transform = 'translateY(0)';
+        underCard.style.transform = 'scale(0.93) translateY(8px)';
         underCard.style.opacity = '0';
         setTimeout(() => {
           if (!isTracking && !isAnimatingDeckTransition) {
@@ -3409,6 +3464,7 @@ function setVisitorMode(isVisitor, targetHandle = null) {
   const visitorBanner = document.getElementById('visitor-banner');
   const targetHandleEl = document.getElementById('visitor-target-handle');
   const visitorStreakPill = document.getElementById('visitor-streak-pill');
+  const voiceToolCard = document.getElementById('voice-tool-card');
   const voiceRow = document.querySelector('.voice-buttons-row');
   const micBanner = document.getElementById('mic-status-text');
   const textLogForm = document.getElementById('text-log-form');
@@ -3426,20 +3482,24 @@ function setVisitorMode(isVisitor, targetHandle = null) {
   if (isVisitorMode && viewedHandle) {
     currentLogs = [];
     filterAndRenderSelectedDate();
+    document.body.classList.add('is-visitor-mode');
     if (visitorBanner) visitorBanner.classList.remove('hidden');
     if (targetHandleEl) targetHandleEl.textContent = viewedHandle;
     if (visitorStreakPill) {
       visitorStreakPill.textContent = '';
       visitorStreakPill.classList.add('hidden');
     }
+    if (voiceToolCard) voiceToolCard.classList.add('hidden');
     if (voiceRow) voiceRow.classList.add('hidden');
     if (micBanner) micBanner.classList.add('hidden');
     if (textLogForm) textLogForm.classList.add('hidden');
     // Header streak ALWAYS displays the logged-in user's streak:
     renderCurrentUserStreak();
   } else {
+    document.body.classList.remove('is-visitor-mode');
     if (visitorBanner) visitorBanner.classList.add('hidden');
     if (visitorStreakPill) visitorStreakPill.classList.add('hidden');
+    if (voiceToolCard) voiceToolCard.classList.remove('hidden');
     if (voiceRow) voiceRow.classList.remove('hidden');
     if (micBanner) micBanner.classList.remove('hidden');
     if (textLogForm) textLogForm.classList.remove('hidden');

@@ -22,12 +22,12 @@
   <meta name="twitter:description" content="Voice-driven macronutrient tracking with circles-based Neobrutalism design and real accountability.">
   <meta name="twitter:image" content="icons/icon-512.png">
   
-  <link rel="manifest" href="manifest.json?v=15.4">
-  <link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=15.4">
-  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png?v=15.4">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=15.4">
-  <link rel="apple-touch-icon" href="icons/icon-192.png?v=15.4">
-  <link rel="shortcut icon" href="favicon.ico?v=15.4">
+  <link rel="manifest" href="manifest.json?v=15.5">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=15.5">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png?v=15.5">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=15.5">
+  <link rel="apple-touch-icon" href="icons/icon-192.png?v=15.5">
+  <link rel="shortcut icon" href="favicon.ico?v=15.5">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -145,23 +145,23 @@
     <div class="app-scroll-canvas" id="app-scroll-canvas">
       <!-- Unified Elevated Top Announcement Banner (Features & PWA Install) -->
       <div id="top-announcement-banner" class="top-announcement-banner" role="region" aria-label="Announcement" aria-hidden="true">
-      <div class="announcement-card" id="announcement-card">
-        <button type="button" class="announcement-close" id="btn-announcement-close" title="Dismiss banner" aria-label="Dismiss banner">✕</button>
-        <div class="announcement-icon-wrap" id="announcement-icon-wrap">
-          <span class="announcement-icon" id="announcement-icon">🔔</span>
-        </div>
-        <div class="announcement-content">
-          <div class="announcement-title-row">
-            <span class="announcement-title" id="announcement-title">Smart Reminders</span>
-            <span class="announcement-badge" id="announcement-badge" style="display: none;"></span>
+        <div class="announcement-card" id="announcement-card">
+          <div class="announcement-icon-wrap" id="announcement-icon-wrap">
+            <span class="announcement-icon" id="announcement-icon">🔔</span>
           </div>
-          <div class="announcement-desc" id="announcement-desc">Custom times &amp; streak alerts</div>
+          <div class="announcement-content">
+            <div class="announcement-title-row">
+              <span class="announcement-title" id="announcement-title">Smart Reminders</span>
+              <span class="announcement-badge" id="announcement-badge" style="display: none;"></span>
+            </div>
+            <div class="announcement-desc" id="announcement-desc">Custom times &amp; streak alerts</div>
+          </div>
+          <button type="button" class="announcement-cta-btn" id="btn-announcement-cta">
+            <span id="announcement-cta-text">Turn On ⚡</span>
+          </button>
+          <button type="button" class="announcement-close" id="btn-announcement-close" title="Dismiss banner" aria-label="Dismiss banner">✕</button>
         </div>
-        <button type="button" class="announcement-cta-btn" id="btn-announcement-cta">
-          <span id="announcement-cta-text">Turn On ⚡</span>
-        </button>
       </div>
-    </div>
 
     <!-- TAB 1: ME (Personal Macro Tracker) -->
     <main id="view-me" class="app-tab-view active">
@@ -171,17 +171,17 @@
         <div class="hidden-stack-edge-1" id="edge-stack-1" aria-hidden="true"></div>
 
         <!-- UNDER CARD (SURFACES UPWARDS AS TOP CARD PEELS AWAY) -->
-        <section class="main-top-card under-card" id="under-top-card" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; opacity: 0; visibility: hidden; transform: scale(0.95) translateY(6px); transform-origin: center bottom;">
+        <section class="main-top-card under-card" id="under-top-card" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; opacity: 0; visibility: hidden; transform: scale(0.93) translateY(8px); transform-origin: center center;">
           <!-- Card Top Rim (Date Navigator) -->
           <div class="card-top-rim">
-            <div class="rim-btn date-nav-arrow" style="visibility: hidden;" aria-hidden="true">◀</div>
+            <button type="button" class="rim-btn date-nav-arrow" id="under-btn-date-prev" tabindex="-1" aria-hidden="true">◀</button>
             <div class="rim-center">
               <div class="rim-date">
                 <span class="rim-today-dot" id="under-today-indicator"></span>
                 <span id="under-date-label" class="date-nav-pill-inline">YESTERDAY</span>
               </div>
             </div>
-            <div class="rim-btn date-nav-arrow" style="visibility: hidden;" aria-hidden="true">▶</div>
+            <button type="button" class="rim-btn date-nav-arrow" id="under-btn-date-next" tabindex="-1" aria-hidden="true">▶</button>
           </div>
 
           <!-- Horizontal Calorie Progress Section -->
@@ -213,7 +213,7 @@
                   <circle class="ring-bg" cx="18" cy="18" r="14.2" />
                   <circle class="ring-progress stroke-carb" id="under-circle-carb" cx="18" cy="18" r="14.2" stroke-dasharray="89.2, 89.2" stroke-dashoffset="89.2" />
                 </svg>
-                <div class="ring-val-inside"><span id="under-val-carb">0</span><span class="ring-unit">g</span></div>
+                <div class="ring-val-inside"><span id="under-val-carb">0</span></div>
               </div>
               <div class="ring-meta">
                 <span class="ring-name circle-name">Carbs</span>
@@ -228,7 +228,7 @@
                   <circle class="ring-bg" cx="18" cy="18" r="14.2" />
                   <circle class="ring-progress stroke-prot" id="under-circle-prot" cx="18" cy="18" r="14.2" stroke-dasharray="89.2, 89.2" stroke-dashoffset="89.2" />
                 </svg>
-                <div class="ring-val-inside"><span id="under-val-prot">0</span><span class="ring-unit">g</span></div>
+                <div class="ring-val-inside"><span id="under-val-prot">0</span></div>
               </div>
               <div class="ring-meta">
                 <span class="ring-name circle-name">Protein</span>
@@ -243,7 +243,7 @@
                   <circle class="ring-bg" cx="18" cy="18" r="14.2" />
                   <circle class="ring-progress stroke-fiber" id="under-circle-fiber" cx="18" cy="18" r="14.2" stroke-dasharray="89.2, 89.2" stroke-dashoffset="89.2" />
                 </svg>
-                <div class="ring-val-inside"><span id="under-val-fiber">0</span><span class="ring-unit">g</span></div>
+                <div class="ring-val-inside"><span id="under-val-fiber">0</span></div>
               </div>
               <div class="ring-meta">
                 <span class="ring-name circle-name">Fiber</span>
@@ -258,7 +258,7 @@
                   <circle class="ring-bg" cx="18" cy="18" r="14.2" />
                   <circle class="ring-progress stroke-fat" id="under-circle-fat" cx="18" cy="18" r="14.2" stroke-dasharray="89.2, 89.2" stroke-dashoffset="89.2" />
                 </svg>
-                <div class="ring-val-inside"><span id="under-val-fat">0</span><span class="ring-unit">g</span></div>
+                <div class="ring-val-inside"><span id="under-val-fat">0</span></div>
               </div>
               <div class="ring-meta">
                 <span class="ring-name circle-name">Fat</span>
@@ -311,7 +311,7 @@
                   <circle class="ring-bg" cx="18" cy="18" r="14.2" />
                   <circle class="ring-progress stroke-carb" id="circle-carb" cx="18" cy="18" r="14.2" stroke-dasharray="89.2, 89.2" stroke-dashoffset="89.2" />
                 </svg>
-                <div class="ring-val-inside"><span id="val-carb">0</span><span class="ring-unit">g</span></div>
+                <div class="ring-val-inside"><span id="val-carb">0</span></div>
               </div>
               <div class="ring-meta">
                 <span class="ring-name circle-name">Carbs</span>
@@ -326,7 +326,7 @@
                   <circle class="ring-bg" cx="18" cy="18" r="14.2" />
                   <circle class="ring-progress stroke-prot" id="circle-prot" cx="18" cy="18" r="14.2" stroke-dasharray="89.2, 89.2" stroke-dashoffset="89.2" />
                 </svg>
-                <div class="ring-val-inside"><span id="val-prot">0</span><span class="ring-unit">g</span></div>
+                <div class="ring-val-inside"><span id="val-prot">0</span></div>
               </div>
               <div class="ring-meta">
                 <span class="ring-name circle-name">Protein</span>
@@ -341,7 +341,7 @@
                   <circle class="ring-bg" cx="18" cy="18" r="14.2" />
                   <circle class="ring-progress stroke-fiber" id="circle-fiber" cx="18" cy="18" r="14.2" stroke-dasharray="89.2, 89.2" stroke-dashoffset="89.2" />
                 </svg>
-                <div class="ring-val-inside"><span id="val-fiber">0</span><span class="ring-unit">g</span></div>
+                <div class="ring-val-inside"><span id="val-fiber">0</span></div>
               </div>
               <div class="ring-meta">
                 <span class="ring-name circle-name">Fiber</span>
@@ -356,7 +356,7 @@
                   <circle class="ring-bg" cx="18" cy="18" r="14.2" />
                   <circle class="ring-progress stroke-fat" id="circle-fat" cx="18" cy="18" r="14.2" stroke-dasharray="89.2, 89.2" stroke-dashoffset="89.2" />
                 </svg>
-                <div class="ring-val-inside"><span id="val-fat">0</span><span class="ring-unit">g</span></div>
+                <div class="ring-val-inside"><span id="val-fat">0</span></div>
               </div>
               <div class="ring-meta">
                 <span class="ring-name circle-name">Fat</span>
@@ -379,7 +379,7 @@
 
         <form id="text-log-form" class="text-input-wrap">
           <input type="text" id="manual-text-input" class="neo-input" placeholder="Or type e.g. 200g veg pulao and some veggies" autocomplete="off">
-          <button type="submit" class="btn-log" id="btn-submit-log" disabled>Log ⚡</button>
+          <button type="submit" class="btn-log" id="btn-submit-log" disabled><span class="btn-log-text">Log</span> <span class="btn-log-bolt" aria-hidden="true">⚡</span></button>
         </form>
       </section>
 
