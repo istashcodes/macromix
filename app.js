@@ -1799,12 +1799,9 @@ async function handleTextLog(e) {
 // --- Gemini Client Fallback & Processing Pipeline ---
 const GEMINI_SYSTEM_PROMPT = `You are a high-precision nutritional voice assistant.
 CRITICAL INSTRUCTION: Analyze the audio or text carefully.
-1. SILENCE, NOISE & NON-FOOD REJECTION:
-   - If the audio is silent, inaudible, contains only ambient background noise, clicks, mic static, or does NOT contain clear human speech explicitly describing food or beverages consumed, you MUST set "raw_transcript": "", "is_food": false, and "items": [].
-   - If the input is conversational speech, questions, commands, background chatter, or does NOT describe actual food or drink consumed (for example: "we will not take one hour to search for a movie", "hello", "play music", "turn on lights"), you MUST set "is_food": false and "items": [].
-   - ABSOLUTE GUARDRAIL: NEVER guess, assume, or invent food items from silence, background static, or examples. If no edible food items were spoken by the user, you MUST set "raw_transcript": "", "is_food": false, and "items": [].
+1. If the input is conversational speech, questions, commands, background chatter, or does NOT describe actual food or drink consumed (for example: "we will not take one hour to search for a movie", "hello", "play music", "turn on lights"), you MUST set "is_food": false and "items": [].
 2. If and only if the input mentions edible food or beverages consumed, set "is_food": true, transcribe what was eaten, extract each food item entity, and compute precise macronutrients (calories, protein, carbs, fat, fiber).
-3. If an input lists multiple foods or describes a composite dish with distinct specified ingredient portions (for example: "chicken biryani with 300g rice and 100g chicken", "salad with 150g chicken and 2 tbsp dressing"), you MUST itemize each distinct component ingredient with its portion as a separate item in the "items" array.
+3. If an input lists multiple foods or describes a composite dish with distinct specified ingredient portions (for example: "chicken biryani with 300g rice and 100g chicken", "salad with 150g chicken and 2 tbsp dressing", "150g chicken, 250g rice, 10 pistas, 15 almonds"), you MUST itemize each distinct component ingredient with its portion as a separate item in the "items" array (e.g. "biryani rice" 300g, "chicken" 100g, "pistachios" 10, "almonds" 15).
 
 Output strictly a JSON object with this structure:
 {
@@ -1858,7 +1855,7 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
   if (transcript) {
     parts.push({ text: transcript });
   } else {
-    parts.push({ text: "Listen carefully to the audio. If the audio is silent, inaudible, contains background noise, or does not contain a person speaking about food consumed, return is_food: false and items: []. Do not guess or hallucinate any food. Otherwise transcribe the meal and calculate exact macronutrients in JSON." });
+    parts.push({ text: "Please transcribe the audio and calculate exact macronutrients in JSON." });
   }
 
   const payload = {
@@ -2250,11 +2247,6 @@ function initSpeechRecognition() {
   return sr;
 }
 
-let voiceRecordingStartTime = 0;
-let maxObservedAudioVolume = 0;
-let speechVoiceFramesCount = 0;
-let speechRecognitionWasActive = false;
-
 async function startRecording() {
   if (isProcessingLog) return;
   AppLogger.log('UI', 'User started microphone recording');
@@ -2268,10 +2260,6 @@ async function startRecording() {
 
   isRecording = true;
   liveTranscript = '';
-  voiceRecordingStartTime = Date.now();
-  maxObservedAudioVolume = 0;
-  speechVoiceFramesCount = 0;
-  speechRecognitionWasActive = false;
   btnTapRecord.classList.add('recording');
   btnTapRecord.textContent = '⏹️ Stop Recording';
   setMicStatus('Listening... Speak food item & portion');
@@ -2280,10 +2268,7 @@ async function startRecording() {
     speechRecognition = initSpeechRecognition();
   }
   if (speechRecognition) {
-    try {
-      speechRecognition.start();
-      speechRecognitionWasActive = true;
-    } catch (e) {}
+    try { speechRecognition.start(); } catch (e) {}
   }
 
   audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -2305,43 +2290,14 @@ async function startRecording() {
     stopAudioVolumeTracker();
 
     const capturedTranscript = liveTranscript.trim();
-    const durationMs = voiceRecordingStartTime ? (Date.now() - voiceRecordingStartTime) : 0;
 
     if (isProcessingLog) return;
-
-    // DETERMINISTIC SILENCE GUARD (Resolves ghost food items like pistachio/banana):
-    // 1) If SpeechRecognition was active and produced no words, the user was silent. Do NOT call Gemini.
-    // 2) If SpeechRecognition was not active, require minimum duration AND minimum voice tract energy frames.
-    const isSilent = !capturedTranscript && (
-      speechRecognitionWasActive ||
-      durationMs < 900 ||
-      audioBlob.size < 1200 ||
-      speechVoiceFramesCount < 8 ||
-      maxObservedAudioVolume < 10
-    );
-
-    if (isSilent) {
-      setMicStatus("No speech detected. Please speak what you ate.", true);
-      AppLogger.log('UI', 'Recording discarded: silence detected (no ghost entry)', {
-        capturedTranscript,
-        speechRecognitionWasActive,
-        durationMs,
-        speechVoiceFramesCount,
-        maxVolume: maxObservedAudioVolume,
-        blobSize: audioBlob.size
-      });
-      return;
-    }
 
     // Convert blob to base64
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
     reader.onloadend = async () => {
-      const base64Audio = reader.result ? reader.result.split(',')[1] : null;
-      if (!base64Audio || base64Audio.length < 500) {
-        setMicStatus("No speech detected. Please speak what you ate.", true);
-        return;
-      }
+      const base64Audio = reader.result.split(',')[1];
       await processRecordedAudio(base64Audio, capturedTranscript);
     };
   };
@@ -2382,17 +2338,6 @@ async function processRecordedAudio(audioBase64, capturedTranscript = "") {
     return;
   }
 
-  // If capturedTranscript is empty, NEVER call Gemini if SpeechRecognition was active or if voice frames were absent
-  if (speechRecognitionWasActive || speechVoiceFramesCount < 8) {
-    setMicStatus("No speech detected. Please speak what you ate.", true);
-    return;
-  }
-
-  if (!audioBase64 || audioBase64.length < 500) {
-    setMicStatus("No speech detected. Please speak what you ate.", true);
-    return;
-  }
-
   // Fallback if browser SpeechRecognition was not available
   if (currentEngine === 'gemini') {
     await processTranscript("", audioBase64);
@@ -2427,11 +2372,6 @@ function startAudioVolumeTracker() {
     }
 
     const avgVolume = volumeSum / bufferLength;
-    maxObservedAudioVolume = Math.max(maxObservedAudioVolume, avgVolume);
-    // Track voice activity frames (typical human voice > 18)
-    if (avgVolume > 18) {
-      speechVoiceFramesCount++;
-    }
     if (avgVolume > 12) {
       resetSilenceTimer();
     }

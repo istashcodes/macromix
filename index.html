@@ -22,19 +22,19 @@
   <meta name="twitter:description" content="Voice-driven macronutrient tracking with circles-based Neobrutalism design and real accountability.">
   <meta name="twitter:image" content="icons/icon-512.png">
   
-  <link rel="manifest" href="manifest.json?v=15.6">
-  <link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=15.6">
-  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png?v=15.6">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=15.6">
-  <link rel="apple-touch-icon" href="icons/icon-192.png?v=15.6">
-  <link rel="shortcut icon" href="favicon.ico?v=15.6">
+  <link rel="manifest" href="manifest.json?v=15.7">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=15.7">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png?v=15.7">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=15.7">
+  <link rel="apple-touch-icon" href="icons/icon-192.png?v=15.7">
+  <link rel="shortcut icon" href="favicon.ico?v=15.7">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=15.6">
+  <link rel="stylesheet" href="styles.css?v=15.7">
 </head>
 <body>
   <!-- Gooey SVG Filter for Header Tab Toggle (gooey-react technique) -->
@@ -127,6 +127,9 @@
         </div>
 
         <div class="header-actions">
+          <button type="button" class="wrapped-badge-btn hidden" id="header-wrapped-btn" title="View your Friday Weekend Wrapped!">
+            <span class="wrapped-badge-spark">✨</span> Wrapped
+          </button>
           <div class="streak-badge" id="streak-badge" role="button" tabindex="0" title="Daily Macro Targets (click to edit)" style="cursor:pointer;">🔥 0d</div>
         </div>
       </div>
@@ -547,6 +550,438 @@
         </div>
       </div>
       <button type="button" class="btn-primary" id="btn-got-it-ios-install" style="width: 100%; margin-top: 14px;">Got It! 👍</button>
+    </div>
+  </div>
+
+  <!-- Spotify-Style Weekend Wrapped Reel Modal (Surfaced exclusively for @istashmacros on Friday/Weekend) -->
+  <div id="weekly-wrapped-modal" class="modal-overlay wrapped-modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Weekend Wrapped Story">
+    <div class="wrapped-phone-shell" id="wrappedPhoneShell">
+      <!-- Progress Segments -->
+      <div class="wrapped-progress-container" id="wrappedProgressContainer">
+        <div class="wrapped-segment"><div class="wrapped-fill" id="wrapped-fill-0"></div></div>
+        <div class="wrapped-segment"><div class="wrapped-fill" id="wrapped-fill-1"></div></div>
+        <div class="wrapped-segment"><div class="wrapped-fill" id="wrapped-fill-2"></div></div>
+        <div class="wrapped-segment"><div class="wrapped-fill" id="wrapped-fill-3"></div></div>
+        <div class="wrapped-segment"><div class="wrapped-fill" id="wrapped-fill-4"></div></div>
+        <div class="wrapped-segment"><div class="wrapped-fill" id="wrapped-fill-5"></div></div>
+        <div class="wrapped-segment"><div class="wrapped-fill" id="wrapped-fill-6"></div></div>
+      </div>
+
+      <!-- Top Story Meta Header -->
+      <div class="wrapped-top-bar">
+        <div class="wrapped-user-pill">
+          <div class="wrapped-user-avatar">🥣</div>
+          <span class="wrapped-user-handle">@istashmacros</span>
+          <span class="wrapped-friday-tag">FRIDAY WRAPPED</span>
+        </div>
+        <div class="wrapped-header-actions">
+          <button type="button" class="wrapped-icon-btn" id="wrappedSoundBtn" title="Toggle Sound FX">🔊</button>
+          <button type="button" class="wrapped-icon-btn" id="wrappedPauseBtn" title="Pause / Play">⏸</button>
+          <button type="button" class="wrapped-icon-btn wrapped-close-btn" id="btn-close-wrapped" title="Close" aria-label="Close story">✕</button>
+        </div>
+      </div>
+
+      <!-- Tap Zones (Left 40% = Prev, Right 60% = Next) -->
+      <div class="wrapped-tap-zone left" id="wrappedTapLeft" title="Tap left to go back"></div>
+      <div class="wrapped-tap-zone right" id="wrappedTapRight" title="Tap right to advance"></div>
+
+      <!-- Slides Deck -->
+      <div class="wrapped-slides-deck">
+
+        <!-- SLIDE 1: The Overture / Scale -->
+        <div class="wrapped-slide wrapped-slide-1 active" data-slide="0">
+          <div style="position: relative;">
+            <div class="wrapped-brutal-badge" style="background: #111; color: #FFE600;">
+              ⚡ 7-DAY NUTRITION REEL
+            </div>
+            <h1 class="wrapped-font-grotesk" style="font-size: 34px; line-height: 1.02; font-weight: 900; margin-top: 12px; text-transform: uppercase; letter-spacing: -1.5px; color: #111;">
+              Your Week<br><span style="background: #111; color: #fff; padding: 2px 8px; border-radius: 8px;">In Fuel</span>
+            </h1>
+            <p style="font-size: 13px; font-weight: 700; margin-top: 8px; color: #222;">
+              You logged consistently and kept your nutrition fire burning strong.
+            </p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="wrapped-brutal-card" style="background: #fff; transform: rotate(-1deg);">
+              <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                  <div class="wrapped-stat-hero-number" id="wrapped-stat-cal" style="color: #FF3366;">15,198</div>
+                  <div class="wrapped-sub-hero-label" style="color: #64748b;">Total Calories Logged</div>
+                </div>
+                <div class="wrapped-brutal-badge" id="wrapped-stat-meals" style="background: #FFE600; font-size: 11px;">40 MEALS</div>
+              </div>
+            </div>
+
+            <div class="wrapped-brutal-card" style="background: #fff; transform: rotate(1.5deg);">
+              <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                  <div class="wrapped-stat-hero-number" id="wrapped-stat-protein" style="color: #111;">869.2<span style="font-size: 24px;">g</span></div>
+                  <div class="wrapped-sub-hero-label" style="color: #64748b;">Total Protein Banked</div>
+                </div>
+                <div style="font-size: 28px;">🍗</div>
+              </div>
+              <p style="font-size: 12px; font-weight: 700; color: #475569; margin-top: 6px;">
+                Equivalent to <strong>29 chicken breasts</strong> or <strong>145 whole eggs</strong>!
+              </p>
+            </div>
+
+            <div class="wrapped-brutal-card" style="background: #111; color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 28px;">🔥</span>
+                <div>
+                  <div style="font-size: 16px; font-weight: 900; color: #FFE600;" id="wrapped-stat-streak">10-DAY STREAK</div>
+                  <div style="font-size: 11px; color: #94a3b8; font-weight: 700;">Unbroken momentum alive!</div>
+                </div>
+              </div>
+              <div class="wrapped-brutal-badge" style="background: #00F59B; color: #111;">ACTIVE</div>
+            </div>
+          </div>
+
+          <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(0,0,0,0.6);">
+            TAP ANYWHERE TO CONTINUE &rarr;
+          </div>
+        </div>
+
+        <!-- SLIDE 2: The MVP Meal & Habit -->
+        <div class="wrapped-slide wrapped-slide-2" data-slide="1">
+          <div>
+            <div class="wrapped-brutal-badge" style="background: #FFE600; color: #111;">
+              👑 YOUR #1 COMFORT WEAPON
+            </div>
+            <h2 class="wrapped-font-grotesk" style="font-size: 32px; line-height: 1.05; font-weight: 900; margin-top: 12px; letter-spacing: -1px; text-transform: uppercase;">
+              The Dosa &amp; Skyr<br><span style="background: #111; color: #FFE600; padding: 2px 8px; border-radius: 8px;">Power Combo</span>
+            </h2>
+            <p style="font-size: 13px; font-weight: 600; margin-top: 6px; color: #ffe4e6;">
+              When hunger struck, you had your signature breakfast playbook locked in.
+            </p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="wrapped-brutal-card" style="background: #fff; color: #111;">
+              <div style="font-size: 11px; font-weight: 900; color: #e11d48; text-transform: uppercase;">
+                Top Logged Fuel Items
+              </div>
+              <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed #e2e8f0; padding-bottom: 4px;">
+                  <span style="font-weight: 800; font-size: 13px;">🍌 Bananas</span>
+                  <span class="wrapped-brutal-badge" style="background: #FFE600; padding: 2px 8px; font-size: 10px;">7 Times</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed #e2e8f0; padding-bottom: 4px;">
+                  <span style="font-weight: 800; font-size: 13px;">🥞 Crispy Dosa</span>
+                  <span class="wrapped-brutal-badge" style="background: #fed7aa; padding: 2px 8px; font-size: 10px;">5 Times</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed #e2e8f0; padding-bottom: 4px;">
+                  <span style="font-weight: 800; font-size: 13px;">🥣 Rolled Oats &amp; Walnuts</span>
+                  <span class="wrapped-brutal-badge" style="background: #e2e8f0; padding: 2px 8px; font-size: 10px;">5 Times</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-weight: 800; font-size: 13px;">☕ Filter Coffee with Milk</span>
+                  <span class="wrapped-brutal-badge" style="background: #dbeafe; padding: 2px 8px; font-size: 10px;">3 Times</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Voice Quote -->
+            <div class="wrapped-brutal-card" style="background: #111; color: #fff; border-color: #FFE600;">
+              <div style="font-size: 10px; font-weight: 800; color: #FFE600; text-transform: uppercase;">
+                🎙️ From Your Real Audio Logs:
+              </div>
+              <p style="font-size: 12px; font-style: italic; font-weight: 600; margin-top: 4px; color: #f8fafc; line-height: 1.35;">
+                &ldquo;I started off by having four dosas, rolled oats with walnuts and yeast protein... then 200g of Skyr.&rdquo;
+              </p>
+            </div>
+
+            <div class="wrapped-brutal-badge" style="background: #fff; color: #111; align-self: flex-start; font-size: 11px;">
+              ⏰ Peak Fuel Window: <strong>08:00 &ndash; 10:00 AM</strong>
+            </div>
+          </div>
+
+          <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.7);">
+            TAP TO VIEW HIGHLIGHTS &rarr;
+          </div>
+        </div>
+
+        <!-- SLIDE 3: Consistency High Note -->
+        <div class="wrapped-slide wrapped-slide-3" data-slide="2">
+          <div>
+            <div class="wrapped-brutal-badge" style="background: #111; color: #00F59B;">
+              🏆 THE MASTERCLASS DAY
+            </div>
+            <h2 class="wrapped-font-grotesk" style="font-size: 32px; line-height: 1.05; font-weight: 900; margin-top: 12px; letter-spacing: -1px; text-transform: uppercase;">
+              Wednesday, Oct 30<br><span style="background: #111; color: #fff; padding: 2px 8px; border-radius: 8px;">Peak Output</span>
+            </h2>
+            <p style="font-size: 13px; font-weight: 700; margin-top: 6px; color: #064e3b;">
+              When you fired on all cylinders, your macros aligned with laser precision.
+            </p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="wrapped-brutal-card" style="background: #fff;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-size: 11px; font-weight: 800; color: #64748b;">RECORD PROTEIN HIT</div>
+                  <div class="wrapped-stat-hero-number" style="color: #059669; font-size: 38px;">156.9<span style="font-size: 20px;">g</span></div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 10px; font-weight: 900; background: #d1fae5; color: #065f46; padding: 3px 8px; border-radius: 999px; border: 1.5px solid #059669;">
+                    +112% OF GOAL
+                  </div>
+                  <div style="font-size: 11px; font-weight: 800; color: #475569; margin-top: 4px;">Target: 140g</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="wrapped-brutal-card" style="background: #fff;">
+              <div style="font-size: 11px; font-weight: 900; color: #475569; text-transform: uppercase; margin-bottom: 6px;">
+                7-Day Macro Accuracy Scorecard
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800;">
+                    <span>Fat Target (65g)</span>
+                    <span style="color: #059669;">68.2g Avg (95% Precision)</span>
+                  </div>
+                  <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin-top: 3px;">
+                    <div style="width: 95%; height: 100%; background: #059669;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800;">
+                    <span>Protein Target (140g)</span>
+                    <span style="color: #0284c7;">124.2g Avg (89% Compliance)</span>
+                  </div>
+                  <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin-top: 3px;">
+                    <div style="width: 89%; height: 100%; background: #0284c7;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="wrapped-brutal-card" style="background: #111; color: #fff; padding: 10px 14px;">
+              <div style="font-size: 11px; font-weight: 800; color: #00F59B;">
+                ✨ Consistency Win:
+              </div>
+              <p style="font-size: 12px; font-weight: 600; color: #cbd5e1; margin-top: 3px;">
+                You hit <strong>30g+ of fiber</strong> on 4 separate days (Oct 29, 30, 31, and Nov 02)!
+              </p>
+            </div>
+          </div>
+
+          <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(0,0,0,0.6);">
+            TAP TO UNLOCK DIET RECOMMENDATIONS &rarr;
+          </div>
+        </div>
+
+        <!-- SLIDE 4: The Intelligent Gap & Culturally Tailored Swaps -->
+        <div class="wrapped-slide wrapped-slide-4" data-slide="3">
+          <div>
+            <div class="wrapped-brutal-badge" style="background: #FFE600; color: #111;">
+              💡 NUTRITION RECOMMENDATION
+            </div>
+            <h2 class="wrapped-font-grotesk" style="font-size: 30px; line-height: 1.05; font-weight: 900; margin-top: 12px; letter-spacing: -1px; text-transform: uppercase;">
+              The Missing<br><span style="background: #FFE600; color: #111; padding: 2px 8px; border-radius: 8px;">13.5g of Fiber</span>
+            </h2>
+            <p style="font-size: 12px; font-weight: 600; margin-top: 6px; color: #f3e8ff;">
+              Your fiber averaged <strong>24.5g</strong> vs your <strong>38g</strong> target. No boring salads — here is how to bridge it with foods you already love:
+            </p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Swap 1 -->
+            <div class="wrapped-brutal-card" style="background: #fff; color: #111; padding: 14px;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span class="wrapped-brutal-badge" style="background: #c084fc; color: #fff; font-size: 9px;">SWAP 1 &bull; MORNING</span>
+                <span style="font-weight: 900; font-size: 11px; color: #7c3aed;">+9g FIBER</span>
+              </div>
+              <div style="font-weight: 800; font-size: 13px; margin-top: 6px;">
+                Stir 2 tbsp Chia Seeds into your Skyr &amp; Rolled Oats
+              </div>
+              <p style="font-size: 11px; color: #475569; font-weight: 600; margin-top: 3px;">
+                You already logged chia seeds on Oct 30! Making it a daily morning staple adds <strong>9g prebiotic fiber</strong> effortlessly.
+              </p>
+            </div>
+
+            <!-- Swap 2 -->
+            <div class="wrapped-brutal-card" style="background: #fff; color: #111; padding: 14px;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span class="wrapped-brutal-badge" style="background: #fde047; color: #111; font-size: 9px;">SWAP 2 &bull; EVENING</span>
+                <span style="font-weight: 900; font-size: 11px; color: #059669;">+8g FIBER &amp; +12g P</span>
+              </div>
+              <div style="font-weight: 800; font-size: 13px; margin-top: 6px;">
+                1 Bowl of Spiced Chana Sundal or Sprouted Moong
+              </div>
+              <p style="font-size: 11px; color: #475569; font-weight: 600; margin-top: 3px;">
+                Pairs naturally with your 5 PM milk coffee. Bridges your fiber gap while keeping calories tight.
+              </p>
+            </div>
+          </div>
+
+          <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.7);">
+            TAP FOR OVER/UNDER ANALYSIS &rarr;
+          </div>
+        </div>
+
+        <!-- SLIDE 5: Over/Under Intake & Weekend Prep -->
+        <div class="wrapped-slide wrapped-slide-5" data-slide="4">
+          <div>
+            <div class="wrapped-brutal-badge" style="background: #fff; color: #111;">
+              ⚖️ THE BALANCE BEAM
+            </div>
+            <h2 class="wrapped-font-grotesk" style="font-size: 30px; line-height: 1.05; font-weight: 900; margin-top: 12px; letter-spacing: -1px; text-transform: uppercase;">
+              Under-Eating<br><span style="background: #fff; color: #FF3366; padding: 2px 8px; border-radius: 8px;">Deficit Detected</span>
+            </h2>
+            <p style="font-size: 12px; font-weight: 600; margin-top: 6px; color: #ffe4e6;">
+              Most people over-eat; you actually <strong>under-consumed</strong> by ~529 kcal/day compared to your 2700 kcal goal.
+            </p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="wrapped-brutal-card" style="background: #fff; color: #111;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <span style="font-size: 11px; font-weight: 800; color: #64748b;">DAILY AVERAGE INTAKE</span>
+                <span class="wrapped-brutal-badge" style="background: #fee2e2; color: #dc2626; font-size: 9px;">-529 KCAL DEFICIT</span>
+              </div>
+              <div class="wrapped-stat-hero-number" style="color: #FF3366; margin-top: 4px; font-size: 38px;">2,171<span style="font-size: 18px;"> kcal</span></div>
+              <p style="font-size: 11px; font-weight: 700; color: #475569; margin-top: 4px;">
+                Target: <strong>2,700 kcal</strong> &bull; Lowest day: <strong>1,654 kcal</strong> (Nov 03).
+              </p>
+            </div>
+
+            <div class="wrapped-brutal-card" style="background: #111; color: #fff; border-color: #FFE600;">
+              <div style="font-size: 10px; font-weight: 900; color: #FFE600; text-transform: uppercase;">
+                🛡️ Weekend Strategy Prescription
+              </div>
+              <div style="font-size: 11px; font-weight: 600; color: #f1f5f9; margin-top: 6px; line-height: 1.4;">
+                &bull; <strong>Don't restrict before social dinners:</strong> Your week ran at an ~3,700 kcal cumulative deficit. You have plenty of calorie runway.<br>
+                &bull; <strong>Add a late afternoon shake:</strong> A quick protein smoothie with milk + 1 banana prevents evening fatigue.
+              </div>
+            </div>
+          </div>
+
+          <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.7);">
+            TAP TO REVEAL YOUR PERSONA &rarr;
+          </div>
+        </div>
+
+        <!-- SLIDE 6: The Archetype Persona -->
+        <div class="wrapped-slide wrapped-slide-6" data-slide="5">
+          <div>
+            <div class="wrapped-brutal-badge" style="background: #111; color: #00F0FF;">
+              🧬 YOUR OFFICIAL PERSONA
+            </div>
+            <h2 class="wrapped-font-grotesk" style="font-size: 30px; line-height: 1.05; font-weight: 900; margin-top: 12px; letter-spacing: -1px; text-transform: uppercase;">
+              The Skyr &amp; Sambar<br><span style="background: #111; color: #00F0FF; padding: 2px 8px; border-radius: 8px;">Alchemist</span>
+            </h2>
+            <p style="font-size: 12px; font-weight: 600; margin-top: 6px; color: #e0f2fe;">
+              You sit in the top 1% of users who bridge traditional South Indian comfort with Scandinavian high-protein biohacking.
+            </p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="wrapped-brutal-card" style="background: #fff; color: #111; text-align: center; padding: 16px;">
+              <div style="font-size: 46px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));">🥣⚡🍌</div>
+              <div class="wrapped-font-grotesk" style="font-size: 18px; font-weight: 900; text-transform: uppercase; margin-top: 6px;">
+                The Alchemist Archetype
+              </div>
+              <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-top: 3px;">
+                &ldquo;Dosas for the soul, Skyr &amp; Yeast Protein for the gains.&rdquo;
+              </div>
+
+              <div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 10px;">
+                <span class="wrapped-brutal-badge" style="background: #fef08a; font-size: 9px;">🥞 Dosa Loyalist</span>
+                <span class="wrapped-brutal-badge" style="background: #bae6fd; font-size: 9px;">🇮🇸 Skyr Devotee</span>
+                <span class="wrapped-brutal-badge" style="background: #bbf7d0; font-size: 9px;">☕ Coffee Fueled</span>
+                <span class="wrapped-brutal-badge" style="background: #fbcfe8; font-size: 9px;">🔥 10d Streaker</span>
+              </div>
+            </div>
+
+            <div class="wrapped-brutal-card" style="background: #111; color: #fff; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <div style="font-size: 10px; font-weight: 800; color: #00F0FF;">MACROMIX SOCIETY TIER</div>
+                <div style="font-size: 13px; font-weight: 900; color: #fff;">Silver Spark Member</div>
+              </div>
+              <span style="font-size: 22px;">🛡️</span>
+            </div>
+          </div>
+
+          <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.7);">
+            TAP FOR YOUR SHARE CARD &rarr;
+          </div>
+        </div>
+
+        <!-- SLIDE 7: The Master Share Card (Zero mention of powered by gemini) -->
+        <div class="wrapped-slide wrapped-slide-7" data-slide="6">
+          <div>
+            <div class="wrapped-brutal-badge" style="background: #FFE600; color: #111;">
+              ✨ WEEKEND REVIEW SUMMARY
+            </div>
+            <h2 class="wrapped-font-grotesk" style="font-size: 30px; line-height: 1.05; font-weight: 900; margin-top: 10px; letter-spacing: -1px; text-transform: uppercase;">
+              Your 7-Day<br><span style="background: #00F59B; color: #111; padding: 2px 8px; border-radius: 8px;">Report Card</span>
+            </h2>
+          </div>
+
+          <!-- Master Shareable Card Preview -->
+          <div class="wrapped-brutal-card" id="wrappedShareableCard" style="background: #182234; border-color: #FFE600; color: #fff; padding: 16px; box-shadow: 5px 5px 0px #FFE600;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #334155; padding-bottom: 8px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 18px;">🥣</span>
+                <span style="font-weight: 900; font-size: 14px; letter-spacing: -0.5px;">macromix wrapped</span>
+              </div>
+              <span class="wrapped-brutal-badge" style="background: #FFE600; color: #111; font-size: 9px;">@istashmacros</span>
+            </div>
+
+            <div style="text-align: center; margin: 12px 0 10px;">
+              <div style="font-size: 10px; font-weight: 800; color: #00F0FF; text-transform: uppercase;">WEEKLY PERSONA</div>
+              <div class="wrapped-font-grotesk" style="font-size: 18px; font-weight: 900; color: #fff; margin-top: 2px;">
+                THE SKYR &amp; SAMBAR ALCHEMIST
+              </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div style="background: #0f172a; border: 2px solid #334155; border-radius: 10px; padding: 8px; text-align: center;">
+                <div style="font-size: 18px; font-weight: 900; color: #FF3366;" class="wrapped-font-grotesk" id="wrapped-card-cal">15,198</div>
+                <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Calories</div>
+              </div>
+              <div style="background: #0f172a; border: 2px solid #334155; border-radius: 10px; padding: 8px; text-align: center;">
+                <div style="font-size: 18px; font-weight: 900; color: #00F59B;" class="wrapped-font-grotesk" id="wrapped-card-p">869.2g</div>
+                <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Protein</div>
+              </div>
+              <div style="background: #0f172a; border: 2px solid #334155; border-radius: 10px; padding: 8px; text-align: center;">
+                <div style="font-size: 18px; font-weight: 900; color: #FFE600;" class="wrapped-font-grotesk" id="wrapped-card-streak">🔥 10d</div>
+                <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Streak</div>
+              </div>
+              <div style="background: #0f172a; border: 2px solid #334155; border-radius: 10px; padding: 8px; text-align: center;">
+                <div style="font-size: 18px; font-weight: 900; color: #A855F7;" class="wrapped-font-grotesk" id="wrapped-card-meals">40 Meals</div>
+                <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Logged</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; margin-top: 10px;">
+            <button type="button" class="wrapped-cta-btn" id="wrappedCopyShareBtn" style="font-size: 13px;">
+              <span>📋</span> Copy Story Card
+            </button>
+            <button type="button" class="wrapped-cta-btn" id="wrappedReplayBtn" style="flex: 0 0 85px; background: #334155; color: #fff; border-color: #64748b; font-size: 13px;">
+              <span>🔄</span> Replay
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Persistent Bottom Action -->
+      <div class="wrapped-bottom-bar">
+        <button type="button" class="wrapped-cta-btn" id="wrappedBottomShareBtn">
+          <span>⚡</span> Share My Week
+        </button>
+        <button type="button" class="wrapped-nav-btn" id="wrappedPrevSlideBtn" title="Previous slide">&larr;</button>
+        <button type="button" class="wrapped-nav-btn" id="wrappedNextSlideBtn" title="Next slide">&rarr;</button>
+      </div>
+
+      <!-- Toast Notification -->
+      <div class="wrapped-toast" id="wrappedToast">Card copied to clipboard! ✨</div>
     </div>
   </div>
 
