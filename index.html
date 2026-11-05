@@ -22,19 +22,19 @@
   <meta name="twitter:description" content="Voice-driven macronutrient tracking with circles-based Neobrutalism design and real accountability.">
   <meta name="twitter:image" content="icons/icon-512.png">
   
-  <link rel="manifest" href="manifest.json?v=15.5">
-  <link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=15.5">
-  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png?v=15.5">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=15.5">
-  <link rel="apple-touch-icon" href="icons/icon-192.png?v=15.5">
-  <link rel="shortcut icon" href="favicon.ico?v=15.5">
+  <link rel="manifest" href="manifest.json?v=15.6">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=15.6">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png?v=15.6">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png?v=15.6">
+  <link rel="apple-touch-icon" href="icons/icon-192.png?v=15.6">
+  <link rel="shortcut icon" href="favicon.ico?v=15.6">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=15.3">
+  <link rel="stylesheet" href="styles.css?v=15.6">
 </head>
 <body>
   <!-- Gooey SVG Filter for Header Tab Toggle (gooey-react technique) -->
@@ -171,17 +171,17 @@
         <div class="hidden-stack-edge-1" id="edge-stack-1" aria-hidden="true"></div>
 
         <!-- UNDER CARD (SURFACES UPWARDS AS TOP CARD PEELS AWAY) -->
-        <section class="main-top-card under-card" id="under-top-card" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; opacity: 0; visibility: hidden; transform: scale(0.93) translateY(8px); transform-origin: center center;">
+        <section class="main-top-card under-card" id="under-top-card" aria-hidden="true" style="position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; opacity: 0; visibility: hidden; transform: translateY(0);">
           <!-- Card Top Rim (Date Navigator) -->
           <div class="card-top-rim">
-            <button type="button" class="rim-btn date-nav-arrow" id="under-btn-date-prev" tabindex="-1" aria-hidden="true">◀</button>
+            <div class="rim-btn date-nav-arrow" style="visibility: hidden;" aria-hidden="true">◀</div>
             <div class="rim-center">
               <div class="rim-date">
                 <span class="rim-today-dot" id="under-today-indicator"></span>
                 <span id="under-date-label" class="date-nav-pill-inline">YESTERDAY</span>
               </div>
             </div>
-            <button type="button" class="rim-btn date-nav-arrow" id="under-btn-date-next" tabindex="-1" aria-hidden="true">▶</button>
+            <div class="rim-btn date-nav-arrow" style="visibility: hidden;" aria-hidden="true">▶</div>
           </div>
 
           <!-- Horizontal Calorie Progress Section -->
@@ -379,7 +379,7 @@
 
         <form id="text-log-form" class="text-input-wrap">
           <input type="text" id="manual-text-input" class="neo-input" placeholder="Or type e.g. 200g veg pulao and some veggies" autocomplete="off">
-          <button type="submit" class="btn-log" id="btn-submit-log" disabled><span class="btn-log-text">Log</span> <span class="btn-log-bolt" aria-hidden="true">⚡</span></button>
+          <button type="submit" class="btn-log" id="btn-submit-log" disabled><span class="btn-log-text">Log</span> <svg class="btn-log-bolt-svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></button>
         </form>
       </section>
 

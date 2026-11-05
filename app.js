@@ -1160,28 +1160,12 @@ function updateUnderCard(targetDate) {
 
   const underDateLabel = document.getElementById('under-date-label');
   const underTodayIndicator = document.getElementById('under-today-indicator');
-  const underPrevBtn = document.getElementById('under-btn-date-prev');
-  const underNextBtn = document.getElementById('under-btn-date-next');
 
   if (underDateLabel) {
     underDateLabel.textContent = formatRimDate(targetDate);
   }
   if (underTodayIndicator) {
     underTodayIndicator.style.display = (targetDate === getTodayDateString()) ? 'inline-block' : 'none';
-  }
-  if (underNextBtn) {
-    const isFuture = (targetDate >= getTodayDateString());
-    if (isFuture) {
-      underNextBtn.classList.add('disabled');
-      underNextBtn.disabled = true;
-    } else {
-      underNextBtn.classList.remove('disabled');
-      underNextBtn.disabled = false;
-    }
-  }
-  if (underPrevBtn) {
-    underPrevBtn.classList.remove('disabled');
-    underPrevBtn.disabled = false;
   }
 
   const logs = currentLogs.filter(l => getLogDate(l) === targetDate);
@@ -1801,7 +1785,7 @@ async function handleTextLog(e) {
     }
     if (submitBtn) {
       submitBtn.classList.remove('btn-logging');
-      submitBtn.innerHTML = '<span class="btn-log-text">Log</span> <span class="btn-log-bolt" aria-hidden="true">⚡</span>';
+      submitBtn.innerHTML = '<span class="btn-log-text">Log</span> <svg class="btn-log-bolt-svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>';
     }
     updateLogButtonState();
     if (btnTapRecord) {
@@ -1818,7 +1802,7 @@ CRITICAL INSTRUCTION: Analyze the audio or text carefully.
 1. SILENCE, NOISE & NON-FOOD REJECTION:
    - If the audio is silent, inaudible, contains only ambient background noise, clicks, mic static, or does NOT contain clear human speech explicitly describing food or beverages consumed, you MUST set "raw_transcript": "", "is_food": false, and "items": [].
    - If the input is conversational speech, questions, commands, background chatter, or does NOT describe actual food or drink consumed (for example: "we will not take one hour to search for a movie", "hello", "play music", "turn on lights"), you MUST set "is_food": false and "items": [].
-   - ABSOLUTE GUARDRAIL: NEVER guess, assume, or hallucinate food items (such as pistachios, banana, or chicken) from silence, background static, or examples in this prompt.
+   - ABSOLUTE GUARDRAIL: NEVER guess, assume, or invent food items from silence, background static, or examples. If no edible food items were spoken by the user, you MUST set "raw_transcript": "", "is_food": false, and "items": [].
 2. If and only if the input mentions edible food or beverages consumed, set "is_food": true, transcribe what was eaten, extract each food item entity, and compute precise macronutrients (calories, protein, carbs, fat, fiber).
 3. If an input lists multiple foods or describes a composite dish with distinct specified ingredient portions (for example: "chicken biryani with 300g rice and 100g chicken", "salad with 150g chicken and 2 tbsp dressing"), you MUST itemize each distinct component ingredient with its portion as a separate item in the "items" array.
 
@@ -2187,7 +2171,7 @@ async function processTranscript(transcript, audioBase64 = null) {
     }
     if (submitBtn) {
       submitBtn.classList.remove('btn-logging');
-      submitBtn.innerHTML = '<span class="btn-log-text">Log</span> <span class="btn-log-bolt" aria-hidden="true">⚡</span>';
+      submitBtn.innerHTML = '<span class="btn-log-text">Log</span> <svg class="btn-log-bolt-svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>';
     }
     updateLogButtonState();
     if (btnTapRecord) {
@@ -2268,6 +2252,8 @@ function initSpeechRecognition() {
 
 let voiceRecordingStartTime = 0;
 let maxObservedAudioVolume = 0;
+let speechVoiceFramesCount = 0;
+let speechRecognitionWasActive = false;
 
 async function startRecording() {
   if (isProcessingLog) return;
@@ -2284,6 +2270,8 @@ async function startRecording() {
   liveTranscript = '';
   voiceRecordingStartTime = Date.now();
   maxObservedAudioVolume = 0;
+  speechVoiceFramesCount = 0;
+  speechRecognitionWasActive = false;
   btnTapRecord.classList.add('recording');
   btnTapRecord.textContent = '⏹️ Stop Recording';
   setMicStatus('Listening... Speak food item & portion');
@@ -2292,7 +2280,10 @@ async function startRecording() {
     speechRecognition = initSpeechRecognition();
   }
   if (speechRecognition) {
-    try { speechRecognition.start(); } catch (e) {}
+    try {
+      speechRecognition.start();
+      speechRecognitionWasActive = true;
+    } catch (e) {}
   }
 
   audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -2318,17 +2309,28 @@ async function startRecording() {
 
     if (isProcessingLog) return;
 
-    // Guard against immediate stop or silence (resolves ghost food items like pistachio/banana)
-    if (!capturedTranscript) {
-      if (durationMs < 900 || audioBlob.size < 1200 || maxObservedAudioVolume < 5) {
-        setMicStatus("No speech detected. Please speak what you ate.", true);
-        AppLogger.log('UI', 'Recording discarded: duration too short or silent', {
-          durationMs,
-          blobSize: audioBlob.size,
-          maxVolume: maxObservedAudioVolume
-        });
-        return;
-      }
+    // DETERMINISTIC SILENCE GUARD (Resolves ghost food items like pistachio/banana):
+    // 1) If SpeechRecognition was active and produced no words, the user was silent. Do NOT call Gemini.
+    // 2) If SpeechRecognition was not active, require minimum duration AND minimum voice tract energy frames.
+    const isSilent = !capturedTranscript && (
+      speechRecognitionWasActive ||
+      durationMs < 900 ||
+      audioBlob.size < 1200 ||
+      speechVoiceFramesCount < 8 ||
+      maxObservedAudioVolume < 10
+    );
+
+    if (isSilent) {
+      setMicStatus("No speech detected. Please speak what you ate.", true);
+      AppLogger.log('UI', 'Recording discarded: silence detected (no ghost entry)', {
+        capturedTranscript,
+        speechRecognitionWasActive,
+        durationMs,
+        speechVoiceFramesCount,
+        maxVolume: maxObservedAudioVolume,
+        blobSize: audioBlob.size
+      });
+      return;
     }
 
     // Convert blob to base64
@@ -2380,6 +2382,12 @@ async function processRecordedAudio(audioBase64, capturedTranscript = "") {
     return;
   }
 
+  // If capturedTranscript is empty, NEVER call Gemini if SpeechRecognition was active or if voice frames were absent
+  if (speechRecognitionWasActive || speechVoiceFramesCount < 8) {
+    setMicStatus("No speech detected. Please speak what you ate.", true);
+    return;
+  }
+
   if (!audioBase64 || audioBase64.length < 500) {
     setMicStatus("No speech detected. Please speak what you ate.", true);
     return;
@@ -2420,6 +2428,10 @@ function startAudioVolumeTracker() {
 
     const avgVolume = volumeSum / bufferLength;
     maxObservedAudioVolume = Math.max(maxObservedAudioVolume, avgVolume);
+    // Track voice activity frames (typical human voice > 18)
+    if (avgVolume > 18) {
+      speechVoiceFramesCount++;
+    }
     if (avgVolume > 12) {
       resetSilenceTimer();
     }
@@ -2486,29 +2498,29 @@ function triggerDeckSwipe(offsetDays, direction = null, exitDirection = null) {
   const exitX = exitDir === 'left' ? '-120%' : '120%';
   const rot = exitDir === 'left' ? -10 : 10;
 
-  // Make under card visible and let it surface upwards with zoom in effect
+  // Make under card visible and let it surface
   underCard.style.visibility = 'visible';
   underCard.style.opacity = '1';
-  underCard.style.transition = 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease';
-  mainCard.style.transition = 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease-out';
+  underCard.style.transition = 'opacity 0.22s ease';
+  mainCard.style.transition = 'transform 0.26s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.22s ease-out';
 
-  mainCard.style.transform = `translateX(${exitX}) rotate(${rot}deg) scale(0.96)`;
+  mainCard.style.transform = `translateX(${exitX}) rotate(${rot}deg)`;
   mainCard.style.opacity = '0';
-  underCard.style.transform = 'scale(1) translateY(0)';
+  underCard.style.transform = 'translateY(0)';
 
-  if (edge1) edge1.style.transform = 'scale(1.02) translateX(-2px)';
-  if (edge2) edge2.style.transform = 'scale(1.02) translateX(-3px)';
+  if (edge1) edge1.style.transform = 'translateX(0)';
+  if (edge2) edge2.style.transform = 'translateX(0)';
 
   setTimeout(() => {
     changeDate(offsetDays, direction || (offsetDays < 0 ? 'prev' : 'next'));
 
     mainCard.style.transition = 'none';
     underCard.style.transition = 'none';
-    mainCard.style.transform = 'translateX(0) rotate(0deg) scale(1)';
+    mainCard.style.transform = 'translateX(0) rotate(0deg)';
     mainCard.style.opacity = '1';
 
     // Reset under card to recessed state and hide it at rest
-    underCard.style.transform = 'scale(0.93) translateY(8px)';
+    underCard.style.transform = 'translateY(0)';
     underCard.style.opacity = '0';
     underCard.style.visibility = 'hidden';
 
@@ -2517,7 +2529,7 @@ function triggerDeckSwipe(offsetDays, direction = null, exitDirection = null) {
 
     updateUnderCard(getOffsetDateString(selectedDate, -1));
     isAnimatingDeckTransition = false;
-  }, 270);
+  }, 260);
 }
 
 // --- Touch & Mouse Swipe Gestures for Day Navigation with Stacked Card Surfacing ---
@@ -2607,7 +2619,7 @@ function setupSwipeGestures() {
           updateUnderCard(neededDate);
         }
 
-        // Under card becomes visible and surfaces dynamically as user drags with zoom-in effect
+        // Under card becomes visible as user drags
         underCard.style.visibility = 'visible';
 
         const maxDrag = 180;
@@ -2615,16 +2627,11 @@ function setupSwipeGestures() {
         const rot = (dx / maxDrag) * 7; // subtle rotation up to 7 deg
 
         mainCard.style.transform = `translateX(${dx}px) rotate(${rot}deg)`;
-        
-        // Dynamic zoom-in surfacing from below (0.93 -> 1.0, translateY 8px -> 0px)
-        const currentScale = 0.93 + (0.07 * progress);
-        const currentY = 8 * (1 - progress);
-        const currentOpacity = 0.65 + (0.35 * progress);
-        underCard.style.transform = `scale(${currentScale.toFixed(3)}) translateY(${currentY.toFixed(1)}px)`;
-        underCard.style.opacity = currentOpacity.toFixed(2);
+        underCard.style.transform = 'translateY(0)';
+        underCard.style.opacity = Math.min(1, 0.4 + (progress * 0.6)).toFixed(2);
 
-        if (edge1) edge1.style.transform = `scale(${1 + 0.02 * progress}) translateX(${-2 * progress}px)`;
-        if (edge2) edge2.style.transform = `scale(${1 + 0.02 * progress}) translateX(${-3 * progress}px)`;
+        if (edge1) edge1.style.transform = 'translateX(0)';
+        if (edge2) edge2.style.transform = 'translateX(0)';
       }
     };
 
@@ -2673,18 +2680,18 @@ function setupSwipeGestures() {
       } else {
         // Cancelled or rubber-band snap back
         mainCard.style.transition = 'transform 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-        underCard.style.transition = 'transform 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.24s ease-out';
+        underCard.style.transition = 'opacity 0.22s ease-out';
         if (edge1) edge1.style.transition = 'transform 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
         if (edge2) edge2.style.transition = 'transform 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
 
         mainCard.style.transform = 'translateX(0) rotate(0deg)';
-        underCard.style.transform = 'scale(0.93) translateY(8px)';
+        underCard.style.transform = 'translateY(0)';
         underCard.style.opacity = '0';
         setTimeout(() => {
           if (!isTracking && !isAnimatingDeckTransition) {
             underCard.style.visibility = 'hidden';
           }
-        }, 240);
+        }, 220);
 
         if (edge1) edge1.style.transform = 'translateX(0)';
         if (edge2) edge2.style.transform = 'translateX(0)';

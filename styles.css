@@ -480,14 +480,13 @@ body {
   width: 100%;
   height: 100%;
   z-index: 3;
-  transform: scale(0.93) translateY(8px);
-  transform-origin: center center;
+  transform: translateY(0);
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease-out;
-  will-change: transform, opacity;
+  box-shadow: none;
+  transition: opacity 0.22s ease-out;
+  will-change: opacity;
 }
 
 .card-top-rim {
@@ -937,44 +936,55 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  min-width: 72px;
+  gap: 6px;
+  min-width: 78px;
+  height: 37px;
   box-sizing: border-box;
   transition: transform 0.06s cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 0.06s cubic-bezier(0.2, 0.9, 0.3, 1), background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
+.btn-log .btn-log-bolt-svg,
 .btn-log .btn-log-bolt {
   display: inline-block;
-  line-height: 1;
+  vertical-align: middle;
   transform-origin: center center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
-.btn-log:hover:not(:disabled) {
+.btn-log:hover:not(:disabled):not(.btn-logging) {
   background: #222222;
 }
 
-.btn-log:active:not(:disabled) {
+.btn-log:active:not(:disabled):not(.btn-logging) {
   transform: translate(1.5px, 1.5px);
   box-shadow: 0.5px 0.5px 0 #111111;
 }
 
-/* Logging in-flight state: color changes subtly, lightning icon rotates, size & label 'Log' stay intact */
+/* Logging in-flight state: distinctly inverted to Canary Yellow background with dark text & fast spinning bolt */
 .btn-log.btn-logging,
 .btn-log.is-logging {
-  background: #2D2708 !important;
-  color: #FFE600 !important;
-  border-color: #FFE600 !important;
+  background: #FFE600 !important;
+  color: #111111 !important;
+  border-color: #111111 !important;
   box-shadow: 2px 2px 0 #111111 !important;
   opacity: 1 !important;
   filter: none !important;
   cursor: wait !important;
   pointer-events: none !important;
   transform: none !important;
+  transition: none !important;
 }
 
+.btn-log.btn-logging .btn-log-bolt-svg,
+.btn-log.is-logging .btn-log-bolt-svg,
 .btn-log.btn-logging .btn-log-bolt,
 .btn-log.is-logging .btn-log-bolt {
-  animation: bolt-spin 0.75s linear infinite;
+  display: inline-block !important;
+  animation: bolt-spin 0.65s linear infinite !important;
+  transform-origin: 50% 50% !important;
+  will-change: transform;
 }
 
 @keyframes bolt-spin {
