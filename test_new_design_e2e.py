@@ -189,6 +189,9 @@ def test_refined_design_and_swiping_e2e(server_url):
                 total_fat_g: 12
             };
             localStorage.setItem(storageKey, JSON.stringify([testMeal]));
+            if (window.MacromixFirebase) {
+                window.MacromixFirebase.syncLocalMealsWithFirestore = async () => [testMeal];
+            }
             currentLogs = [testMeal];
             filterAndRenderSelectedDate();
         }''')

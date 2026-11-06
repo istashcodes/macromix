@@ -4603,7 +4603,7 @@ function closeIosInstallModal() {
 }
 
 // ==========================================================================
-// Weekend Wrapped Feature Controller (Exclusively for @istashmacros on Friday/Weekend)
+// Weekend Wrapped Feature Controller (Exclusively for @istashmacros and @kalay on Friday/Weekend)
 // ==========================================================================
 const WRAPPED_SLIDE_DURATION_MS = 6500;
 let wrappedCurrentSlide = 0;
@@ -4613,10 +4613,207 @@ let wrappedElapsed = 0;
 let wrappedIsPaused = false;
 let wrappedSoundEnabled = true;
 let wrappedAudioCtx = null;
+let _wrappedEventsInitialized = false;
+
+const WRAPPED_PROFILES = {
+  istashmacros: {
+    avatar: '🥣',
+    handle: '@istashmacros',
+    fridayTag: 'FRIDAY WRAPPED',
+    shareText: "🥣 @istashmacros's Weekend Review Wrapped:\n" +
+               "🔥 10-day streak unbroken!\n" +
+               "💪 869.2g Protein banked (29 chicken breasts equivalent)\n" +
+               "🧬 Persona: The Skyr & Sambar Alchemist\n" +
+               "Tracked on macromix.web.app",
+    slide1: {
+      subtitle: 'You logged consistently and kept your nutrition fire burning strong.',
+      totalCalories: '15,198',
+      badge: '40 MEALS',
+      totalProtein: '869.2',
+      proteinEquiv: 'Equivalent to <strong>29 chicken breasts</strong> or <strong>145 whole eggs</strong>!',
+      streak: '10-DAY STREAK',
+      streakSubtitle: 'Unbroken momentum alive!'
+    },
+    slide2: {
+      title: 'The Dosa & Skyr<br><span style="background: #111; color: #FFE600; padding: 2px 8px; border-radius: 8px;">Power Combo</span>',
+      subtitle: 'When hunger struck, you had your signature breakfast playbook locked in.',
+      topItems: [
+        { name: '🍌 Bananas', badge: '7 Times', bg: '#FFE600' },
+        { name: '🥞 Crispy Dosa', badge: '5 Times', bg: '#fed7aa' },
+        { name: '🥣 Rolled Oats & Walnuts', badge: '5 Times', bg: '#e2e8f0' },
+        { name: '☕ Filter Coffee with Milk', badge: '3 Times', bg: '#dbeafe' }
+      ],
+      quote: 'I started off by having four dosas, rolled oats with walnuts and yeast protein... then 200g of Skyr.',
+      peakLabel: 'Peak Fuel Window',
+      peakTime: '08:00 – 10:00 AM'
+    },
+    slide3: {
+      dayTitle: 'Wednesday, Oct 30',
+      subtitle: 'When you fired on all cylinders, your macros aligned with laser precision.',
+      peakProtein: '156.9',
+      pctGoal: '+112% OF GOAL',
+      targetProtein: '140g',
+      scorecard1: { label: 'Fat Target (65g)', value: '68.2g Avg (95% Precision)', pct: 95 },
+      scorecard2: { label: 'Protein Target (140g)', value: '124.2g Avg (89% Compliance)', pct: 89 },
+      winTitle: 'Consistency Win',
+      winBody: 'You hit <strong>30g+ of fiber</strong> on 4 separate days (Oct 29, 30, 31, and Nov 02)!'
+    },
+    slide4: {
+      title: 'The Missing<br><span style="background: #FFE600; color: #111; padding: 2px 8px; border-radius: 8px;">13.5g of Fiber</span>',
+      subtitle: 'Your fiber averaged <strong>24.5g</strong> vs your <strong>38g</strong> target. No boring salads — here is how to bridge it with foods you already love:',
+      swap1: {
+        badge: 'SWAP 1 • MORNING',
+        gain: '+9g FIBER',
+        name: 'Stir 2 tbsp Chia Seeds into your Skyr & Rolled Oats',
+        desc: 'You already logged chia seeds on Oct 30! Making it a daily morning staple adds <strong>9g prebiotic fiber</strong> effortlessly.'
+      },
+      swap2: {
+        badge: 'SWAP 2 • EVENING',
+        gain: '+8g FIBER & +12g P',
+        name: '1 Bowl of Spiced Chana Sundal or Sprouted Moong',
+        desc: 'Pairs naturally with your 5 PM milk coffee. Bridges your fiber gap while keeping calories tight.'
+      }
+    },
+    slide5: {
+      title: 'Under-Eating<br><span style="background: #fff; color: #FF3366; padding: 2px 8px; border-radius: 8px;">Deficit Detected</span>',
+      subtitle: 'Most people over-eat; you actually <strong>under-consumed</strong> by ~529 kcal/day compared to your 2700 kcal goal.',
+      badge: '-529 KCAL DEFICIT',
+      avgKcal: '2,171',
+      targetDetail: 'Target: <strong>2,700 kcal</strong> &bull; Lowest day: <strong>1,654 kcal</strong> (Nov 03).',
+      prescriptionHtml: '&bull; <strong>Don\'t restrict before social dinners:</strong> Your week ran at an ~3,700 kcal cumulative deficit. You have plenty of calorie runway.<br>&bull; <strong>Add a late afternoon shake:</strong> A quick protein smoothie with milk + 1 banana prevents evening fatigue.'
+    },
+    slide6: {
+      title: 'The Skyr & Sambar<br><span style="background: #111; color: #00F0FF; padding: 2px 8px; border-radius: 8px;">Alchemist</span>',
+      subtitle: 'You sit in the top 1% of users who bridge traditional South Indian comfort with Scandinavian high-protein biohacking.',
+      emoji: '🥣⚡🍌',
+      archetypeName: 'The Alchemist Archetype',
+      quote: 'Dosas for the soul, Skyr &amp; Yeast Protein for the gains.',
+      tags: [
+        { text: '🥞 Dosa Loyalist', bg: '#fef08a' },
+        { text: '🇮🇸 Skyr Devotee', bg: '#bae6fd' },
+        { text: '☕ Coffee Fueled', bg: '#bbf7d0' },
+        { text: '🔥 10d Streaker', bg: '#fbcfe8' }
+      ],
+      tier: 'Silver Spark Member'
+    },
+    slide7: {
+      handle: '@istashmacros',
+      personaUpper: 'THE SKYR & SAMBAR ALCHEMIST',
+      stat1Val: '15,198',
+      stat1Label: 'Calories',
+      stat2Val: '869.2g',
+      stat2Label: 'Protein',
+      stat3Val: '🔥 10d',
+      stat3Label: 'Streak',
+      stat4Val: '40 Meals',
+      stat4Label: 'Logged'
+    }
+  },
+  kalay: {
+    avatar: '☕',
+    handle: '@kalay',
+    fridayTag: 'FRIDAY WRAPPED',
+    shareText: "☕ @kalay's Weekend Review Wrapped:\n" +
+               "🔥 4-day streak rolling!\n" +
+               "💪 761.2g Protein banked (25 chicken breasts equivalent)\n" +
+               "🌾 188.3g Fiber (Beat daily goal at 105%!)\n" +
+               "🧬 Persona: The Filter Coffee & Dosa Titan\n" +
+               "Tracked on macromix.web.app",
+    slide1: {
+      subtitle: 'You brought serious appetite and kept your nutrition engine firing on high octane!',
+      totalCalories: '19,366',
+      badge: '6 DAYS LOGGED',
+      totalProtein: '761.2',
+      proteinEquiv: 'Equivalent to <strong>25 whole chicken breasts</strong> or <strong>127 whole eggs</strong>!',
+      streak: '4-DAY STREAK',
+      streakSubtitle: 'Momentum rolling strong!'
+    },
+    slide2: {
+      title: 'Filter Coffee &<br><span style="background: #111; color: #FFE600; padding: 2px 8px; border-radius: 8px;">Dosa Masterclass</span>',
+      subtitle: 'When hunger called, your traditional breakfast and evening cafe ritual answered every single time.',
+      topItems: [
+        { name: '☕ Filter Coffee', badge: '7 Times', bg: '#FFE600' },
+        { name: '🥞 Plain & Egg Dosa', badge: '12 Times', bg: '#fed7aa' },
+        { name: '🍰 Vanilla Cake & Sweets', badge: '4 Times', bg: '#fbcfe8' },
+        { name: '🥚 Hard Boiled Eggs', badge: '3 Times', bg: '#dbeafe' }
+      ],
+      quote: 'Started off with hot filter coffee, 3 idlis, brinjal drumstick therakkal, boiled egg, then rice with fried lady fish...',
+      peakLabel: 'Peak Fuel Ritual',
+      peakTime: '08:30 AM & 05:00 PM Kaapi'
+    },
+    slide3: {
+      dayTitle: 'Monday, Nov 02',
+      subtitle: 'When you fired on all cylinders, your protein surge reached towering heights.',
+      peakProtein: '178.2',
+      pctGoal: '+119% OF GOAL',
+      targetProtein: '150g',
+      scorecard1: { label: 'Fiber Target (30g)', value: '31.4g Avg (105% Precision)', pct: 100 },
+      scorecard2: { label: 'Protein Target (150g)', value: '126.9g Avg (85% Compliance)', pct: 85 },
+      winTitle: 'Fiber Champion',
+      winBody: 'You smashed your fiber goal, logging up to <strong>43g of fiber</strong> in a single day thanks to chana, dal, and poriyals!'
+    },
+    slide4: {
+      title: 'The Sweet Tooth<br><span style="background: #FFE600; color: #111; padding: 2px 8px; border-radius: 8px;">Macro Pivot</span>',
+      subtitle: 'Your fiber is dialed at 105%. Here is how to keep calories tight while honoring foods you love:',
+      swap1: {
+        badge: 'SWAP 1 • EVENING',
+        gain: 'SAVE 240 KCAL & +10g P',
+        name: 'Trade Vanilla Cake & Murukku for Warm Chana Sundal',
+        desc: 'Cuts 18g of excess fat while complementing your 5 PM filter coffee with fiber and clean plant protein.'
+      },
+      swap2: {
+        badge: 'SWAP 2 • BREAKFAST',
+        gain: '+14g PROTEIN',
+        name: 'Swap 2 Plain Dosas for Pesarattu (Moong Dal Dosa) or Adai',
+        desc: 'Keeps the exact same crispy warmth and chutney experience, while doubling your protein absorption.'
+      }
+    },
+    slide5: {
+      title: 'High Energy<br><span style="background: #fff; color: #FF3366; padding: 2px 8px; border-radius: 8px;">Surplus Detected</span>',
+      subtitle: 'You averaged <strong>3,228 kcal/day</strong> against your 2,000 kcal target — running at an energy surplus of +1,228 kcal/day.',
+      badge: '+1,228 KCAL SURPLUS',
+      avgKcal: '3,228',
+      targetDetail: 'Target: <strong>2,000 kcal</strong> &bull; Carbs: <strong>404g avg</strong> &bull; Fat: <strong>122.8g avg</strong>.',
+      prescriptionHtml: '&bull; <strong>Tawa Grill vs Deep Fry:</strong> Switch from deep-fried fish to tawa grilled meen to trim 250 kcal of cooking oil instantly.<br>&bull; <strong>Post-Meal 15-min Stroll:</strong> A gentle walk after heavy dosa lunches channels high carbohydrate intake directly into muscle glycogen.'
+    },
+    slide6: {
+      title: 'The Filter Coffee &<br><span style="background: #111; color: #00F0FF; padding: 2px 8px; border-radius: 8px;">Dosa Titan</span>',
+      subtitle: 'You honor authentic South Indian cuisine with unapologetic passion, massive caloric fire, and rich traditional flavor.',
+      emoji: '☕🥞🐟🔥',
+      archetypeName: 'The Dosa Titan Archetype',
+      quote: 'Dosas by the plate, piping hot kaapi, and feasts built for champions.',
+      tags: [
+        { text: '🥞 Dosa Titan', bg: '#fef08a' },
+        { text: '☕ Kaapi Devotee', bg: '#bae6fd' },
+        { text: '🐟 Meen Kuzhambu Fan', bg: '#bbf7d0' },
+        { text: '🔥 4d Streaker', bg: '#fbcfe8' }
+      ],
+      tier: 'Gold Feast Member'
+    },
+    slide7: {
+      handle: '@kalay',
+      personaUpper: 'THE FILTER COFFEE & DOSA TITAN',
+      stat1Val: '19,366',
+      stat1Label: 'Calories',
+      stat2Val: '761.2g',
+      stat2Label: 'Protein',
+      stat3Val: '🔥 4d',
+      stat3Label: 'Streak',
+      stat4Val: '188g',
+      stat4Label: 'Fiber (105%)'
+    }
+  }
+};
+
+function getWrappedActiveHandle() {
+  const handle = (currentUserHandle || (typeof localStorage !== 'undefined' ? localStorage.getItem('macromix_user_handle') : '') || '').trim().toLowerCase().replace(/^@+/, '');
+  if (WRAPPED_PROFILES[handle]) return handle;
+  return 'istashmacros';
+}
 
 function isWeekendWrappedEligible() {
   const handle = (currentUserHandle || (typeof localStorage !== 'undefined' ? localStorage.getItem('macromix_user_handle') : '') || '').trim().toLowerCase().replace(/^@+/, '');
-  if (handle !== 'istashmacros') return false;
+  if (handle !== 'istashmacros' && handle !== 'kalay') return false;
 
   // Check URL query param ?wrapped=1 or ?wrapped=true
   if (typeof window !== 'undefined' && window.location) {
@@ -4629,6 +4826,398 @@ function isWeekendWrappedEligible() {
   // Check Friday (5), Saturday (6), Sunday (0)
   const day = new Date().getDay();
   return day === 5 || day === 6 || day === 0;
+}
+
+function renderWeeklyWrappedSlides(handle) {
+  const normalized = (handle || getWrappedActiveHandle() || '').trim().toLowerCase().replace(/^@+/, '');
+  const profile = WRAPPED_PROFILES[normalized] || WRAPPED_PROFILES['istashmacros'];
+
+  const avatarEl = document.getElementById('wrappedUserAvatar');
+  if (avatarEl) avatarEl.textContent = profile.avatar;
+
+  const handleEl = document.getElementById('wrappedUserHandle');
+  if (handleEl) handleEl.textContent = profile.handle;
+
+  const deck = document.getElementById('wrappedSlidesDeck');
+  if (!deck) return;
+
+  const s1 = profile.slide1;
+  const s2 = profile.slide2;
+  const s3 = profile.slide3;
+  const s4 = profile.slide4;
+  const s5 = profile.slide5;
+  const s6 = profile.slide6;
+  const s7 = profile.slide7;
+
+  const topItemsHtml = s2.topItems.map((item, idx) => {
+    const borderStyle = idx < s2.topItems.length - 1 ? 'border-bottom: 2px dashed #e2e8f0; padding-bottom: 4px;' : '';
+    return `<div style="display: flex; justify-content: space-between; align-items: center; ${borderStyle}">
+      <span style="font-weight: 800; font-size: 13px;">${item.name}</span>
+      <span class="wrapped-brutal-badge" style="background: ${item.bg}; padding: 2px 8px; font-size: 10px;">${item.badge}</span>
+    </div>`;
+  }).join('');
+
+  const tagsHtml = s6.tags.map(t =>
+    `<span class="wrapped-brutal-badge" style="background: ${t.bg}; font-size: 9px;">${t.text}</span>`
+  ).join('');
+
+  deck.innerHTML = `
+    <!-- SLIDE 1: The Overture / Scale -->
+    <div class="wrapped-slide wrapped-slide-1 active" data-slide="0">
+      <div style="position: relative;">
+        <div class="wrapped-brutal-badge" style="background: #111; color: #FFE600;">
+          ⚡ 7-DAY NUTRITION REEL
+        </div>
+        <h1 class="wrapped-font-grotesk" style="font-size: 34px; line-height: 1.02; font-weight: 900; margin-top: 12px; text-transform: uppercase; letter-spacing: -1.5px; color: #111;">
+          Your Week<br><span style="background: #111; color: #fff; padding: 2px 8px; border-radius: 8px;">In Fuel</span>
+        </h1>
+        <p style="font-size: 13px; font-weight: 700; margin-top: 8px; color: #222;">
+          ${s1.subtitle}
+        </p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="wrapped-brutal-card" style="background: #fff; transform: rotate(-1deg);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+            <div>
+              <div class="wrapped-stat-hero-number" id="wrapped-stat-cal" style="color: #FF3366;">${s1.totalCalories}</div>
+              <div class="wrapped-sub-hero-label" style="color: #64748b;">Total Calories Logged</div>
+            </div>
+            <div class="wrapped-brutal-badge" id="wrapped-stat-meals" style="background: #FFE600; font-size: 11px;">${s1.badge}</div>
+          </div>
+        </div>
+
+        <div class="wrapped-brutal-card" style="background: #fff; transform: rotate(1.5deg);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+            <div>
+              <div class="wrapped-stat-hero-number" id="wrapped-stat-protein" style="color: #111;">${s1.totalProtein}<span style="font-size: 24px;">g</span></div>
+              <div class="wrapped-sub-hero-label" style="color: #64748b;">Total Protein Banked</div>
+            </div>
+            <div style="font-size: 28px;">🍗</div>
+          </div>
+          <p style="font-size: 12px; font-weight: 700; color: #475569; margin-top: 6px;">
+            ${s1.proteinEquiv}
+          </p>
+        </div>
+
+        <div class="wrapped-brutal-card" style="background: #111; color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 28px;">🔥</span>
+            <div>
+              <div style="font-size: 16px; font-weight: 900; color: #FFE600;" id="wrapped-stat-streak">${s1.streak}</div>
+              <div style="font-size: 11px; color: #94a3b8; font-weight: 700;">${s1.streakSubtitle}</div>
+            </div>
+          </div>
+          <div class="wrapped-brutal-badge" style="background: #00F59B; color: #111;">ACTIVE</div>
+        </div>
+      </div>
+
+      <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(0,0,0,0.6);">
+        TAP ANYWHERE TO CONTINUE &rarr;
+      </div>
+    </div>
+
+    <!-- SLIDE 2: The MVP Meal & Habit -->
+    <div class="wrapped-slide wrapped-slide-2" data-slide="1">
+      <div>
+        <div class="wrapped-brutal-badge" style="background: #FFE600; color: #111;">
+          👑 YOUR #1 COMFORT WEAPON
+        </div>
+        <h2 class="wrapped-font-grotesk" style="font-size: 32px; line-height: 1.05; font-weight: 900; margin-top: 12px; letter-spacing: -1px; text-transform: uppercase;">
+          ${s2.title}
+        </h2>
+        <p style="font-size: 13px; font-weight: 600; margin-top: 6px; color: #ffe4e6;">
+          ${s2.subtitle}
+        </p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="wrapped-brutal-card" style="background: #fff; color: #111;">
+          <div style="font-size: 11px; font-weight: 900; color: #e11d48; text-transform: uppercase;">
+            Top Logged Fuel Items
+          </div>
+          <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+            ${topItemsHtml}
+          </div>
+        </div>
+
+        <div class="wrapped-brutal-card" style="background: #111; color: #fff; border-color: #FFE600;">
+          <div style="font-size: 10px; font-weight: 800; color: #FFE600; text-transform: uppercase;">
+            🎙️ From Your Real Audio Logs:
+          </div>
+          <p style="font-size: 12px; font-style: italic; font-weight: 600; margin-top: 4px; color: #f8fafc; line-height: 1.35;">
+            &ldquo;${s2.quote}&rdquo;
+          </p>
+        </div>
+
+        <div class="wrapped-brutal-badge" style="background: #fff; color: #111; align-self: flex-start; font-size: 11px;">
+          ⏰ ${s2.peakLabel}: <strong>${s2.peakTime}</strong>
+        </div>
+      </div>
+
+      <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.7);">
+        TAP TO VIEW HIGHLIGHTS &rarr;
+      </div>
+    </div>
+
+    <!-- SLIDE 3: Consistency High Note -->
+    <div class="wrapped-slide wrapped-slide-3" data-slide="2">
+      <div>
+        <div class="wrapped-brutal-badge" style="background: #111; color: #00F59B;">
+          🏆 THE MASTERCLASS DAY
+        </div>
+        <h2 class="wrapped-font-grotesk" style="font-size: 32px; line-height: 1.05; font-weight: 900; margin-top: 12px; letter-spacing: -1px; text-transform: uppercase;">
+          ${s3.dayTitle}<br><span style="background: #111; color: #fff; padding: 2px 8px; border-radius: 8px;">Peak Output</span>
+        </h2>
+        <p style="font-size: 13px; font-weight: 700; margin-top: 6px; color: #064e3b;">
+          ${s3.subtitle}
+        </p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="wrapped-brutal-card" style="background: #fff;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-size: 11px; font-weight: 800; color: #64748b;">RECORD PROTEIN HIT</div>
+              <div class="wrapped-stat-hero-number" style="color: #059669; font-size: 38px;">${s3.peakProtein}<span style="font-size: 20px;">g</span></div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 10px; font-weight: 900; background: #d1fae5; color: #065f46; padding: 3px 8px; border-radius: 999px; border: 1.5px solid #059669;">
+                ${s3.pctGoal}
+              </div>
+              <div style="font-size: 11px; font-weight: 800; color: #475569; margin-top: 4px;">Target: ${s3.targetProtein}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="wrapped-brutal-card" style="background: #fff;">
+          <div style="font-size: 11px; font-weight: 900; color: #475569; text-transform: uppercase; margin-bottom: 6px;">
+            7-Day Macro Accuracy Scorecard
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800;">
+                <span>${s3.scorecard1.label}</span>
+                <span style="color: #059669;">${s3.scorecard1.value}</span>
+              </div>
+              <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin-top: 3px;">
+                <div style="width: ${s3.scorecard1.pct}%; height: 100%; background: #059669;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800;">
+                <span>${s3.scorecard2.label}</span>
+                <span style="color: #0284c7;">${s3.scorecard2.value}</span>
+              </div>
+              <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin-top: 3px;">
+                <div style="width: ${s3.scorecard2.pct}%; height: 100%; background: #0284c7;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="wrapped-brutal-card" style="background: #111; color: #fff; padding: 10px 14px;">
+          <div style="font-size: 11px; font-weight: 800; color: #00F59B;">
+            ✨ ${s3.winTitle}:
+          </div>
+          <p style="font-size: 12px; font-weight: 600; color: #cbd5e1; margin-top: 3px;">
+            ${s3.winBody}
+          </p>
+        </div>
+      </div>
+
+      <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(0,0,0,0.6);">
+        TAP TO UNLOCK DIET RECOMMENDATIONS &rarr;
+      </div>
+    </div>
+
+    <!-- SLIDE 4: The Intelligent Gap & Culturally Tailored Swaps -->
+    <div class="wrapped-slide wrapped-slide-4" data-slide="3">
+      <div>
+        <div class="wrapped-brutal-badge" style="background: #FFE600; color: #111;">
+          💡 NUTRITION RECOMMENDATION
+        </div>
+        <h2 class="wrapped-font-grotesk" style="font-size: 30px; line-height: 1.05; font-weight: 900; margin-top: 12px; letter-spacing: -1px; text-transform: uppercase;">
+          ${s4.title}
+        </h2>
+        <p style="font-size: 12px; font-weight: 600; margin-top: 6px; color: #f3e8ff;">
+          ${s4.subtitle}
+        </p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="wrapped-brutal-card" style="background: #fff; color: #111; padding: 14px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span class="wrapped-brutal-badge" style="background: #c084fc; color: #fff; font-size: 9px;">${s4.swap1.badge}</span>
+            <span style="font-weight: 900; font-size: 11px; color: #7c3aed;">${s4.swap1.gain}</span>
+          </div>
+          <div style="font-weight: 800; font-size: 13px; margin-top: 6px;">
+            ${s4.swap1.name}
+          </div>
+          <p style="font-size: 11px; color: #475569; font-weight: 600; margin-top: 3px;">
+            ${s4.swap1.desc}
+          </p>
+        </div>
+
+        <div class="wrapped-brutal-card" style="background: #fff; color: #111; padding: 14px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span class="wrapped-brutal-badge" style="background: #fde047; color: #111; font-size: 9px;">${s4.swap2.badge}</span>
+            <span style="font-weight: 900; font-size: 11px; color: #059669;">${s4.swap2.gain}</span>
+          </div>
+          <div style="font-weight: 800; font-size: 13px; margin-top: 6px;">
+            ${s4.swap2.name}
+          </div>
+          <p style="font-size: 11px; color: #475569; font-weight: 600; margin-top: 3px;">
+            ${s4.swap2.desc}
+          </p>
+        </div>
+      </div>
+
+      <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.7);">
+        TAP FOR OVER/UNDER ANALYSIS &rarr;
+      </div>
+    </div>
+
+    <!-- SLIDE 5: Over/Under Intake -->
+    <div class="wrapped-slide wrapped-slide-5" data-slide="4">
+      <div>
+        <div class="wrapped-brutal-badge" style="background: #fff; color: #111;">
+          ⚖️ THE BALANCE BEAM
+        </div>
+        <h2 class="wrapped-font-grotesk" style="font-size: 30px; line-height: 1.05; font-weight: 900; margin-top: 12px; letter-spacing: -1px; text-transform: uppercase;">
+          ${s5.title}
+        </h2>
+        <p style="font-size: 12px; font-weight: 600; margin-top: 6px; color: #ffe4e6;">
+          ${s5.subtitle}
+        </p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="wrapped-brutal-card" style="background: #fff; color: #111;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748b;">DAILY AVERAGE INTAKE</span>
+            <span class="wrapped-brutal-badge" style="background: #fee2e2; color: #dc2626; font-size: 9px;">${s5.badge}</span>
+          </div>
+          <div class="wrapped-stat-hero-number" style="color: #FF3366; margin-top: 4px; font-size: 38px;">${s5.avgKcal}<span style="font-size: 18px;"> kcal</span></div>
+          <p style="font-size: 11px; font-weight: 700; color: #475569; margin-top: 4px;">
+            ${s5.targetDetail}
+          </p>
+        </div>
+
+        <div class="wrapped-brutal-card" style="background: #111; color: #fff; border-color: #FFE600;">
+          <div style="font-size: 10px; font-weight: 900; color: #FFE600; text-transform: uppercase;">
+            🛡️ Weekend Strategy Prescription
+          </div>
+          <div style="font-size: 11px; font-weight: 600; color: #f1f5f9; margin-top: 6px; line-height: 1.4;">
+            ${s5.prescriptionHtml}
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.7);">
+        TAP TO REVEAL YOUR PERSONA &rarr;
+      </div>
+    </div>
+
+    <!-- SLIDE 6: The Archetype Persona -->
+    <div class="wrapped-slide wrapped-slide-6" data-slide="5">
+      <div>
+        <div class="wrapped-brutal-badge" style="background: #111; color: #00F0FF;">
+          🧬 YOUR OFFICIAL PERSONA
+        </div>
+        <h2 class="wrapped-font-grotesk" style="font-size: 30px; line-height: 1.05; font-weight: 900; margin-top: 12px; letter-spacing: -1px; text-transform: uppercase;">
+          ${s6.title}
+        </h2>
+        <p style="font-size: 12px; font-weight: 600; margin-top: 6px; color: #e0f2fe;">
+          ${s6.subtitle}
+        </p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="wrapped-brutal-card" style="background: #fff; color: #111; text-align: center; padding: 16px;">
+          <div style="font-size: 46px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));">${s6.emoji}</div>
+          <div class="wrapped-font-grotesk" style="font-size: 18px; font-weight: 900; text-transform: uppercase; margin-top: 6px;">
+            ${s6.archetypeName}
+          </div>
+          <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-top: 3px;">
+            &ldquo;${s6.quote}&rdquo;
+          </div>
+
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 10px;">
+            ${tagsHtml}
+          </div>
+        </div>
+
+        <div class="wrapped-brutal-card" style="background: #111; color: #fff; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <div style="font-size: 10px; font-weight: 800; color: #00F0FF;">MACROMIX SOCIETY TIER</div>
+            <div style="font-size: 13px; font-weight: 900; color: #fff;">${s6.tier}</div>
+          </div>
+          <span style="font-size: 22px;">🛡️</span>
+        </div>
+      </div>
+
+      <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.7);">
+        TAP FOR YOUR SHARE CARD &rarr;
+      </div>
+    </div>
+
+    <!-- SLIDE 7: The Master Share Card -->
+    <div class="wrapped-slide wrapped-slide-7" data-slide="6">
+      <div>
+        <div class="wrapped-brutal-badge" style="background: #FFE600; color: #111;">
+          ✨ WEEKEND REVIEW SUMMARY
+        </div>
+        <h2 class="wrapped-font-grotesk" style="font-size: 30px; line-height: 1.05; font-weight: 900; margin-top: 10px; letter-spacing: -1px; text-transform: uppercase;">
+          Your 7-Day<br><span style="background: #00F59B; color: #111; padding: 2px 8px; border-radius: 8px;">Report Card</span>
+        </h2>
+      </div>
+
+      <!-- Master Shareable Card Preview -->
+      <div class="wrapped-brutal-card" id="wrappedShareableCard" style="background: #182234; border-color: #FFE600; color: #fff; padding: 16px; box-shadow: 5px 5px 0px #FFE600;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #334155; padding-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 18px;">🥣</span>
+            <span style="font-weight: 900; font-size: 14px; letter-spacing: -0.5px;">macromix wrapped</span>
+          </div>
+          <span class="wrapped-brutal-badge" style="background: #FFE600; color: #111; font-size: 9px;">${s7.handle}</span>
+        </div>
+
+        <div style="text-align: center; margin: 12px 0 10px;">
+          <div style="font-size: 10px; font-weight: 800; color: #00F0FF; text-transform: uppercase;">WEEKLY PERSONA</div>
+          <div class="wrapped-font-grotesk" style="font-size: 18px; font-weight: 900; color: #fff; margin-top: 2px;">
+            ${s7.personaUpper}
+          </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <div style="background: #0f172a; border: 2px solid #334155; border-radius: 10px; padding: 8px; text-align: center;">
+            <div style="font-size: 18px; font-weight: 900; color: #FF3366;" class="wrapped-font-grotesk">${s7.stat1Val}</div>
+            <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">${s7.stat1Label}</div>
+          </div>
+          <div style="background: #0f172a; border: 2px solid #334155; border-radius: 10px; padding: 8px; text-align: center;">
+            <div style="font-size: 18px; font-weight: 900; color: #00F59B;" class="wrapped-font-grotesk">${s7.stat2Val}</div>
+            <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">${s7.stat2Label}</div>
+          </div>
+          <div style="background: #0f172a; border: 2px solid #334155; border-radius: 10px; padding: 8px; text-align: center;">
+            <div style="font-size: 18px; font-weight: 900; color: #FFE600;" class="wrapped-font-grotesk">${s7.stat3Val}</div>
+            <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">${s7.stat3Label}</div>
+          </div>
+          <div style="background: #0f172a; border: 2px solid #334155; border-radius: 10px; padding: 8px; text-align: center;">
+            <div style="font-size: 18px; font-weight: 900; color: #A855F7;" class="wrapped-font-grotesk">${s7.stat4Val}</div>
+            <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">${s7.stat4Label}</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 14px; width: 100%;">
+        <button type="button" class="wrapped-cta-btn" id="wrappedCopyShareBtn" style="width: 100%; font-size: 14px; padding: 12px 18px;">
+          <span>⚡</span> Share Story Card
+        </button>
+      </div>
+    </div>
+  `;
 }
 
 function updateWeekendWrappedVisibility() {
@@ -4785,9 +5374,11 @@ function toggleWrappedPause() {
   }
 }
 
-function openWeeklyWrappedModal() {
+function openWeeklyWrappedModal(handleOverride) {
   const modal = document.getElementById('weekly-wrapped-modal');
   if (!modal || !modal.classList.contains('hidden')) return;
+  const activeHandle = handleOverride || getWrappedActiveHandle();
+  renderWeeklyWrappedSlides(activeHandle);
   modal.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   wrappedCurrentSlide = 0;
@@ -4809,11 +5400,9 @@ function closeWeeklyWrappedModal() {
 }
 
 function triggerWrappedShare() {
-  const text = "🥣 @istashmacros's Weekend Review Wrapped:\n" +
-               "🔥 10-day streak unbroken!\n" +
-               "💪 869.2g Protein banked (29 chicken breasts equivalent)\n" +
-               "🧬 Persona: The Skyr & Sambar Alchemist\n" +
-               "Tracked on macromix.web.app";
+  const handle = getWrappedActiveHandle();
+  const profile = WRAPPED_PROFILES[handle] || WRAPPED_PROFILES['istashmacros'];
+  const text = profile.shareText;
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text).then(() => {
       showWrappedToast('Summary copied to clipboard! 🚀');
@@ -4826,6 +5415,9 @@ function triggerWrappedShare() {
 }
 
 function initWeekendWrappedEvents() {
+  if (_wrappedEventsInitialized) return;
+  _wrappedEventsInitialized = true;
+
   const closeBtn = document.getElementById('btn-close-wrapped');
   if (closeBtn) {
     closeBtn.addEventListener('click', (e) => {
@@ -4905,17 +5497,15 @@ function initWeekendWrappedEvents() {
   bindStoryTapZone(tapLeft, -1);
   bindStoryTapZone(tapRight, 1);
 
-  const copyShareBtn = document.getElementById('wrappedCopyShareBtn');
-  if (copyShareBtn) {
-    copyShareBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      triggerWrappedShare();
-    });
-  }
-
   const modal = document.getElementById('weekly-wrapped-modal');
   if (modal) {
     modal.addEventListener('click', (e) => {
+      const shareBtn = e.target.closest('#wrappedCopyShareBtn');
+      if (shareBtn) {
+        e.stopPropagation();
+        triggerWrappedShare();
+        return;
+      }
       if (e.target === modal) {
         closeWeeklyWrappedModal();
       }
@@ -5143,6 +5733,11 @@ window.openWeeklyWrappedModal = openWeeklyWrappedModal;
 window.closeWeeklyWrappedModal = closeWeeklyWrappedModal;
 window.isWeekendWrappedEligible = isWeekendWrappedEligible;
 window.updateWeekendWrappedVisibility = updateWeekendWrappedVisibility;
+window.renderWeeklyWrappedSlides = renderWeeklyWrappedSlides;
+window.WRAPPED_PROFILES = WRAPPED_PROFILES;
+window.getWrappedActiveHandle = getWrappedActiveHandle;
+window.getWrappedCurrentSlide = () => wrappedCurrentSlide;
+window.isWrappedPaused = () => wrappedIsPaused;
 
 // ─── PWA Launch Handler Consumer (Captures deep links into active PWA) ───
 if ('launchQueue' in window) {
