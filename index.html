@@ -34,7 +34,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=15.8">
+  <link rel="stylesheet" href="styles.css?v=15.9">
 </head>
 <body>
   <!-- Gooey SVG Filter for Header Tab Toggle (gooey-react technique) -->
@@ -127,9 +127,6 @@
         </div>
 
         <div class="header-actions">
-          <button type="button" class="wrapped-badge-btn hidden" id="header-wrapped-btn" title="View your Friday Weekend Wrapped!">
-            <span class="wrapped-badge-spark">✨</span> Wrapped
-          </button>
           <div class="streak-badge" id="streak-badge" role="button" tabindex="0" title="Daily Macro Targets (click to edit)" style="cursor:pointer;">🔥 0d</div>
         </div>
       </div>
@@ -996,25 +993,13 @@
             </div>
           </div>
 
-          <div style="display: flex; gap: 8px; margin-top: 10px;">
-            <button type="button" class="wrapped-cta-btn" id="wrappedCopyShareBtn" style="font-size: 13px;">
-              <span>📋</span> Copy Story Card
-            </button>
-            <button type="button" class="wrapped-cta-btn" id="wrappedReplayBtn" style="flex: 0 0 85px; background: #334155; color: #fff; border-color: #64748b; font-size: 13px;">
-              <span>🔄</span> Replay
+          <div style="margin-top: 14px; width: 100%;">
+            <button type="button" class="wrapped-cta-btn" id="wrappedCopyShareBtn" style="width: 100%; font-size: 14px; padding: 12px 18px;">
+              <span>⚡</span> Share Story Card
             </button>
           </div>
         </div>
 
-      </div>
-
-      <!-- Persistent Bottom Action -->
-      <div class="wrapped-bottom-bar">
-        <button type="button" class="wrapped-cta-btn" id="wrappedBottomShareBtn">
-          <span>⚡</span> Share My Week
-        </button>
-        <button type="button" class="wrapped-nav-btn" id="wrappedPrevSlideBtn" title="Previous slide">&larr;</button>
-        <button type="button" class="wrapped-nav-btn" id="wrappedNextSlideBtn" title="Next slide">&rarr;</button>
       </div>
 
       <!-- Toast Notification -->
@@ -1032,6 +1017,6 @@
   <script src="env.js" onerror="/* optional env.js */"></script>
 
   <!-- Frontend Controller -->
-  <script src="app.js?v=14.2"></script>
+  <script src="app.js?v=15.9"></script>
 </body>
 </html>

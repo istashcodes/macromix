@@ -501,10 +501,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     initWeekendWrappedEvents();
     updateWeekendWrappedVisibility();
     updateTopAnnouncementBanner();
-    if (isWeekendWrappedEligible() && (window.location.search.includes('wrapped') || !sessionStorage.getItem('wrapped_auto_opened'))) {
-      sessionStorage.setItem('wrapped_auto_opened', '1');
-      setTimeout(() => openWeeklyWrappedModal(), 350);
-    }
   } catch (e) {
     console.warn('[Init] Additional feature init note:', e);
   }
@@ -4447,21 +4443,6 @@ function snoozeBanner(bannerId) {
 }
 
 const FEATURE_BANNERS = [
-  // Priority 0: Weekend Wrapped (Exclusive for @istashmacros on Friday/Weekend)
-  {
-    id: 'weekend_wrapped',
-    badge: 'FRIDAY',
-    icon: '✨',
-    title: 'Weekend Wrapped',
-    desc: 'Your 7-day nutrition reel is ready!',
-    ctaText: 'Watch Reel ⚡',
-    isSatisfied: () => {
-      return !isWeekendWrappedEligible();
-    },
-    onAction: () => {
-      openWeeklyWrappedModal();
-    }
-  },
   // Priority 1: New Feature Launch (Smart Notifications)
   {
     id: 'notifications_v1',
@@ -4651,13 +4632,38 @@ function isWeekendWrappedEligible() {
 }
 
 function updateWeekendWrappedVisibility() {
-  const wrappedBtn = document.getElementById('header-wrapped-btn');
+  const brand = document.getElementById('brand-wrapper');
   const isEligible = isWeekendWrappedEligible();
-  if (wrappedBtn) {
+  if (brand) {
     if (isEligible && !isVisitorMode) {
-      wrappedBtn.classList.remove('hidden');
+      brand.classList.add('has-wrapped-story');
+      brand.setAttribute('title', 'Watch Weekend Review Reel ✨');
+      brand.setAttribute('aria-label', 'Watch Weekend Review Story Reel');
     } else {
-      wrappedBtn.classList.add('hidden');
+      brand.classList.remove('has-wrapped-story');
+      brand.setAttribute('title', 'Back to My Tracker');
+      brand.setAttribute('aria-label', 'Back to My Tracker');
+    }
+  }
+}
+
+let _wrappedNavLock = false;
+
+function safeAdvanceWrappedSlide(direction) {
+  if (_wrappedNavLock) return;
+  _wrappedNavLock = true;
+  setTimeout(() => { _wrappedNavLock = false; }, 260);
+
+  const total = document.querySelectorAll('.wrapped-slide').length;
+  if (direction > 0) {
+    if (wrappedCurrentSlide < total - 1) {
+      goToWrappedSlide(wrappedCurrentSlide + 1);
+    }
+  } else if (direction < 0) {
+    if (wrappedCurrentSlide > 0) {
+      goToWrappedSlide(wrappedCurrentSlide - 1);
+    } else {
+      goToWrappedSlide(0);
     }
   }
 }
@@ -4707,11 +4713,10 @@ function updateWrappedSlideUI() {
   });
 
   fills.forEach((fill, idx) => {
+    fill.style.transition = 'none';
     if (idx < wrappedCurrentSlide) {
-      fill.style.transition = 'none';
       fill.style.width = '100%';
-    } else if (idx > wrappedCurrentSlide) {
-      fill.style.transition = 'none';
+    } else {
       fill.style.width = '0%';
     }
   });
@@ -4753,12 +4758,17 @@ function startWrappedSlideProgress() {
 }
 
 function goToWrappedSlide(idx) {
+  cancelAnimationFrame(wrappedSlideTimer);
+  wrappedSlideTimer = null;
   const slides = document.querySelectorAll('.wrapped-slide');
   const totalSlides = slides.length;
   if (idx < 0) idx = 0;
   if (idx >= totalSlides) idx = totalSlides - 1;
   wrappedCurrentSlide = idx;
   wrappedElapsed = 0;
+  wrappedIsPaused = false;
+  const pauseBtn = document.getElementById('wrappedPauseBtn');
+  if (pauseBtn) pauseBtn.textContent = '⏸';
   updateWrappedSlideUI();
   startWrappedSlideProgress();
 }
@@ -4777,7 +4787,7 @@ function toggleWrappedPause() {
 
 function openWeeklyWrappedModal() {
   const modal = document.getElementById('weekly-wrapped-modal');
-  if (!modal) return;
+  if (!modal || !modal.classList.contains('hidden')) return;
   modal.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   wrappedCurrentSlide = 0;
@@ -4816,14 +4826,6 @@ function triggerWrappedShare() {
 }
 
 function initWeekendWrappedEvents() {
-  const headerBtn = document.getElementById('header-wrapped-btn');
-  if (headerBtn) {
-    headerBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openWeeklyWrappedModal();
-    });
-  }
-
   const closeBtn = document.getElementById('btn-close-wrapped');
   if (closeBtn) {
     closeBtn.addEventListener('click', (e) => {
@@ -4851,58 +4853,61 @@ function initWeekendWrappedEvents() {
   }
 
   const tapLeft = document.getElementById('wrappedTapLeft');
-  if (tapLeft) {
-    tapLeft.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (wrappedCurrentSlide > 0) goToWrappedSlide(wrappedCurrentSlide - 1);
-    });
-  }
-
   const tapRight = document.getElementById('wrappedTapRight');
-  if (tapRight) {
-    tapRight.addEventListener('click', (e) => {
+
+  let holdTimer = null;
+  let isHolding = false;
+  let justReleasedHold = false;
+
+  function bindStoryTapZone(el, direction) {
+    if (!el) return;
+
+    el.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.wrapped-header-actions') || e.target.closest('.wrapped-cta-btn')) return;
+      isHolding = false;
+      justReleasedHold = false;
+      clearTimeout(holdTimer);
+      holdTimer = setTimeout(() => {
+        isHolding = true;
+        if (!wrappedIsPaused) {
+          wrappedIsPaused = true;
+          wrappedElapsed = Date.now() - wrappedStartTime;
+          cancelAnimationFrame(wrappedSlideTimer);
+        }
+      }, 400);
+    });
+
+    const releaseHold = () => {
+      clearTimeout(holdTimer);
+      if (isHolding) {
+        isHolding = false;
+        justReleasedHold = true;
+        setTimeout(() => { justReleasedHold = false; }, 120);
+        wrappedIsPaused = false;
+        wrappedStartTime = Date.now() - wrappedElapsed;
+        startWrappedSlideProgress();
+      }
+    };
+
+    el.addEventListener('pointerup', releaseHold);
+    el.addEventListener('pointercancel', releaseHold);
+
+    el.addEventListener('click', (e) => {
       e.stopPropagation();
-      const total = document.querySelectorAll('.wrapped-slide').length;
-      if (wrappedCurrentSlide < total - 1) goToWrappedSlide(wrappedCurrentSlide + 1);
+      if (justReleasedHold) {
+        justReleasedHold = false;
+        return;
+      }
+      safeAdvanceWrappedSlide(direction);
     });
   }
 
-  const prevBtn = document.getElementById('wrappedPrevSlideBtn');
-  if (prevBtn) {
-    prevBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (wrappedCurrentSlide > 0) goToWrappedSlide(wrappedCurrentSlide - 1);
-    });
-  }
-
-  const nextBtn = document.getElementById('wrappedNextSlideBtn');
-  if (nextBtn) {
-    nextBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const total = document.querySelectorAll('.wrapped-slide').length;
-      if (wrappedCurrentSlide < total - 1) goToWrappedSlide(wrappedCurrentSlide + 1);
-    });
-  }
-
-  const replayBtn = document.getElementById('wrappedReplayBtn');
-  if (replayBtn) {
-    replayBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      goToWrappedSlide(0);
-    });
-  }
+  bindStoryTapZone(tapLeft, -1);
+  bindStoryTapZone(tapRight, 1);
 
   const copyShareBtn = document.getElementById('wrappedCopyShareBtn');
   if (copyShareBtn) {
     copyShareBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      triggerWrappedShare();
-    });
-  }
-
-  const bottomShareBtn = document.getElementById('wrappedBottomShareBtn');
-  if (bottomShareBtn) {
-    bottomShareBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       triggerWrappedShare();
     });
@@ -4923,10 +4928,9 @@ function initWeekendWrappedEvents() {
     if (e.key === 'Escape') {
       closeWeeklyWrappedModal();
     } else if (e.key === 'ArrowRight' || e.key === 'KeyL') {
-      const total = document.querySelectorAll('.wrapped-slide').length;
-      if (wrappedCurrentSlide < total - 1) goToWrappedSlide(wrappedCurrentSlide + 1);
+      safeAdvanceWrappedSlide(1);
     } else if (e.key === 'ArrowLeft' || e.key === 'KeyH') {
-      if (wrappedCurrentSlide > 0) goToWrappedSlide(wrappedCurrentSlide - 1);
+      safeAdvanceWrappedSlide(-1);
     } else if (e.key === ' ' || e.key === 'Spacebar') {
       e.preventDefault();
       toggleWrappedPause();
@@ -4993,6 +4997,10 @@ function setupEventListeners() {
   const brand = document.getElementById('brand-wrapper');
   if (brand) {
     brand.addEventListener('click', () => {
+      if (brand.classList.contains('has-wrapped-story')) {
+        openWeeklyWrappedModal();
+        return;
+      }
       switchTab('me');
       const scroller = document.getElementById('app-scroll-canvas');
       if (scroller) scroller.scrollTo({ top: 0, behavior: 'smooth' });
@@ -5000,6 +5008,10 @@ function setupEventListeners() {
     brand.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
+        if (brand.classList.contains('has-wrapped-story')) {
+          openWeeklyWrappedModal();
+          return;
+        }
         switchTab('me');
         const scroller = document.getElementById('app-scroll-canvas');
         if (scroller) scroller.scrollTo({ top: 0, behavior: 'smooth' });
