@@ -20,6 +20,7 @@ const GLOBAL_GEMINI_API_KEY = getEffectiveGeminiKey();
 let userTargets = { calories: 2000, protein_g: 150, carbs_g: 200, fat_g: 65, fiber_g: 30 };
 let userGeminiInfo = { free_remaining: 0, has_custom_key: false, can_use_gemini: false, gemini_api_key: "", masked_key: "Not set" };
 let currentLogs = [];
+let isLoadingMeals = true;
 let currentUserHandle = null;
 let currentTab = 'me';
 let isVisitorMode = false;
@@ -989,7 +990,63 @@ function renderStreak() {
   }
 }
 
+function setCardLoadingState(loading) {
+  isLoadingMeals = !!loading;
+  const mainCard = document.getElementById('main-top-card');
+  if (mainCard) {
+    if (loading) {
+      mainCard.classList.add('is-loading');
+    } else {
+      mainCard.classList.remove('is-loading');
+    }
+  }
+}
+
+function getTimelineSkeletonHtml() {
+  return `
+    <div class="timeline-skeleton-wrap" aria-busy="true">
+      <div class="timeline-skeleton-card">
+        <div class="timeline-skeleton-top">
+          <div class="timeline-skeleton-left">
+            <span class="timeline-skeleton-badge"></span>
+            <span class="timeline-skeleton-line timeline-skeleton-title"></span>
+          </div>
+          <span class="timeline-skeleton-line timeline-skeleton-cal"></span>
+        </div>
+        <div class="timeline-skeleton-bottom">
+          <span class="timeline-skeleton-line timeline-skeleton-sub"></span>
+          <div class="timeline-skeleton-chips">
+            <span class="timeline-skeleton-chip"></span>
+            <span class="timeline-skeleton-chip"></span>
+            <span class="timeline-skeleton-chip"></span>
+            <span class="timeline-skeleton-chip"></span>
+          </div>
+        </div>
+      </div>
+      <div class="timeline-skeleton-card">
+        <div class="timeline-skeleton-top">
+          <div class="timeline-skeleton-left">
+            <span class="timeline-skeleton-badge"></span>
+            <span class="timeline-skeleton-line timeline-skeleton-title short"></span>
+          </div>
+          <span class="timeline-skeleton-line timeline-skeleton-cal"></span>
+        </div>
+        <div class="timeline-skeleton-bottom">
+          <span class="timeline-skeleton-line timeline-skeleton-sub short"></span>
+          <div class="timeline-skeleton-chips">
+            <span class="timeline-skeleton-chip"></span>
+            <span class="timeline-skeleton-chip"></span>
+            <span class="timeline-skeleton-chip"></span>
+            <span class="timeline-skeleton-chip"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function filterAndRenderSelectedDate(direction = null, animateFromZero = true) {
+  setCardLoadingState(false);
   const filtered = currentLogs.filter(log => getLogDate(log) === selectedDate);
   renderTimeline(filtered, direction);
   updateCirclesProgress(filtered, animateFromZero);
@@ -1352,6 +1409,8 @@ function setupRealtimeProfileSync() {
 // --- Meal Logs & Timeline ---
 async function loadMealLogs() {
   if (isVisitorMode && viewedHandle) {
+    setCardLoadingState(true);
+    renderTimeline();
     if (window.MacromixFirebase && typeof window.MacromixFirebase.fetchMealsFromFirestore === 'function') {
       try {
         currentLogs = await window.MacromixFirebase.fetchMealsFromFirestore(viewedHandle);
@@ -1369,6 +1428,11 @@ async function loadMealLogs() {
 
   cleanContaminatedMealsFromLocalStorage();
   const storageKey = getMealsStorageKey(currentUserHandle);
+
+  if (!currentLogs || currentLogs.length === 0) {
+    setCardLoadingState(true);
+    renderTimeline();
+  }
 
   // 1. Local FastAPI backend if available (local development / tests)
   if (isLocalBackend()) {
@@ -1514,6 +1578,12 @@ function formatItemCommentary(prepState) {
 function renderTimeline(logsToUse = null, direction = null) {
   const container = document.getElementById('meal-timeline-content');
   if (!container) return;
+
+  if (isLoadingMeals && logsToUse === null) {
+    container.innerHTML = getTimelineSkeletonHtml();
+    return;
+  }
+
   const logs = logsToUse !== null ? logsToUse : currentLogs.filter(l => getLogDate(l) === selectedDate);
   const validLogs = logs.filter(log => log.items && log.items.length > 0);
 
@@ -3428,7 +3498,8 @@ function setVisitorMode(isVisitor, targetHandle = null) {
 
   if (isVisitorMode && viewedHandle) {
     currentLogs = [];
-    filterAndRenderSelectedDate();
+    setCardLoadingState(true);
+    renderTimeline();
     document.body.classList.add('is-visitor-mode');
     if (visitorBanner) visitorBanner.classList.remove('hidden');
     if (targetHandleEl) targetHandleEl.textContent = viewedHandle;
@@ -3452,7 +3523,8 @@ function setVisitorMode(isVisitor, targetHandle = null) {
     if (textLogForm) textLogForm.classList.remove('hidden');
     // Clear visitor meals so they don't linger before owner's logs finish loading
     currentLogs = [];
-    filterAndRenderSelectedDate();
+    setCardLoadingState(true);
+    renderTimeline();
     renderCurrentUserStreak();
   }
 
@@ -4697,6 +4769,8 @@ window.triggerEmptyStateCardJiggle = triggerEmptyStateCardJiggle;
 window.dismissActiveAnnouncementBanner = dismissActiveAnnouncementBanner;
 window.handleActiveAnnouncementCta = handleActiveAnnouncementCta;
 window.FEATURE_BANNERS = FEATURE_BANNERS;
+window.setCardLoadingState = setCardLoadingState;
+window.isLoadingMeals = () => isLoadingMeals;
 
 // ─── PWA Launch Handler Consumer (Captures deep links into active PWA) ───
 if ('launchQueue' in window) {

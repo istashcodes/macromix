@@ -34,7 +34,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=15.7">
+  <link rel="stylesheet" href="styles.css?v=15.8">
 </head>
 <body>
   <!-- Gooey SVG Filter for Header Tab Toggle (gooey-react technique) -->
@@ -272,7 +272,7 @@
         </section>
 
         <!-- TOP ACTIVE CARD (MAIN CARD) -->
-        <section class="main-top-card" id="main-top-card" aria-label="Daily Macro Summary">
+        <section class="main-top-card is-loading" id="main-top-card" aria-label="Daily Macro Summary">
           <!-- Card Top Rim (Date Navigator) -->
           <div class="card-top-rim">
             <button type="button" class="rim-btn date-nav-arrow" id="btn-date-prev" title="Previous Day" aria-label="Previous Day">◀</button>
@@ -395,7 +395,44 @@
           </div>
         </div>
         <div id="meal-timeline-content" class="logged-meals-container">
-          <div class="empty-state">No meals logged yet today. Tap the mic or type above!</div>
+          <div class="timeline-skeleton-wrap" aria-busy="true">
+            <div class="timeline-skeleton-card">
+              <div class="timeline-skeleton-top">
+                <div class="timeline-skeleton-left">
+                  <span class="timeline-skeleton-badge"></span>
+                  <span class="timeline-skeleton-line timeline-skeleton-title"></span>
+                </div>
+                <span class="timeline-skeleton-line timeline-skeleton-cal"></span>
+              </div>
+              <div class="timeline-skeleton-bottom">
+                <span class="timeline-skeleton-line timeline-skeleton-sub"></span>
+                <div class="timeline-skeleton-chips">
+                  <span class="timeline-skeleton-chip"></span>
+                  <span class="timeline-skeleton-chip"></span>
+                  <span class="timeline-skeleton-chip"></span>
+                  <span class="timeline-skeleton-chip"></span>
+                </div>
+              </div>
+            </div>
+            <div class="timeline-skeleton-card">
+              <div class="timeline-skeleton-top">
+                <div class="timeline-skeleton-left">
+                  <span class="timeline-skeleton-badge"></span>
+                  <span class="timeline-skeleton-line timeline-skeleton-title short"></span>
+                </div>
+                <span class="timeline-skeleton-line timeline-skeleton-cal"></span>
+              </div>
+              <div class="timeline-skeleton-bottom">
+                <span class="timeline-skeleton-line timeline-skeleton-sub short"></span>
+                <div class="timeline-skeleton-chips">
+                  <span class="timeline-skeleton-chip"></span>
+                  <span class="timeline-skeleton-chip"></span>
+                  <span class="timeline-skeleton-chip"></span>
+                  <span class="timeline-skeleton-chip"></span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
     </main>
@@ -995,6 +1032,6 @@
   <script src="env.js" onerror="/* optional env.js */"></script>
 
   <!-- Frontend Controller -->
-  <script src="app.js?v=14.0"></script>
+  <script src="app.js?v=14.1"></script>
 </body>
 </html>
