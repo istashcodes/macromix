@@ -447,6 +447,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   setupSwipeGestures();
   setupSettingsModal();
   setupNotificationSettings();
+  initWeekendWrappedEvents();
+  updateWeekendWrappedVisibility();
 
   try {
     await waitForFirebaseDB();
@@ -496,7 +498,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   try {
     scheduleDailyReminderCheck();
     await initFriendsView();
+    initWeekendWrappedEvents();
+    updateWeekendWrappedVisibility();
     updateTopAnnouncementBanner();
+    if (isWeekendWrappedEligible() && (window.location.search.includes('wrapped') || !sessionStorage.getItem('wrapped_auto_opened'))) {
+      sessionStorage.setItem('wrapped_auto_opened', '1');
+      setTimeout(() => openWeeklyWrappedModal(), 350);
+    }
   } catch (e) {
     console.warn('[Init] Additional feature init note:', e);
   }
@@ -3529,6 +3537,8 @@ function setVisitorMode(isVisitor, targetHandle = null) {
   }
 
   updateHeaderFriendsBtn();
+  updateWeekendWrappedVisibility();
+  updateTopAnnouncementBanner();
 }
 
 
@@ -3559,6 +3569,8 @@ async function checkUrlRoute() {
     setVisitorMode(false);
   }
   updateHeaderFriendsBtn();
+  updateWeekendWrappedVisibility();
+  updateTopAnnouncementBanner();
 }
 
 
@@ -3609,6 +3621,8 @@ async function switchTab(tabName, updateUrl = true) {
       if (viewFriends) viewFriends.classList.remove('hidden');
       refreshFriendsView();
       updateHeaderFriendsBtn();
+  updateWeekendWrappedVisibility();
+  updateTopAnnouncementBanner();
       return;
     }
 
@@ -3616,6 +3630,8 @@ async function switchTab(tabName, updateUrl = true) {
     if (viewFriends) viewFriends.classList.remove('hidden');
     refreshFriendsView();
     updateHeaderFriendsBtn();
+  updateWeekendWrappedVisibility();
+  updateTopAnnouncementBanner();
   } else {
     // Switching to 'me'
     currentTab = 'me';
@@ -3635,6 +3651,8 @@ async function switchTab(tabName, updateUrl = true) {
     if (viewMe) viewMe.classList.remove('hidden');
     if (viewFriends) viewFriends.classList.add('hidden');
     updateHeaderFriendsBtn();
+  updateWeekendWrappedVisibility();
+  updateTopAnnouncementBanner();
   }
 }
 
@@ -3664,6 +3682,8 @@ async function viewFriendProfile(friendHandle) {
   setupRealtimeMealsSync();
   setupRealtimeProfileSync();
   updateHeaderFriendsBtn();
+  updateWeekendWrappedVisibility();
+  updateTopAnnouncementBanner();
 }
 
 async function exitVisitorMode() {
@@ -3684,6 +3704,8 @@ async function exitVisitorMode() {
     }
   }
   updateHeaderFriendsBtn();
+  updateWeekendWrappedVisibility();
+  updateTopAnnouncementBanner();
 }
 
 async function backToFriendsList() {
@@ -3691,6 +3713,8 @@ async function backToFriendsList() {
   setVisitorMode(false);
   await switchTab('friends', false);
   updateHeaderFriendsBtn();
+  updateWeekendWrappedVisibility();
+  updateTopAnnouncementBanner();
 }
 
 async function triggerProfileShare() {
@@ -3919,6 +3943,7 @@ async function checkUserProfileOnboarding() {
     setupRealtimeMealsSync();
     setupCurrentUserProfileSync();
     updateHeaderFriendsBtn();
+    updateWeekendWrappedVisibility();
     updateTopAnnouncementBanner();
     return;
   }
@@ -3961,6 +3986,7 @@ async function checkUserProfileOnboarding() {
         setupRealtimeMealsSync();
         setupCurrentUserProfileSync();
         updateHeaderFriendsBtn();
+        updateWeekendWrappedVisibility();
         updateTopAnnouncementBanner();
         return;
       }
@@ -4086,6 +4112,8 @@ async function registerHandleOnboarding(handle, authMethod = 'passkey') {
   await loadMealLogs();
   currentUserStreak = calculateStreak();
   updateHeaderFriendsBtn();
+  updateWeekendWrappedVisibility();
+  updateTopAnnouncementBanner();
   triggerEmptyStateCardJiggle();
 
   // If the user arrived via a friend's profile link, navigate to that profile now that they are authenticated!
@@ -4419,6 +4447,21 @@ function snoozeBanner(bannerId) {
 }
 
 const FEATURE_BANNERS = [
+  // Priority 0: Weekend Wrapped (Exclusive for @istashmacros on Friday/Weekend)
+  {
+    id: 'weekend_wrapped',
+    badge: 'FRIDAY',
+    icon: '✨',
+    title: 'Weekend Wrapped',
+    desc: 'Your 7-day nutrition reel is ready!',
+    ctaText: 'Watch Reel ⚡',
+    isSatisfied: () => {
+      return !isWeekendWrappedEligible();
+    },
+    onAction: () => {
+      openWeeklyWrappedModal();
+    }
+  },
   // Priority 1: New Feature Launch (Smart Notifications)
   {
     id: 'notifications_v1',
@@ -4576,6 +4619,319 @@ function openIosInstallModal() {
 function closeIosInstallModal() {
   const modal = document.getElementById('ios-install-modal');
   if (modal) modal.classList.add('hidden');
+}
+
+// ==========================================================================
+// Weekend Wrapped Feature Controller (Exclusively for @istashmacros on Friday/Weekend)
+// ==========================================================================
+const WRAPPED_SLIDE_DURATION_MS = 6500;
+let wrappedCurrentSlide = 0;
+let wrappedSlideTimer = null;
+let wrappedStartTime = 0;
+let wrappedElapsed = 0;
+let wrappedIsPaused = false;
+let wrappedSoundEnabled = true;
+let wrappedAudioCtx = null;
+
+function isWeekendWrappedEligible() {
+  const handle = (currentUserHandle || (typeof localStorage !== 'undefined' ? localStorage.getItem('macromix_user_handle') : '') || '').trim().toLowerCase().replace(/^@+/, '');
+  if (handle !== 'istashmacros') return false;
+
+  // Check URL query param ?wrapped=1 or ?wrapped=true
+  if (typeof window !== 'undefined' && window.location) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('wrapped') === '1' || params.get('wrapped') === 'true') {
+      return true;
+    }
+  }
+
+  // Check Friday (5), Saturday (6), Sunday (0)
+  const day = new Date().getDay();
+  return day === 5 || day === 6 || day === 0;
+}
+
+function updateWeekendWrappedVisibility() {
+  const wrappedBtn = document.getElementById('header-wrapped-btn');
+  const isEligible = isWeekendWrappedEligible();
+  if (wrappedBtn) {
+    if (isEligible && !isVisitorMode) {
+      wrappedBtn.classList.remove('hidden');
+    } else {
+      wrappedBtn.classList.add('hidden');
+    }
+  }
+}
+
+function playWrappedTone(freq, type = 'sine', duration = 0.15) {
+  if (!wrappedSoundEnabled) return;
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    if (!wrappedAudioCtx) wrappedAudioCtx = new AudioContext();
+    if (wrappedAudioCtx.state === 'suspended') wrappedAudioCtx.resume();
+    const osc = wrappedAudioCtx.createOscillator();
+    const gain = wrappedAudioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, wrappedAudioCtx.currentTime);
+    gain.gain.setValueAtTime(0.08, wrappedAudioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, wrappedAudioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(wrappedAudioCtx.destination);
+    osc.start();
+    osc.stop(wrappedAudioCtx.currentTime + duration);
+  } catch (e) {}
+}
+
+function showWrappedToast(text) {
+  const toast = document.getElementById('wrappedToast');
+  if (!toast) return;
+  toast.textContent = text;
+  toast.classList.add('show');
+  playWrappedTone(660, 'sine', 0.15);
+  setTimeout(() => toast.classList.remove('show'), 2400);
+}
+
+function updateWrappedSlideUI() {
+  const slides = document.querySelectorAll('.wrapped-slide');
+  const fills = document.querySelectorAll('.wrapped-fill');
+
+  slides.forEach((slide, idx) => {
+    slide.classList.remove('active', 'prev', 'next');
+    if (idx === wrappedCurrentSlide) {
+      slide.classList.add('active');
+    } else if (idx < wrappedCurrentSlide) {
+      slide.classList.add('prev');
+    } else {
+      slide.classList.add('next');
+    }
+  });
+
+  fills.forEach((fill, idx) => {
+    if (idx < wrappedCurrentSlide) {
+      fill.style.transition = 'none';
+      fill.style.width = '100%';
+    } else if (idx > wrappedCurrentSlide) {
+      fill.style.transition = 'none';
+      fill.style.width = '0%';
+    }
+  });
+
+  playWrappedTone(440 + (wrappedCurrentSlide * 60), 'triangle', 0.25);
+}
+
+function startWrappedSlideProgress() {
+  cancelAnimationFrame(wrappedSlideTimer);
+  wrappedStartTime = Date.now() - wrappedElapsed;
+  const fills = document.querySelectorAll('.wrapped-fill');
+  const slides = document.querySelectorAll('.wrapped-slide');
+  const totalSlides = slides.length;
+  const pauseBtn = document.getElementById('wrappedPauseBtn');
+
+  function tick() {
+    if (wrappedIsPaused) return;
+    const now = Date.now();
+    const elapsed = now - wrappedStartTime;
+    const pct = Math.min(100, (elapsed / WRAPPED_SLIDE_DURATION_MS) * 100);
+
+    if (fills[wrappedCurrentSlide]) {
+      fills[wrappedCurrentSlide].style.transition = 'width 0.1s linear';
+      fills[wrappedCurrentSlide].style.width = `${pct}%`;
+    }
+
+    if (elapsed >= WRAPPED_SLIDE_DURATION_MS) {
+      if (wrappedCurrentSlide < totalSlides - 1) {
+        goToWrappedSlide(wrappedCurrentSlide + 1);
+      } else {
+        wrappedIsPaused = true;
+        if (pauseBtn) pauseBtn.textContent = '▶';
+      }
+    } else {
+      wrappedSlideTimer = requestAnimationFrame(tick);
+    }
+  }
+  wrappedSlideTimer = requestAnimationFrame(tick);
+}
+
+function goToWrappedSlide(idx) {
+  const slides = document.querySelectorAll('.wrapped-slide');
+  const totalSlides = slides.length;
+  if (idx < 0) idx = 0;
+  if (idx >= totalSlides) idx = totalSlides - 1;
+  wrappedCurrentSlide = idx;
+  wrappedElapsed = 0;
+  updateWrappedSlideUI();
+  startWrappedSlideProgress();
+}
+
+function toggleWrappedPause() {
+  wrappedIsPaused = !wrappedIsPaused;
+  const pauseBtn = document.getElementById('wrappedPauseBtn');
+  if (pauseBtn) pauseBtn.textContent = wrappedIsPaused ? '▶' : '⏸';
+  if (!wrappedIsPaused) {
+    wrappedStartTime = Date.now() - wrappedElapsed;
+    startWrappedSlideProgress();
+  } else {
+    wrappedElapsed = Date.now() - wrappedStartTime;
+  }
+}
+
+function openWeeklyWrappedModal() {
+  const modal = document.getElementById('weekly-wrapped-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  wrappedCurrentSlide = 0;
+  wrappedElapsed = 0;
+  wrappedIsPaused = false;
+  const pauseBtn = document.getElementById('wrappedPauseBtn');
+  if (pauseBtn) pauseBtn.textContent = '⏸';
+  updateWrappedSlideUI();
+  startWrappedSlideProgress();
+}
+
+function closeWeeklyWrappedModal() {
+  const modal = document.getElementById('weekly-wrapped-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  document.body.style.overflow = '';
+  cancelAnimationFrame(wrappedSlideTimer);
+  wrappedIsPaused = true;
+}
+
+function triggerWrappedShare() {
+  const text = "🥣 @istashmacros's Weekend Review Wrapped:\n" +
+               "🔥 10-day streak unbroken!\n" +
+               "💪 869.2g Protein banked (29 chicken breasts equivalent)\n" +
+               "🧬 Persona: The Skyr & Sambar Alchemist\n" +
+               "Tracked on macromix.web.app";
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      showWrappedToast('Summary copied to clipboard! 🚀');
+    }).catch(() => {
+      showWrappedToast('Ready to share! ✨');
+    });
+  } else {
+    showWrappedToast('Ready to share! ✨');
+  }
+}
+
+function initWeekendWrappedEvents() {
+  const headerBtn = document.getElementById('header-wrapped-btn');
+  if (headerBtn) {
+    headerBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openWeeklyWrappedModal();
+    });
+  }
+
+  const closeBtn = document.getElementById('btn-close-wrapped');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeWeeklyWrappedModal();
+    });
+  }
+
+  const soundBtn = document.getElementById('wrappedSoundBtn');
+  if (soundBtn) {
+    soundBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      wrappedSoundEnabled = !wrappedSoundEnabled;
+      soundBtn.textContent = wrappedSoundEnabled ? '🔊' : '🔇';
+      showWrappedToast(wrappedSoundEnabled ? 'Audio Sound FX On' : 'Audio Sound FX Muted');
+    });
+  }
+
+  const pauseBtn = document.getElementById('wrappedPauseBtn');
+  if (pauseBtn) {
+    pauseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleWrappedPause();
+    });
+  }
+
+  const tapLeft = document.getElementById('wrappedTapLeft');
+  if (tapLeft) {
+    tapLeft.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (wrappedCurrentSlide > 0) goToWrappedSlide(wrappedCurrentSlide - 1);
+    });
+  }
+
+  const tapRight = document.getElementById('wrappedTapRight');
+  if (tapRight) {
+    tapRight.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const total = document.querySelectorAll('.wrapped-slide').length;
+      if (wrappedCurrentSlide < total - 1) goToWrappedSlide(wrappedCurrentSlide + 1);
+    });
+  }
+
+  const prevBtn = document.getElementById('wrappedPrevSlideBtn');
+  if (prevBtn) {
+    prevBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (wrappedCurrentSlide > 0) goToWrappedSlide(wrappedCurrentSlide - 1);
+    });
+  }
+
+  const nextBtn = document.getElementById('wrappedNextSlideBtn');
+  if (nextBtn) {
+    nextBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const total = document.querySelectorAll('.wrapped-slide').length;
+      if (wrappedCurrentSlide < total - 1) goToWrappedSlide(wrappedCurrentSlide + 1);
+    });
+  }
+
+  const replayBtn = document.getElementById('wrappedReplayBtn');
+  if (replayBtn) {
+    replayBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      goToWrappedSlide(0);
+    });
+  }
+
+  const copyShareBtn = document.getElementById('wrappedCopyShareBtn');
+  if (copyShareBtn) {
+    copyShareBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      triggerWrappedShare();
+    });
+  }
+
+  const bottomShareBtn = document.getElementById('wrappedBottomShareBtn');
+  if (bottomShareBtn) {
+    bottomShareBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      triggerWrappedShare();
+    });
+  }
+
+  const modal = document.getElementById('weekly-wrapped-modal');
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeWeeklyWrappedModal();
+      }
+    });
+  }
+
+  window.addEventListener('keydown', (e) => {
+    const m = document.getElementById('weekly-wrapped-modal');
+    if (!m || m.classList.contains('hidden')) return;
+    if (e.key === 'Escape') {
+      closeWeeklyWrappedModal();
+    } else if (e.key === 'ArrowRight' || e.key === 'KeyL') {
+      const total = document.querySelectorAll('.wrapped-slide').length;
+      if (wrappedCurrentSlide < total - 1) goToWrappedSlide(wrappedCurrentSlide + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'KeyH') {
+      if (wrappedCurrentSlide > 0) goToWrappedSlide(wrappedCurrentSlide - 1);
+    } else if (e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      toggleWrappedPause();
+    }
+  });
 }
 
 async function handleLinkPasskey() {
@@ -4771,6 +5127,10 @@ window.handleActiveAnnouncementCta = handleActiveAnnouncementCta;
 window.FEATURE_BANNERS = FEATURE_BANNERS;
 window.setCardLoadingState = setCardLoadingState;
 window.isLoadingMeals = () => isLoadingMeals;
+window.openWeeklyWrappedModal = openWeeklyWrappedModal;
+window.closeWeeklyWrappedModal = closeWeeklyWrappedModal;
+window.isWeekendWrappedEligible = isWeekendWrappedEligible;
+window.updateWeekendWrappedVisibility = updateWeekendWrappedVisibility;
 
 // ─── PWA Launch Handler Consumer (Captures deep links into active PWA) ───
 if ('launchQueue' in window) {
