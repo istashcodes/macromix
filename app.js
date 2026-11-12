@@ -4457,102 +4457,17 @@ function snoozeBanner(bannerId) {
 }
 
 const FEATURE_BANNERS = [
-  // Priority 1: New Feature Launch (Smart Notifications)
-  {
-    id: 'notifications_v1',
-    icon: '🔔',
-    title: 'Smart Reminders',
-    desc: 'Custom times & streak alerts',
-    ctaText: 'Turn On ⚡',
-    isSatisfied: () => {
-      if (typeof Notification === 'undefined') return true;
-      return Notification.permission === 'granted' && localStorage.getItem('macromix_reminders_enabled') === 'true';
-    },
-    onAction: () => {
-      openSettingsModal();
-      setTimeout(() => {
-        const modal = document.getElementById('settings-modal');
-        if (modal) {
-          const scrollable = modal.querySelector('.modal-content');
-          const reminderCard = document.getElementById('settings-notification-status')?.closest('.form-group');
-          if (scrollable && reminderCard) {
-            scrollable.scrollTo({ top: reminderCard.offsetTop - 20, behavior: 'smooth' });
-          } else if (scrollable) {
-            scrollable.scrollTo({ top: 380, behavior: 'smooth' });
-          }
-        }
-      }, 150);
-    }
-  },
-  // Priority 2: PWA Installation
-  {
-    id: 'pwa_install',
-    badge: 'PWA',
-    icon: '📲',
-    title: 'Install macromix',
-    desc: 'Instant 1-tap logging, offline mode & home screen speed',
-    ctaText: 'Install 📲',
-    isSatisfied: () => isPwaInstalled(),
-    onAction: () => {
-      handlePwaInstallAction();
-    }
-  }
+  // Smart banners (notifications opt-in & pwa install) removed per user request
 ];
 
 function updateTopAnnouncementBanner() {
   const container = document.getElementById('top-announcement-banner') || document.getElementById('pwa-install-banner');
-  if (!container) return;
-
-  // Don't show banners in visitor mode or before onboarding is completed
-  if (isVisitorMode || !currentUserHandle) {
+  if (container) {
     container.classList.remove('visible');
     container.setAttribute('aria-hidden', 'true');
-    currentActiveBannerId = null;
-    return;
+    container.style.display = 'none';
   }
-
-  // Find the highest priority banner that is NOT satisfied and NOT snoozed
-  let activeBanner = null;
-  for (const b of FEATURE_BANNERS) {
-    if (b.isSatisfied()) continue; // Completed / already active
-    if (isBannerSnoozed(b.id)) continue; // Currently snoozed
-    activeBanner = b;
-    break; // Priority order: first match wins
-  }
-
-  if (!activeBanner) {
-    container.classList.remove('visible');
-    container.setAttribute('aria-hidden', 'true');
-    currentActiveBannerId = null;
-    return;
-  }
-
-  currentActiveBannerId = activeBanner.id;
-
-  // Populate content
-  const titleEl = document.getElementById('announcement-title');
-  const badgeEl = document.getElementById('announcement-badge');
-  const descEl = document.getElementById('announcement-desc');
-  const iconEl = document.getElementById('announcement-icon');
-  const ctaBtnText = document.getElementById('announcement-cta-text');
-
-  if (titleEl) titleEl.textContent = activeBanner.title;
-  if (badgeEl) {
-    if (activeBanner.badge) {
-      badgeEl.textContent = activeBanner.badge;
-      badgeEl.style.display = '';
-    } else {
-      badgeEl.textContent = '';
-      badgeEl.style.display = 'none';
-    }
-  }
-  if (descEl) descEl.textContent = activeBanner.desc;
-  if (iconEl) iconEl.textContent = activeBanner.icon;
-  if (ctaBtnText) ctaBtnText.textContent = activeBanner.ctaText;
-
-  // Animate in
-  container.classList.add('visible');
-  container.setAttribute('aria-hidden', 'false');
+  currentActiveBannerId = null;
 }
 
 function dismissActiveAnnouncementBanner() {
