@@ -6,6 +6,8 @@ service cloud.firestore {
     // Macromix Cloud Firestore Security Rules
     // ===============================================================
     //
+    // Assumed Data Model:
+    //
     // Collection: users
     // Document ID: {userId} (handle: 3-12 characters, lowercase alphanumeric + underscore)
     // Fields:
@@ -20,6 +22,36 @@ service cloud.firestore {
     // Subcollections:
     //   - users/{userId}/meals/{mealId}
     //   - users/{userId}/following/{targetHandle}
+    //
+    // Collection: challenges
+    // Document ID: {handle} (Passkey WebAuthn challenge payload)
+    // Fields:
+    //   - challenge: string
+    //   - createdAt / expiresAt: timestamp
+    //
+    // Collection: admin_stats
+    // Document ID: {statId} (e.g. 'global', 'today', '2026-11-12')
+    // Fields:
+    //   - statId, period, date: string (<= 64 chars)
+    //   - createdAt, updatedAt, lastUpdated: timestamp
+    //   - totalUsers, passkeyUsers, googleUsers, bothUsers: number (>= 0)
+    //   - dau, wau, mau, stickinessRatio: number (>= 0)
+    //   - mealsTotal, mealsVoice, mealsText, mealsCamera: number (>= 0)
+    //   - hourlyDistribution: list (size <= 48)
+    //   - streakTier0, streakTier1, streakTier2, streakTier3: number (>= 0)
+    //   - pwaInstalls, pushOptIns, pushSubscriptions: number (>= 0)
+    //   - geminiP50, geminiP95, geminiSuccessRate: string (<= 32 chars)
+    //   - aiRequestsTotal, aiRequestsSuccess, aiRequestsError: number (>= 0)
+    //   - aiLatencySumMs, aiLatencyCount, aiAvgLatencyMs: number (>= 0)
+    //
+    // Collection: admin_telemetry
+    // Document ID: {eventId} (UUID or client-generated event identifier)
+    // Fields:
+    //   - type / eventType: string (<= 50 chars)
+    //   - timestamp / createdAt: timestamp or string
+    //   - durationMs: number (>= 0)
+    //   - modality, handle, status: string (<= 32 chars)
+    //   - metadata: map (size <= 20)
     // ===============================================================
 
     function isValidHandle(h) {
@@ -30,7 +62,7 @@ service cloud.firestore {
     }
 
     function isOwner(userId) {
-      return request.auth != null && (
+      return (userId is string) && request.auth != null && (
         (resource != null && resource.data.uid != null && request.auth.uid == resource.data.uid) ||
         (resource != null && resource.data.googleUid != null && request.auth.uid == resource.data.googleUid)
       );
@@ -42,6 +74,111 @@ service cloud.firestore {
         (userDoc.data.uid != null && request.auth.uid == userDoc.data.uid) ||
         (userDoc.data.googleUid != null && request.auth.uid == userDoc.data.googleUid)
       );
+    }
+
+    function isValidStatId(id) {
+      return id is string &&
+             id.size() >= 1 &&
+             id.size() <= 64 &&
+             id.matches('^[a-zA-Z0-9_.-]+$');
+    }
+
+    function isValidAdminString(data, key, maxLen) {
+      return !(key in data) || (data[key] is string && data[key].size() <= maxLen);
+    }
+
+    function isValidAdminNumber(data, key) {
+      return !(key in data) || (data[key] is number && data[key] >= 0 && data[key] <= 1000000000);
+    }
+
+    function isValidAdminTimestamp(data, key) {
+      return !(key in data) || data[key] is timestamp || (data[key] is string && data[key].size() <= 50);
+    }
+
+    function isValidAdminStatsCore(data) {
+      return isValidAdminString(data, 'statId', 64) &&
+             isValidAdminString(data, 'period', 32) &&
+             isValidAdminString(data, 'date', 32) &&
+             isValidAdminString(data, 'geminiP50', 32) &&
+             isValidAdminString(data, 'geminiP95', 32) &&
+             isValidAdminString(data, 'geminiSuccessRate', 32) &&
+             isValidAdminTimestamp(data, 'updatedAt') &&
+             isValidAdminTimestamp(data, 'createdAt') &&
+             (!('hourlyDistribution' in data) || (data.hourlyDistribution is list && data.hourlyDistribution.size() <= 48)) &&
+             (!('streakTiers' in data) || (data.streakTiers is map && data.streakTiers.keys().size() <= 20));
+    }
+
+    function isValidAdminStatsNumbers(data) {
+      return isValidAdminNumber(data, 'mealsTotal') &&
+             isValidAdminNumber(data, 'mealsVoice') &&
+             isValidAdminNumber(data, 'mealsText') &&
+             isValidAdminNumber(data, 'totalMeals') &&
+             isValidAdminNumber(data, 'totalUsers') &&
+             isValidAdminNumber(data, 'passkeyUsers') &&
+             isValidAdminNumber(data, 'googleUsers') &&
+             isValidAdminNumber(data, 'dau') &&
+             isValidAdminNumber(data, 'wau') &&
+             isValidAdminNumber(data, 'pwaInstalls') &&
+             isValidAdminNumber(data, 'pushOptIns') &&
+             isValidAdminNumber(data, 'aiRequestsTotal') &&
+             isValidAdminNumber(data, 'aiRequestsSuccess') &&
+             isValidAdminNumber(data, 'aiRequestsError') &&
+             isValidAdminNumber(data, 'aiLatencySumMs') &&
+             isValidAdminNumber(data, 'aiLatencyCount');
+    }
+
+    function isValidAdminStats(data) {
+      return data.keys().size() <= 100 &&
+             data.keys().hasOnly([
+               'statId', 'period', 'date', 'createdAt', 'updatedAt', 'lastUpdated', 'updated_at', 'created_at',
+               'totalUsers', 'passkeyUsers', 'googleUsers', 'bothUsers', 'anonymousUsers',
+               'total_users', 'passkey_users', 'google_users',
+               'dau', 'wau', 'mau', 'activeUsers', 'stickinessRatio', 'stickiness', 'dauWauRatio',
+               'mealsTotal', 'mealsVoice', 'mealsText', 'mealsCamera',
+               'totalMeals', 'voiceMeals', 'textMeals', 'cameraMeals',
+               'mealsToday', 'mealsRolling7d', 'mealsCount',
+               'total_meals', 'meals_voice', 'meals_text',
+               'voiceAvgSeconds', 'textAvgSeconds', 'voiceLogs', 'textLogs', 'cameraLogs',
+               'weekendReviewEligible', 'weekendReviewViewed', 'weekendReviewCompleted', 'weekendReviewShared',
+               'weekendReviewViews', 'weekendReviewShares', 'weekendReviewConversion',
+               'streakTier0', 'streakTier1', 'streakTier2', 'streakTier3',
+               'streakAvgDays', 'streakTiers',
+               'streaks_0', 'streaks_1_6', 'streaks_7_13', 'streaks_14_29', 'streaks_30_plus',
+               'hourlyDistribution',
+               'hourly_0', 'hourly_1', 'hourly_2', 'hourly_3', 'hourly_4', 'hourly_5',
+               'hourly_6', 'hourly_7', 'hourly_8', 'hourly_9', 'hourly_10', 'hourly_11',
+               'hourly_12', 'hourly_13', 'hourly_14', 'hourly_15', 'hourly_16', 'hourly_17',
+               'hourly_18', 'hourly_19', 'hourly_20', 'hourly_21', 'hourly_22', 'hourly_23',
+               'peakHour',
+               'pwaInstalls', 'pushOptIns', 'pushSubscriptions',
+               'pwaStandaloneCount', 'pushEnabledCount',
+               'pwa_installs', 'push_opt_ins', 'push_subscriptions',
+               'geminiP50', 'geminiP95', 'geminiSuccessRate',
+               'aiRequestsTotal', 'aiRequestsSuccess', 'aiRequestsError',
+               'aiLatencySumMs', 'aiLatencyCount', 'aiAvgLatencyMs',
+               'geminiLatencySumMs', 'geminiLatencyCount',
+               'gemini_p50', 'gemini_p95', 'gemini_success_rate'
+             ]) &&
+             isValidAdminStatsCore(data) &&
+             isValidAdminStatsNumbers(data);
+    }
+
+    function isValidTelemetryEvent(data) {
+      return data.keys().size() <= 20 &&
+             data.keys().hasOnly([
+               'id', 'eventId', 'type', 'eventType', 'timestamp', 'createdAt',
+               'durationMs', 'modality', 'handle', 'status', 'step', 'meta', 'metadata'
+             ]) &&
+             isValidAdminString(data, 'type', 50) &&
+             isValidAdminString(data, 'eventType', 50) &&
+             isValidAdminString(data, 'modality', 32) &&
+             isValidAdminString(data, 'handle', 32) &&
+             isValidAdminString(data, 'status', 32) &&
+             isValidAdminNumber(data, 'durationMs') &&
+             isValidAdminTimestamp(data, 'timestamp') &&
+             isValidAdminTimestamp(data, 'createdAt') &&
+             (!('meta' in data) || (data.meta is map && data.meta.keys().size() <= 20)) &&
+             (!('metadata' in data) || (data.metadata is map && data.metadata.keys().size() <= 20));
     }
 
     match /users/{userId} {
@@ -76,6 +213,25 @@ service cloud.firestore {
     // Passkey WebAuthn challenges
     match /challenges/{handle} {
       allow read, write: if request.auth != null;
+    }
+
+    // Admin Aggregated Telemetry Stats (real-time websocket sync for admin dashboard)
+    match /admin_stats/{statId} {
+      // Allow read so admin dashboard can stream live metrics via onSnapshot
+      allow read: if true;
+
+      // Allow atomic increments and updates from client telemetry with strict schema validation
+      allow create, update: if isValidStatId(statId) && isValidAdminStats(request.resource.data);
+
+      // Disallow deletion to preserve historical operational telemetry
+      allow delete: if false;
+    }
+
+    // Optional Granular Admin Telemetry Events stream
+    match /admin_telemetry/{eventId} {
+      allow read: if true;
+      allow create: if isValidStatId(eventId) && isValidTelemetryEvent(request.resource.data);
+      allow update, delete: if false;
     }
   }
 }

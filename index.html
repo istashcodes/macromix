@@ -32,9 +32,10 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="styles.css?v=15.9">
+  <link rel="stylesheet" href="admin.css?v=1.0">
 </head>
 <body>
   <!-- Gooey SVG Filter for Header Tab Toggle (gooey-react technique) -->
@@ -446,6 +447,11 @@
         </div>
       </div>
     </section>
+
+    <!-- TAB 3: ADMIN INTELLIGENCE (Operations Analytics Dashboard) -->
+    <section id="view-admin" class="app-tab-view hidden" style="padding: 0; min-height: 100vh;">
+      <!-- Populated dynamically by admin.js with Swiss Paper Design -->
+    </section>
     </div> <!-- /.app-scroll-canvas -->
   </div> <!-- /.app-container -->
 
@@ -506,6 +512,11 @@
       </div>
 
       <div class="settings-section-divider"></div>
+      <div id="settings-admin-section" style="display:none; margin-bottom:12px;">
+        <button type="button" class="btn-primary" id="btn-settings-admin" style="width:100%; padding:10px; font-size:13px; background:#181A1D; color:#FFFFFF; border:1.5px solid #181A1D; display:flex; align-items:center; justify-content:center; gap:8px;">
+          <span>Operations Intelligence</span> <span style="font-size:10px; background:#C2410C; color:#FFF; padding:2px 6px; border-radius:4px; font-family:'JetBrains Mono', monospace;">ADMIN</span>
+        </button>
+      </div>
       <div class="account-auth-card" style="display:flex; justify-content:space-between; align-items:center; padding:12px;">
         <div style="font-size:13px; font-weight:800; color:var(--text-primary);">
           Account: <span id="settings-account-handle" style="color:var(--prot-color);">@you</span>
@@ -996,6 +1007,9 @@
 
   <!-- Optional Local/Shared Environment Config (gitignored) -->
   <script src="env.js" onerror="/* optional env.js */"></script>
+
+  <!-- Operations Intelligence Admin Controller -->
+  <script type="module" src="admin.js?v=1.0"></script>
 
   <!-- Frontend Controller -->
   <script src="app.js?v=15.9"></script>

@@ -1859,7 +1859,7 @@ async function handleTextLog(e) {
   manualTextInput.placeholder = 'Logging meal...';
 
   try {
-    const success = await processTranscript(text);
+    const success = await processTranscript(text, null, 'text');
     if (success && manualTextInput && manualTextInput.value === text) {
       manualTextInput.value = '';
     }
@@ -1925,6 +1925,7 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
   if (!apiKey) {
     throw new Error("Gemini API key is not configured. Please ensure env.js is loaded.");
   }
+  const t0 = performance.now();
 
   const modelsToTry = [
     'gemini-flash-latest',
@@ -2002,14 +2003,22 @@ async function callClientGeminiDirect(transcript, audioBase64 = null) {
   }
 
   if (!geminiResult) {
+    if (window.MacromixFirebase && typeof window.MacromixFirebase.recordGeminiTelemetry === 'function') {
+      window.MacromixFirebase.recordGeminiTelemetry(Math.round(performance.now() - t0), false);
+    }
     const safeMsg = lastErr ? (lastErr.message || '').replace(/<[^>]*>?/gm, '').trim() : '';
     throw new Error(safeMsg || "Gemini AI is currently busy. Please wait a few moments and try again.");
+  }
+
+  const latencyMs = Math.round(performance.now() - t0);
+  if (window.MacromixFirebase && typeof window.MacromixFirebase.recordGeminiTelemetry === 'function') {
+    window.MacromixFirebase.recordGeminiTelemetry(latencyMs, true);
   }
 
   return geminiResult;
 }
 
-async function processTranscript(transcript, audioBase64 = null) {
+async function processTranscript(transcript, audioBase64 = null, inputSource = 'voice') {
   if (isVisitorMode) return;
   if ((!transcript || !transcript.trim()) && !audioBase64) {
     setMicStatus("Please speak or enter what you ate.", true);
@@ -2198,6 +2207,7 @@ async function processTranscript(transcript, audioBase64 = null) {
         logged_time: geminiData.logged_time || now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         raw_transcript: geminiData.raw_transcript || transcript || "",
         engine_used: 'gemini_multimodal_ai',
+        input_source: inputSource,
         items: itemsWithIds,
         total_calories: Math.round(mealTotalCal * 10) / 10,
         total_protein_g: Math.round(mealTotalProt * 10) / 10,
@@ -2881,6 +2891,11 @@ function openSettingsModal() {
     handleEl.textContent = currentUserHandle ? `@${currentUserHandle}` : '@you';
   }
 
+  const adminSection = document.getElementById('settings-admin-section');
+  if (adminSection) {
+    adminSection.style.display = (currentUserHandle && currentUserHandle.toLowerCase() === 'satish') ? 'block' : 'none';
+  }
+
   const modal = document.getElementById('settings-modal');
   updateNotificationSettingsUI();
   if (modal) modal.classList.remove('hidden');
@@ -3381,7 +3396,7 @@ function parseUrlHandle() {
   const match = path.match(/^\/?@?([a-zA-Z0-9_]{3,16})$/);
   if (match) {
     const handle = match[1].toLowerCase();
-    const reserved = ['index', 'styles', 'app', 'sw', 'manifest', 'icons', 'api', 'favicon'];
+    const reserved = ['index', 'styles', 'app', 'sw', 'manifest', 'icons', 'api', 'favicon', 'admin'];
     if (!reserved.includes(handle)) {
       return handle;
     }
@@ -3553,6 +3568,15 @@ function setVisitorMode(isVisitor, targetHandle = null) {
 
 
 async function checkUrlRoute() {
+  const isHashAdmin = window.location.hash === '#admin';
+  const isPathAdmin = window.location.pathname.replace(/\/+$/, '') === '/admin';
+  if (isHashAdmin || isPathAdmin) {
+    if (currentUserHandle && currentUserHandle.toLowerCase() === 'satish') {
+      await switchTab('admin', false);
+      return;
+    }
+  }
+
   const routeHandle = parseUrlHandle();
   if (routeHandle) {
     if (!currentUserHandle) {
@@ -3617,8 +3641,33 @@ function animateTabSlide(exitEl, enterEl, direction) {
 async function switchTab(tabName, updateUrl = true) {
   const viewMe = document.getElementById('view-me');
   const viewFriends = document.getElementById('view-friends');
+  const viewAdmin = document.getElementById('view-admin');
   const scroller = document.getElementById('app-scroll-canvas');
   if (scroller) scroller.scrollTop = 0;
+
+  if (tabName === 'admin') {
+    currentTab = 'admin';
+    if (viewMe) viewMe.classList.add('hidden');
+    if (viewFriends) viewFriends.classList.add('hidden');
+    if (viewAdmin) {
+      viewAdmin.classList.remove('hidden');
+      if (window.MacromixAdmin && typeof window.MacromixAdmin.initAdminDashboard === 'function') {
+        window.MacromixAdmin.initAdminDashboard(viewAdmin);
+      }
+    }
+    if (updateUrl) {
+      window.location.hash = 'admin';
+    }
+    return;
+  }
+
+  // If leaving admin tab, tear down listener and hide
+  if (viewAdmin) {
+    viewAdmin.classList.add('hidden');
+    if (window.MacromixAdmin && typeof window.MacromixAdmin.destroyAdminDashboard === 'function') {
+      window.MacromixAdmin.destroyAdminDashboard();
+    }
+  }
 
   if (tabName === 'friends') {
     currentTab = 'friends';
@@ -5264,6 +5313,12 @@ function updateWrappedSlideUI() {
     }
   });
 
+  if (wrappedCurrentSlide === slides.length - 1 && slides.length > 0) {
+    if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.syncWeekendReviewCompleted === 'function') {
+      window.MacromixFirebase.syncWeekendReviewCompleted(currentUserHandle);
+    }
+  }
+
   fills.forEach((fill, idx) => {
     fill.style.transition = 'none';
     if (idx < wrappedCurrentSlide) {
@@ -5377,6 +5432,9 @@ function closeWeeklyWrappedModal() {
 function triggerWrappedShare() {
   markWeekendWrappedViewed(getWrappedActiveHandle());
   const handle = getWrappedActiveHandle();
+  if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.syncWeekendReviewShared === 'function') {
+    window.MacromixFirebase.syncWeekendReviewShared(currentUserHandle);
+  }
   const profile = WRAPPED_PROFILES[handle] || WRAPPED_PROFILES['istashmacros'];
   const text = profile.shareText;
   if (navigator.clipboard) {
@@ -5640,9 +5698,23 @@ function setupEventListeners() {
 
   bind('btn-close-settings', 'click', closeSettingsModal);
   bind('btn-save-targets', 'click', saveTargets);
+  bind('btn-settings-admin', 'click', () => {
+    closeSettingsModal();
+    switchTab('admin');
+  });
   bind('btn-settings-signout', 'click', handleSignOut);
   bind('btn-close-edit-modal', 'click', closeEditModal);
   bind('btn-save-item-edit', 'click', saveItemEdit);
+
+  window.addEventListener('hashchange', () => {
+    if (window.location.hash === '#admin') {
+      if (currentUserHandle && currentUserHandle.toLowerCase() === 'satish') {
+        switchTab('admin', false);
+      }
+    } else if (currentTab === 'admin') {
+      switchTab('me', false);
+    }
+  });
 
   // PWA Install Prompt Listeners
   window.addEventListener('beforeinstallprompt', (e) => {
@@ -5716,7 +5788,14 @@ window.getWrappedCurrentSlide = () => wrappedCurrentSlide;
 window.isWrappedPaused = () => wrappedIsPaused;
 window.hasUserViewedWeekendWrapped = hasUserViewedWeekendWrapped;
 window.markWeekendWrappedViewed = markWeekendWrappedViewed;
-window.WRAPPED_CURRENT_EDITION = WRAPPED_CURRENT_EDITION;
+window.exitAdminDashboard = function() {
+  switchTab('me', true);
+  window.history.pushState(null, '', '/');
+};
+
+window.navigateToAdmin = function() {
+  switchTab('admin', true);
+};
 
 // ─── PWA Launch Handler Consumer (Captures deep links into active PWA) ───
 if ('launchQueue' in window) {
@@ -5728,7 +5807,7 @@ if ('launchQueue' in window) {
       const match = path.match(/^\/?@?([a-zA-Z0-9_]{3,16})$/);
       if (match) {
         const handle = match[1].toLowerCase();
-        const reserved = ['index', 'styles', 'app', 'sw', 'manifest', 'icons', 'api', 'favicon'];
+        const reserved = ['index', 'styles', 'app', 'sw', 'manifest', 'icons', 'api', 'favicon', 'admin'];
         if (!reserved.includes(handle)) {
           if (currentUserHandle && currentUserHandle.toLowerCase() === handle) {
             setVisitorMode(false);

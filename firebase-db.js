@@ -14,7 +14,8 @@ import {
   where,
   orderBy,
   onSnapshot,
-  serverTimestamp
+  serverTimestamp,
+  increment
 } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js';
 import {
   getAuth,
@@ -654,6 +655,43 @@ export async function saveMealToFirestore(handle, meal) {
     });
     await setDoc(mealRef, mealPayload, { merge: true });
     console.log(`[Macromix Firebase] Saved meal #${mealId} for @${clean} to Firestore.`);
+
+    // Real-time telemetry & operational counters
+    try {
+      const userRef = doc(database, 'users', clean);
+      const isText = meal.input_source === 'text';
+      const userStats = {
+        lastActive: serverTimestamp(),
+        lastMealLoggedAt: serverTimestamp(),
+        totalMealsCount: increment(1)
+      };
+      if (isText) {
+        userStats.textMealsCount = increment(1);
+      } else {
+        userStats.voiceMealsCount = increment(1);
+      }
+      await setDoc(userRef, userStats, { merge: true });
+
+      // Atomic update to admin_stats/today
+      const currentHour = new Date().getHours();
+      const adminTodayRef = doc(database, 'admin_stats', 'today');
+      const statsPayload = {
+        statId: 'today',
+        updatedAt: serverTimestamp(),
+        mealsTotal: increment(1),
+        totalMeals: increment(1)
+      };
+      if (isText) {
+        statsPayload.mealsText = increment(1);
+      } else {
+        statsPayload.mealsVoice = increment(1);
+      }
+      statsPayload[`hourly_${currentHour}`] = increment(1);
+      await setDoc(adminTodayRef, statsPayload, { merge: true });
+    } catch (metricErr) {
+      console.warn('[Macromix Firebase] Telemetry notice:', metricErr.message);
+    }
+
     return true;
   } catch (err) {
     console.warn(`[Macromix Firebase] Could not save meal #${mealId} to Firestore:`, err);
@@ -849,10 +887,122 @@ export async function syncWeekendWrappedViewedToFirestore(handle, edition = '202
       weekendReviewEdition: edition,
       lastActive: serverTimestamp()
     }, { merge: true });
+
+    // Atomic increment to admin_stats
+    try {
+      const statsRef = doc(database, 'admin_stats', 'today');
+      await setDoc(statsRef, {
+        statId: 'today',
+        updatedAt: serverTimestamp(),
+        weekendReviewViewed: increment(1),
+        weekendReviewViews: increment(1)
+      }, { merge: true });
+    } catch (e) {}
+
     console.log(`[Macromix Firebase] Recorded Weekend Review viewed for @${clean}`);
     return true;
   } catch (err) {
     console.warn(`[Macromix Firebase] Could not sync Weekend Review viewed for @${clean}:`, err);
+    return false;
+  }
+}
+
+export async function syncWeekendReviewCompleted(handle) {
+  const database = initFirebaseDB();
+  if (!database || !handle) return false;
+  const clean = handle.trim().toLowerCase().replace(/^@+/, '');
+  try {
+    const docRef = doc(database, 'users', clean);
+    await setDoc(docRef, {
+      weekendReviewCompleted: true,
+      weekendReviewCompletedAt: serverTimestamp()
+    }, { merge: true });
+
+    try {
+      const statsRef = doc(database, 'admin_stats', 'today');
+      await setDoc(statsRef, {
+        statId: 'today',
+        updatedAt: serverTimestamp(),
+        weekendReviewCompleted: increment(1)
+      }, { merge: true });
+    } catch (e) {}
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+export async function syncWeekendReviewShared(handle) {
+  const database = initFirebaseDB();
+  if (!database || !handle) return false;
+  const clean = handle.trim().toLowerCase().replace(/^@+/, '');
+  try {
+    const docRef = doc(database, 'users', clean);
+    await setDoc(docRef, {
+      weekendReviewShared: true,
+      weekendReviewSharedAt: serverTimestamp()
+    }, { merge: true });
+
+    try {
+      const statsRef = doc(database, 'admin_stats', 'today');
+      await setDoc(statsRef, {
+        statId: 'today',
+        updatedAt: serverTimestamp(),
+        weekendReviewShared: increment(1),
+        weekendReviewShares: increment(1)
+      }, { merge: true });
+    } catch (e) {}
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+export async function syncPwaInstalledToFirestore(handle) {
+  const database = initFirebaseDB();
+  if (!database || !handle) return false;
+  const clean = handle.trim().toLowerCase().replace(/^@+/, '');
+  try {
+    const docRef = doc(database, 'users', clean);
+    await setDoc(docRef, {
+      pwaInstalled: true,
+      pwaInstalledAt: serverTimestamp()
+    }, { merge: true });
+
+    try {
+      const statsRef = doc(database, 'admin_stats', 'today');
+      await setDoc(statsRef, {
+        statId: 'today',
+        updatedAt: serverTimestamp(),
+        pwaInstalls: increment(1)
+      }, { merge: true });
+    } catch (e) {}
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+export async function recordGeminiTelemetry(durationMs, isSuccess = true) {
+  const database = initFirebaseDB();
+  if (!database) return false;
+  try {
+    const statsRef = doc(database, 'admin_stats', 'today');
+    const updateObj = {
+      statId: 'today',
+      updatedAt: serverTimestamp(),
+      aiRequestsTotal: increment(1),
+      aiLatencySumMs: increment(Math.round(durationMs)),
+      aiLatencyCount: increment(1)
+    };
+    if (isSuccess) {
+      updateObj.aiRequestsSuccess = increment(1);
+    } else {
+      updateObj.aiRequestsError = increment(1);
+    }
+    await setDoc(statsRef, updateObj, { merge: true });
+    return true;
+  } catch (err) {
     return false;
   }
 }
@@ -891,7 +1041,11 @@ if (typeof window !== 'undefined') {
     getMealsStorageKey,
     completeCustomTokenAuth,
     savePushSubscription,
-    syncWeekendWrappedViewedToFirestore
+    syncWeekendWrappedViewedToFirestore,
+    syncWeekendReviewCompleted,
+    syncWeekendReviewShared,
+    syncPwaInstalledToFirestore,
+    recordGeminiTelemetry
   });
 }
 
