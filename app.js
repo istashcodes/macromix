@@ -2898,7 +2898,70 @@ function openSettingsModal() {
 
   const modal = document.getElementById('settings-modal');
   updateNotificationSettingsUI();
+  updateGoogleLinkSettingsUI();
   if (modal) modal.classList.remove('hidden');
+}
+
+async function updateGoogleLinkSettingsUI() {
+  const linkBtn = document.getElementById('btn-link-google');
+  const statusEl = document.getElementById('settings-google-status');
+  const linkText = document.getElementById('btn-link-google-text');
+  if (!linkBtn || !statusEl) return;
+
+  if (!currentUserHandle) {
+    linkBtn.style.display = 'none';
+    statusEl.style.display = 'none';
+    return;
+  }
+
+  try {
+    if (window.MacromixFirebase && typeof window.MacromixFirebase.getFirestoreUserProfile === 'function') {
+      const profile = await window.MacromixFirebase.getFirestoreUserProfile(currentUserHandle);
+      if (profile && (profile.googleUid || profile.email)) {
+        linkBtn.style.display = 'none';
+        statusEl.style.display = 'block';
+        statusEl.textContent = `✓ Linked with Google (${profile.email || 'Connected'})`;
+        return;
+      }
+    }
+  } catch (e) {}
+
+  linkBtn.style.display = 'flex';
+  statusEl.style.display = 'none';
+  if (linkText) linkText.textContent = 'Link Google Account (Cross-Device)';
+}
+
+async function handleLinkGoogleAccount() {
+  const linkBtn = document.getElementById('btn-link-google');
+  const statusEl = document.getElementById('settings-google-status');
+  const linkText = document.getElementById('btn-link-google-text');
+  if (!linkBtn || !statusEl || !currentUserHandle) return;
+
+  try {
+    if (linkText) linkText.textContent = 'Connecting Google...';
+    await waitForFirebaseDB();
+    const res = await window.MacromixFirebase.signInWithGoogle();
+    if (!res.success) {
+      if (res.redirecting) return;
+      alert(res.error || 'Google Sign-In failed.');
+      if (linkText) linkText.textContent = 'Link Google Account (Cross-Device)';
+      return;
+    }
+    const googleUser = res.user;
+    const linkRes = await window.MacromixFirebase.linkGoogleToHandle(currentUserHandle, googleUser);
+    if (linkRes) {
+      linkBtn.style.display = 'none';
+      statusEl.style.display = 'block';
+      statusEl.textContent = `✓ Linked with Google (${googleUser.email || 'Connected'})`;
+      AppLogger.log('AUTH', `Successfully linked Google account ${googleUser.email} to @${currentUserHandle}`, null, 'SUCCESS');
+    } else {
+      alert('Could not link Google account. Please try again.');
+      if (linkText) linkText.textContent = 'Link Google Account (Cross-Device)';
+    }
+  } catch (err) {
+    alert('Google linking error: ' + err.message);
+    if (linkText) linkText.textContent = 'Link Google Account (Cross-Device)';
+  }
 }
 
 function closeSettingsModal() {
@@ -4088,6 +4151,86 @@ function clearOnboardingError() {
   }
 }
 
+async function completeLoginOnboarding(handle, authMethod = 'passkey', profileOverride = null) {
+  clearOnboardingError();
+  const clean = (handle || '').trim().toLowerCase().replace(/^@+/, '');
+  if (!clean) return false;
+
+  let profile = profileOverride;
+  if (!profile && window.MacromixFirebase && typeof window.MacromixFirebase.getFirestoreUserProfile === 'function') {
+    try {
+      profile = await window.MacromixFirebase.getFirestoreUserProfile(clean);
+    } catch (e) {
+      console.warn('[Macromix] Could not fetch profile on login:', e);
+    }
+  }
+
+  // Restore daily targets from cloud profile if available
+  if (profile && profile.dailyTargets) {
+    userTargets = profile.dailyTargets;
+    localStorage.setItem('macronomics_targets', JSON.stringify(userTargets));
+    applyTargetsToUI();
+  }
+
+  // Restore streak from cloud profile if available
+  if (profile && typeof profile.streak === 'number') {
+    currentUserStreak = profile.streak;
+    const streakBadge = document.getElementById('streak-badge');
+    if (streakBadge) {
+      streakBadge.textContent = `🔥 ${profile.streak}d`;
+    }
+  }
+
+  // If local backend is running, notify local server
+  if (isLocalBackend()) {
+    try {
+      await fetch('/api/user/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handle: clean, user_id: 1 })
+      });
+    } catch (e) {}
+  }
+
+  currentUserHandle = clean;
+  localStorage.setItem('macromix_user_handle', clean);
+  localStorage.setItem('macromix_onboarded', 'true');
+
+  if (window.MacromixFirebase && typeof window.MacromixFirebase.touchUserLogin === 'function') {
+    window.MacromixFirebase.touchUserLogin(clean).catch(() => {});
+  }
+
+  const pillMe = document.getElementById('tab-pill-me');
+  const badgeText = document.getElementById('header-handle-text');
+  if (badgeText) badgeText.textContent = 'Me';
+  if (pillMe) pillMe.style.display = '';
+
+  const onboardingEl = document.getElementById('onboarding-screen');
+  if (onboardingEl) {
+    onboardingEl.classList.add('hidden');
+  }
+  document.body.style.overflow = '';
+
+  AppLogger.log('AUTH', `Logged in existing user via ${authMethod}: @${clean}`, { handle: clean, authMethod, isLogin: true }, 'SUCCESS');
+
+  setupRealtimeMealsSync();
+  setupCurrentUserProfileSync();
+  setupRealtimeProfileSync();
+  await loadMealLogs();
+  currentUserStreak = calculateStreak();
+  updateHeaderFriendsBtn();
+  updateWeekendWrappedVisibility();
+  updateTopAnnouncementBanner();
+  triggerEmptyStateCardJiggle();
+
+  const pendingShareHandle = sessionStorage.getItem('macromix_pending_share_handle') || parseUrlHandle();
+  if (pendingShareHandle && pendingShareHandle.toLowerCase() !== clean.toLowerCase()) {
+    sessionStorage.removeItem('macromix_pending_share_handle');
+    await viewFriendProfile(pendingShareHandle);
+  }
+  return true;
+}
+
 async function registerHandleOnboarding(handle, authMethod = 'passkey') {
   clearOnboardingError();
   const clean = (handle || '').trim().toLowerCase().replace(/^@+/, '');
@@ -4242,7 +4385,9 @@ async function handlePasskeyAuth() {
         isExisting = !chkData.available;
       }
     } catch (e) {}
-  } else if (window.MacromixFirebase && typeof window.MacromixFirebase.checkHandleAvailable === 'function') {
+  }
+  
+  if (!isExisting && window.MacromixFirebase && typeof window.MacromixFirebase.checkHandleAvailable === 'function') {
     try {
       const isAvailable = await window.MacromixFirebase.checkHandleAvailable(clean);
       isExisting = !isAvailable;
@@ -4294,6 +4439,46 @@ async function registerHandleNativePasskey(clean) {
   await registerHandleOnboarding(clean, 'passkey');
 }
 
+async function loginHandleNativePasskey(clean) {
+  clearOnboardingError();
+
+  if (!window.PublicKeyCredential) {
+    showOnboardingError('Passkeys are not supported on this browser or device.');
+    return;
+  }
+
+  try {
+    const challenge = new Uint8Array(32);
+    window.crypto.getRandomValues(challenge);
+
+    const credential = await navigator.credentials.get({
+      publicKey: {
+        challenge: challenge,
+        rpId: window.location.hostname,
+        userVerification: 'preferred',
+        timeout: 60000
+      }
+    });
+
+    if (!credential) {
+      showOnboardingError('No passkey returned. Please try again.');
+      return;
+    }
+
+    AppLogger.log('AUTH', `WebAuthn assertion verified for @${clean}`, { id: credential.id }, 'SUCCESS');
+    await completeLoginOnboarding(clean, 'passkey');
+  } catch (err) {
+    AppLogger.log('AUTH', 'WebAuthn assertion failed/cancelled: ' + (err.name || err.message || err), null, 'WARN');
+    if (err.name === 'NotAllowedError') {
+      showOnboardingError('Passkey sign-in was cancelled. Please try again.');
+      return;
+    }
+    showOnboardingError(
+      `No passkey found on this device for @${clean}. Use your registered device (or scan QR code when prompted), or sign in with Google.`
+    );
+  }
+}
+
 // ─── Registration (TOFU) ─────────────────────────────────────────────
 async function passkeyRegister(handle) {
   let options;
@@ -4305,21 +4490,12 @@ async function passkeyRegister(handle) {
     });
     const ct = res.headers.get('content-type') || '';
     if (!res.ok || !ct.includes('application/json')) {
-      if (!isLocalBackend()) {
-        await registerHandleNativePasskey(handle);
-        return;
-      }
-      const err = await res.json().catch(() => ({}));
-      showOnboardingError(err.detail || err.error || 'Could not start registration.');
+      await registerHandleNativePasskey(handle);
       return;
     }
     options = await res.json();
   } catch (e) {
-    if (!isLocalBackend()) {
-      await registerHandleNativePasskey(handle);
-      return;
-    }
-    showOnboardingError('Network error. Please try again.');
+    await registerHandleNativePasskey(handle);
     return;
   }
 
@@ -4370,27 +4546,31 @@ async function passkeyRegister(handle) {
 // ─── Login ────────────────────────────────────────────────────
 async function passkeyLogin(handle) {
   let options;
-  try {
-    const res = await fetch(`${AUTH_BASE}/authLoginBegin`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ handle }),
-    });
-    const ct = res.headers.get('content-type') || '';
-    if (!res.ok || !ct.includes('application/json')) {
-      const err = await res.json().catch(() => ({}));
-      const msg = err.detail || err.error || '';
-      if (res.status === 404 || msg.toLowerCase().includes('register')) {
-        AppLogger.log('AUTH', `Handle @${handle} has no passkey on record, switching to registration...`, null, 'INFO');
-        await passkeyRegister(handle);
-        return;
+  let useNativePasskey = false;
+
+  if (isLocalBackend()) {
+    try {
+      const res = await fetch(`${AUTH_BASE}/authLoginBegin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handle }),
+      });
+      const ct = res.headers.get('content-type') || '';
+      if (res.ok && ct.includes('application/json')) {
+        options = await res.json();
+      } else {
+        useNativePasskey = true;
       }
-      showOnboardingError(msg || 'Could not start login.');
-      return;
+    } catch (e) {
+      useNativePasskey = true;
     }
-    options = await res.json();
-  } catch (e) {
-    showOnboardingError('Network error. Please try again.');
+  } else {
+    // Static / Spark plan hosting: use native WebAuthn assertion
+    useNativePasskey = true;
+  }
+
+  if (useNativePasskey) {
+    await loginHandleNativePasskey(handle);
     return;
   }
 
@@ -4412,8 +4592,8 @@ async function passkeyLogin(handle) {
       body: JSON.stringify({ handle, assertion }),
     });
     if (!res.ok) {
-      const err = await res.json();
-      showOnboardingError(err.error || 'Passkey login failed.');
+      const err = await res.json().catch(() => ({}));
+      showOnboardingError(err.error || err.detail || 'Passkey login failed.');
       return;
     }
     const data = await res.json();
@@ -4435,7 +4615,7 @@ async function passkeyLogin(handle) {
   }
 
   AppLogger.log('AUTH', `Passkey login for @${handle}`, { handle }, 'SUCCESS');
-  await registerHandleOnboarding(handle, 'passkey');
+  await completeLoginOnboarding(handle, 'passkey');
 }
 
 // ─── Google OIDC Authentication Flow ─────────────────────────
@@ -4457,7 +4637,7 @@ async function handleGoogleAuth() {
     const googleUser = res.user;
     const existingProfile = await window.MacromixFirebase.findUserByGoogleAuth(googleUser.uid, googleUser.email);
     if (existingProfile && existingProfile.handle) {
-      await registerHandleOnboarding(existingProfile.handle, 'google', existingProfile);
+      await completeLoginOnboarding(existingProfile.handle, 'google', existingProfile);
       return;
     }
     let defaultHandle = (googleUser.email ? googleUser.email.split('@')[0] : (googleUser.displayName || 'user'))
@@ -4475,7 +4655,7 @@ async function handleGoogleAuth() {
       showOnboardingError(createRes.error || 'Failed to claim handle.');
       return;
     }
-    await registerHandleOnboarding(cleanHandle, 'google', createRes.profile);
+    await completeLoginOnboarding(cleanHandle, 'google', createRes.profile);
   } catch (err) {
     AppLogger.log('AUTH', 'Google Sign-In error: ' + err.message, null, 'ERROR');
     showOnboardingError('Google Sign-In error: ' + err.message);
@@ -5702,6 +5882,7 @@ function setupEventListeners() {
     closeSettingsModal();
     switchTab('admin');
   });
+  bind('btn-link-google', 'click', handleLinkGoogleAccount);
   bind('btn-settings-signout', 'click', handleSignOut);
   bind('btn-close-edit-modal', 'click', closeEditModal);
   bind('btn-save-item-edit', 'click', saveItemEdit);

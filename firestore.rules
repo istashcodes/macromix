@@ -12,11 +12,13 @@ service cloud.firestore {
     // Document ID: {userId} (handle: 3-12 characters, lowercase alphanumeric + underscore)
     // Fields:
     //   - handle: string (3-12 chars)
-    //   - uid / googleUid: string (Firebase Auth UID of the owner)
+    //   - uid / googleUid: string (Firebase Auth UID of the owner, or null for Passkey users)
     //   - streak: number (integer >= 0)
     //   - latestStats: map ({ streak, targetPct })
     //   - targets / dailyTargets: map (nutritional targets)
     //   - deviceId: string
+    //   - authMethod: string ('passkey', 'google', 'both')
+    //   - credentials: list of WebAuthn descriptors
     //   - createdAt / lastActive: timestamp
     //
     // Subcollections:
@@ -61,19 +63,33 @@ service cloud.firestore {
              h.matches('^[a-z0-9_]+$');
     }
 
-    function isOwner(userId) {
-      return (userId is string) && request.auth != null && (
-        (resource != null && resource.data.uid != null && request.auth.uid == resource.data.uid) ||
-        (resource != null && resource.data.googleUid != null && request.auth.uid == resource.data.googleUid)
-      );
+    function isGoogleAccount(data) {
+      return ('googleUid' in data && data.googleUid != null) ||
+             ('uid' in data && data.uid != null);
     }
 
-    function isParentOwner(userId) {
-      let userDoc = get(/databases/$(database)/documents/users/$(userId));
-      return request.auth != null && (
-        (userDoc.data.uid != null && request.auth.uid == userDoc.data.uid) ||
-        (userDoc.data.googleUid != null && request.auth.uid == userDoc.data.googleUid)
-      );
+    function isPasskeyAccount(data) {
+      return (!('googleUid' in data) || data.googleUid == null) &&
+             (!('uid' in data) || data.uid == null);
+    }
+
+    function getUserDoc(userId) {
+      return get(/databases/$(database)/documents/users/$(userId));
+    }
+
+    function isParentGoogleOwner(userId) {
+      let userDoc = getUserDoc(userId);
+      return request.auth != null &&
+             isGoogleAccount(userDoc.data) &&
+             (
+               ('googleUid' in userDoc.data && userDoc.data.googleUid != null && request.auth.uid == userDoc.data.googleUid) ||
+               ('uid' in userDoc.data && userDoc.data.uid != null && request.auth.uid == userDoc.data.uid)
+             );
+    }
+
+    function isParentPasskeyOwner(userId) {
+      let userDoc = getUserDoc(userId);
+      return isPasskeyAccount(userDoc.data);
     }
 
     function isValidStatId(id) {
@@ -185,28 +201,50 @@ service cloud.firestore {
       // Public read for leaderboard, streak display, and friend discovery
       allow read: if true;
 
-      // Create: Authenticated user claiming an available valid handle
-      allow create: if request.auth != null &&
-                       isValidHandle(userId) &&
-                       (request.resource.data.uid == request.auth.uid ||
-                        request.resource.data.googleUid == request.auth.uid);
+      // Create: Authenticated Google user with matching UID OR Passkey user without Firebase Auth UID
+      allow create: if isValidHandle(userId) && (
+        (request.auth != null && (
+          (('uid' in request.resource.data) && request.resource.data.uid == request.auth.uid) ||
+          (('googleUid' in request.resource.data) && request.resource.data.googleUid == request.auth.uid)
+        )) ||
+        (request.auth == null &&
+         (!('uid' in request.resource.data) || request.resource.data.uid == null) &&
+         (!('googleUid' in request.resource.data) || request.resource.data.googleUid == null))
+      );
 
-      // Update: Only authenticated owner; UID cannot be overwritten
-      allow update: if isOwner(userId) &&
-                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid', 'googleUid']);
+      // Update:
+      // - Google-linked account: must be authenticated Google owner, cannot tamper with UID
+      // - Passkey-only account: allow profile updates if handle matches; if linking Google account, must authenticate with matching UID
+      allow update: if (
+        (isGoogleAccount(resource.data) &&
+         request.auth != null &&
+         (('googleUid' in resource.data && resource.data.googleUid != null && request.auth.uid == resource.data.googleUid) ||
+          ('uid' in resource.data && resource.data.uid != null && request.auth.uid == resource.data.uid)) &&
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid', 'googleUid'])) ||
+        (isPasskeyAccount(resource.data) &&
+         request.resource.data.handle == userId &&
+         ((!('googleUid' in request.resource.data) || request.resource.data.googleUid == null) ||
+          (request.auth != null && request.resource.data.googleUid == request.auth.uid)) &&
+         ((!('uid' in request.resource.data) || request.resource.data.uid == null) ||
+          (request.auth != null && request.resource.data.uid == request.auth.uid)))
+      );
 
       // Delete: Disallow direct client delete
       allow delete: if false;
 
       // Subcollection for real-time meal entries across devices
       match /meals/{mealId} {
-        allow read, write, delete: if isParentOwner(userId);
+        allow read: if true;
+        allow write: if isParentGoogleOwner(userId) ||
+                        (isParentPasskeyOwner(userId) &&
+                         (!('owner_handle' in request.resource.data) || request.resource.data.owner_handle == userId));
+        allow delete: if isParentGoogleOwner(userId) || isParentPasskeyOwner(userId);
       }
 
       // Subcollection for social friend relationships
       match /following/{targetHandle} {
         allow read: if true;
-        allow write, delete: if isParentOwner(userId);
+        allow write, delete: if isParentGoogleOwner(userId) || isParentPasskeyOwner(userId);
       }
     }
 

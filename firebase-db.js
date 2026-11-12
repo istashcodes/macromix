@@ -353,6 +353,26 @@ export async function savePasskeyCredentialToUser(handle, credentialData) {
 }
 
 /**
+ * Update user lastActive timestamp upon successful login
+ * @param {string} handle
+ */
+export async function touchUserLogin(handle) {
+  const database = initFirebaseDB();
+  if (!database || !handle) return false;
+  const clean = handle.trim().toLowerCase().replace(/^@+/, '');
+  try {
+    const docRef = doc(database, 'users', clean);
+    await updateDoc(docRef, {
+      lastActive: serverTimestamp()
+    });
+    return true;
+  } catch (err) {
+    console.warn('[Macromix Firebase] Could not update lastActive on login:', err);
+    return false;
+  }
+}
+
+/**
  * Link Google identity to an existing handle
  */
 export async function linkGoogleToHandle(handle, googleUser) {
@@ -1024,6 +1044,7 @@ if (typeof window !== 'undefined') {
     getOrCreateDeviceId,
     checkHandleAvailable,
     createHandleProfile,
+    touchUserLogin,
     syncStreakToFirestore,
     syncTargetsToFirestore,
     getFirestoreUserProfile,
