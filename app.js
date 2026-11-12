@@ -21,7 +21,8 @@ let userTargets = { calories: 2000, protein_g: 150, carbs_g: 200, fat_g: 65, fib
 let userGeminiInfo = { free_remaining: 0, has_custom_key: false, can_use_gemini: false, gemini_api_key: "", masked_key: "Not set" };
 let currentLogs = [];
 let isLoadingMeals = true;
-let currentUserHandle = null;
+let currentUserHandle = (typeof localStorage !== 'undefined' ? (localStorage.getItem('macromix_user_handle') || null) : null);
+if (typeof window !== 'undefined') window.currentUserHandle = currentUserHandle;
 let currentTab = 'me';
 let isVisitorMode = false;
 let viewedHandle = null;
@@ -2867,6 +2868,15 @@ function triggerEmptyStateCardJiggle(force = false) {
   }, 450);
 }
 
+const ADMIN_HANDLES = ['satish', 'istashmacros', 'admin'];
+
+function isAdminUser(handle) {
+  const h = handle || currentUserHandle || (typeof localStorage !== 'undefined' ? localStorage.getItem('macromix_user_handle') : null);
+  if (!h) return false;
+  const clean = h.trim().toLowerCase().replace(/^@+/, '');
+  return ADMIN_HANDLES.includes(clean);
+}
+
 function openSettingsModal() {
   if (isVisitorMode) {
     // Read-only visitor mode: settings cannot be edited
@@ -2886,14 +2896,15 @@ function openSettingsModal() {
     if (fatEl && userTargets.fat_g) fatEl.value = userTargets.fat_g;
   }
 
+  const currentHandle = currentUserHandle || (typeof localStorage !== 'undefined' ? localStorage.getItem('macromix_user_handle') : null);
   const handleEl = document.getElementById('settings-account-handle');
   if (handleEl) {
-    handleEl.textContent = currentUserHandle ? `@${currentUserHandle}` : '@you';
+    handleEl.textContent = currentHandle ? `@${currentHandle.replace(/^@+/, '')}` : '@you';
   }
 
   const adminSection = document.getElementById('settings-admin-section');
   if (adminSection) {
-    adminSection.style.display = (currentUserHandle && currentUserHandle.toLowerCase() === 'satish') ? 'block' : 'none';
+    adminSection.style.display = isAdminUser(currentHandle) ? 'block' : 'none';
   }
 
   const modal = document.getElementById('settings-modal');
@@ -3634,10 +3645,8 @@ async function checkUrlRoute() {
   const isHashAdmin = window.location.hash === '#admin';
   const isPathAdmin = window.location.pathname.replace(/\/+$/, '') === '/admin';
   if (isHashAdmin || isPathAdmin) {
-    if (currentUserHandle && currentUserHandle.toLowerCase() === 'satish') {
-      await switchTab('admin', false);
-      return;
-    }
+    await switchTab('admin', false);
+    return;
   }
 
   const routeHandle = parseUrlHandle();
@@ -3710,13 +3719,22 @@ async function switchTab(tabName, updateUrl = true) {
 
   if (tabName === 'admin') {
     currentTab = 'admin';
+    document.body.classList.add('is-admin-view');
+    const onboardingEl = document.getElementById('onboarding-screen');
+    if (onboardingEl) onboardingEl.classList.add('hidden');
+    document.body.style.overflow = '';
     if (viewMe) viewMe.classList.add('hidden');
     if (viewFriends) viewFriends.classList.add('hidden');
     if (viewAdmin) {
       viewAdmin.classList.remove('hidden');
-      if (window.MacromixAdmin && typeof window.MacromixAdmin.initAdminDashboard === 'function') {
-        window.MacromixAdmin.initAdminDashboard(viewAdmin);
-      }
+      const attachAdmin = (retries = 30) => {
+        if (window.MacromixAdmin && typeof window.MacromixAdmin.initAdminDashboard === 'function') {
+          window.MacromixAdmin.initAdminDashboard(viewAdmin);
+        } else if (retries > 0) {
+          setTimeout(() => attachAdmin(retries - 1), 50);
+        }
+      };
+      attachAdmin();
     }
     if (updateUrl) {
       window.location.hash = 'admin';
@@ -3724,7 +3742,8 @@ async function switchTab(tabName, updateUrl = true) {
     return;
   }
 
-  // If leaving admin tab, tear down listener and hide
+  // If leaving admin tab, restore normal body layout, tear down listener and hide
+  document.body.classList.remove('is-admin-view');
   if (viewAdmin) {
     viewAdmin.classList.add('hidden');
     if (window.MacromixAdmin && typeof window.MacromixAdmin.destroyAdminDashboard === 'function') {
@@ -4120,6 +4139,15 @@ async function checkUserProfileOnboarding() {
   if (routeHandle) {
     sessionStorage.setItem('macromix_pending_share_handle', routeHandle);
     showSharedInviteNotice(routeHandle);
+  }
+
+  // If user requested #admin or /admin, do not trap them in onboarding screen
+  const isHashAdmin = window.location.hash === '#admin';
+  const isPathAdmin = window.location.pathname.replace(/\/+$/, '') === '/admin';
+  if (isHashAdmin || isPathAdmin) {
+    if (onboardingEl) onboardingEl.classList.add('hidden');
+    document.body.style.overflow = '';
+    return;
   }
 
   if (onboardingEl) {
@@ -5887,11 +5915,14 @@ function setupEventListeners() {
   bind('btn-close-edit-modal', 'click', closeEditModal);
   bind('btn-save-item-edit', 'click', saveItemEdit);
 
+  window.exitAdminDashboard = () => {
+    window.location.hash = '';
+    switchTab('me', false);
+  };
+
   window.addEventListener('hashchange', () => {
     if (window.location.hash === '#admin') {
-      if (currentUserHandle && currentUserHandle.toLowerCase() === 'satish') {
-        switchTab('admin', false);
-      }
+      switchTab('admin', false);
     } else if (currentTab === 'admin') {
       switchTab('me', false);
     }

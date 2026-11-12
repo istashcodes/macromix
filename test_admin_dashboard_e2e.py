@@ -99,5 +99,76 @@ def test_admin_dashboard_render_and_telemetry():
 
         browser.close()
 
+def test_admin_direct_hash_istashmacros():
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        context = browser.new_context(viewport={'width': 1380, 'height': 920})
+        page = context.new_page()
+
+        # Set user as istashmacros
+        page.goto('http://localhost:8000/index.html')
+        page.evaluate('''() => {
+            localStorage.setItem('macromix_user_handle', 'istashmacros');
+            localStorage.setItem('macromix_onboarded', 'true');
+        }''')
+
+        # Direct navigation to #admin
+        page.goto('http://localhost:8000/index.html#admin')
+        page.wait_for_timeout(2500)
+
+        admin_view = page.query_selector('#view-admin')
+        assert admin_view is not None
+        assert admin_view.is_visible(), "Admin view should be visible on #admin route for istashmacros"
+
+        view_me = page.query_selector('#view-me')
+        assert not view_me.is_visible(), "Tracker view should be hidden"
+
+        # Check admin user pill displays @istashmacros
+        admin_subline = page.text_content('.admin-subline')
+        assert '@istashmacros' in admin_subline, f"Subline should show @istashmacros, got: {admin_subline}"
+
+        # Verify settings modal also shows Admin Intelligence button for istashmacros
+        # First return to tracker
+        page.query_selector('#btn-admin-return-app').click()
+        page.wait_for_timeout(1000)
+        assert page.query_selector('#view-me').is_visible()
+
+        page.evaluate('openSettingsModal()')
+        page.wait_for_timeout(500)
+        admin_btn = page.query_selector('#btn-settings-admin')
+        assert admin_btn is not None
+        assert admin_btn.is_visible(), "Settings admin button should be visible for istashmacros"
+
+        browser.close()
+
+def test_admin_direct_hash_unauthenticated():
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        context = browser.new_context(viewport={'width': 1380, 'height': 920})
+        page = context.new_page()
+
+        # Clear any storage
+        page.goto('http://localhost:8000/index.html')
+        page.evaluate('''() => {
+            localStorage.clear();
+            sessionStorage.clear();
+        }''')
+
+        # Direct navigation to #admin
+        page.goto('http://localhost:8000/index.html#admin')
+        page.wait_for_timeout(2500)
+
+        # Onboarding should NOT block admin
+        onboarding = page.query_selector('#onboarding-screen')
+        assert not onboarding.is_visible(), "Onboarding modal should not block #admin view"
+
+        admin_view = page.query_selector('#view-admin')
+        assert admin_view is not None
+        assert admin_view.is_visible(), "Admin view should be visible to direct #admin visitor"
+
+        browser.close()
+
 if __name__ == '__main__':
     test_admin_dashboard_render_and_telemetry()
+    test_admin_direct_hash_istashmacros()
+    test_admin_direct_hash_unauthenticated()

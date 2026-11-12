@@ -3,6 +3,21 @@
    Design System: Option 1 — Swiss Warm Editorial ("Swiss Paper")
    ========================================================================== */
 
+body.is-admin-view .app-header-shell {
+  display: none !important;
+}
+
+body.is-admin-view .app-scroll-canvas {
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+  padding: 0 !important;
+  max-width: 100% !important;
+}
+
+body.is-admin-view {
+  background: #F8F7F4 !important;
+}
+
 .admin-view-container {
   --admin-bg-base: #F8F7F4;
   --admin-bg-surface: #FFFFFF;

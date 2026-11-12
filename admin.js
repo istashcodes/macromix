@@ -57,6 +57,7 @@ export function destroyAdminDashboard() {
  * Render the static Swiss Paper DOM skeleton
  */
 function renderAdminShell(container) {
+  const currentAdmin = (window.currentUserHandle || localStorage.getItem('macromix_user_handle') || 'admin').replace(/^@+/, '');
   container.innerHTML = `
     <div class="admin-view-container">
       <div class="admin-max-width">
@@ -69,7 +70,7 @@ function renderAdminShell(container) {
               <span class="admin-ops-badge">OPS · ADMIN</span>
             </h1>
             <div class="admin-subline">
-              <span>Admin: <strong class="admin-user-pill">@satish</strong></span>
+              <span>Admin: <strong class="admin-user-pill">@${currentAdmin}</strong></span>
               <span>•</span>
               <span id="admin-last-sync-time">Streaming telemetry</span>
               <span>•</span>
