@@ -677,6 +677,13 @@ async function loadTargets() {
     try {
       const profile = await window.MacromixFirebase.getFirestoreUserProfile(currentUserHandle);
       console.log(`[loadTargets] Fetched profile for @${currentUserHandle}:`, profile);
+      if (profile && profile.weekendReviewViewed) {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(`macromix_wrapped_viewed_${currentUserHandle}`, '1');
+          localStorage.setItem(`macromix_wrapped_viewed_${currentUserHandle}_2026_w45_nov`, '1');
+        }
+        updateWeekendWrappedVisibility();
+      }
       const raw = profile?.dailyTargets || profile?.targets;
       if (raw) {
         userTargets = {
@@ -1343,6 +1350,13 @@ function setupCurrentUserProfileSync() {
   }
   unsubscribeCurrentUserListener = window.MacromixFirebase.subscribeProfileFromFirestore(currentUserHandle, (remoteProfile) => {
     if (remoteProfile) {
+      if (remoteProfile.weekendReviewViewed) {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(`macromix_wrapped_viewed_${currentUserHandle}`, '1');
+          localStorage.setItem(`macromix_wrapped_viewed_${currentUserHandle}_2026_w45_nov`, '1');
+        }
+        updateWeekendWrappedVisibility();
+      }
       if (typeof remoteProfile.streak === 'number') {
         currentUserStreak = remoteProfile.streak;
         renderCurrentUserStreak();
@@ -4606,6 +4620,7 @@ function closeIosInstallModal() {
 // Weekend Wrapped Feature Controller (Exclusively for @istashmacros and @kalay on Friday/Weekend)
 // ==========================================================================
 const WRAPPED_SLIDE_DURATION_MS = 6500;
+const WRAPPED_CURRENT_EDITION = '2026_w45_nov';
 let wrappedCurrentSlide = 0;
 let wrappedSlideTimer = null;
 let wrappedStartTime = 0;
@@ -4614,6 +4629,34 @@ let wrappedIsPaused = false;
 let wrappedSoundEnabled = true;
 let wrappedAudioCtx = null;
 let _wrappedEventsInitialized = false;
+let _wrappedSlideViewedCount = 0;
+let _wrappedOpenTime = 0;
+
+function hasUserViewedWeekendWrapped(handle) {
+  const clean = (handle || getWrappedActiveHandle() || '').trim().toLowerCase().replace(/^@+/, '');
+  if (!clean) return false;
+  if (typeof localStorage !== 'undefined') {
+    if (localStorage.getItem(`macromix_wrapped_viewed_${clean}_${WRAPPED_CURRENT_EDITION}`) === '1' ||
+        localStorage.getItem(`macromix_wrapped_viewed_${clean}`) === '1') {
+      return true;
+    }
+  }
+  return false;
+}
+
+function markWeekendWrappedViewed(handle) {
+  const clean = (handle || getWrappedActiveHandle() || '').trim().toLowerCase().replace(/^@+/, '');
+  if (!clean) return;
+
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(`macromix_wrapped_viewed_${clean}`, '1');
+    localStorage.setItem(`macromix_wrapped_viewed_${clean}_${WRAPPED_CURRENT_EDITION}`, '1');
+  }
+
+  if (window.MacromixFirebase && typeof window.MacromixFirebase.syncWeekendWrappedViewedToFirestore === 'function') {
+    window.MacromixFirebase.syncWeekendWrappedViewedToFirestore(clean, WRAPPED_CURRENT_EDITION);
+  }
+}
 
 const WRAPPED_PROFILES = {
   istashmacros: {
@@ -4823,9 +4866,14 @@ function isWeekendWrappedEligible() {
     }
   }
 
-  // Check Friday (5), Saturday (6), Sunday (0)
-  const day = new Date().getDay();
-  return day === 5 || day === 6 || day === 0;
+  // Keep it available until the user has accessed it and viewed it at least once
+  const hasViewed = hasUserViewedWeekendWrapped(handle);
+  if (!hasViewed) {
+    return true;
+  }
+
+  // Once viewed at least once, the glowing ring is dismissed on weekdays and regular days
+  return false;
 }
 
 function renderWeeklyWrappedSlides(handle) {
@@ -5356,6 +5404,10 @@ function goToWrappedSlide(idx) {
   wrappedCurrentSlide = idx;
   wrappedElapsed = 0;
   wrappedIsPaused = false;
+  if (idx >= 1) {
+    _wrappedSlideViewedCount++;
+    markWeekendWrappedViewed(getWrappedActiveHandle());
+  }
   const pauseBtn = document.getElementById('wrappedPauseBtn');
   if (pauseBtn) pauseBtn.textContent = '⏸';
   updateWrappedSlideUI();
@@ -5384,6 +5436,8 @@ function openWeeklyWrappedModal(handleOverride) {
   wrappedCurrentSlide = 0;
   wrappedElapsed = 0;
   wrappedIsPaused = false;
+  _wrappedSlideViewedCount = 0;
+  _wrappedOpenTime = Date.now();
   const pauseBtn = document.getElementById('wrappedPauseBtn');
   if (pauseBtn) pauseBtn.textContent = '⏸';
   updateWrappedSlideUI();
@@ -5397,9 +5451,16 @@ function closeWeeklyWrappedModal() {
   document.body.style.overflow = '';
   cancelAnimationFrame(wrappedSlideTimer);
   wrappedIsPaused = true;
+
+  const elapsed = Date.now() - _wrappedOpenTime;
+  if (_wrappedSlideViewedCount >= 1 || elapsed >= 2500 || wrappedCurrentSlide >= 1) {
+    markWeekendWrappedViewed(getWrappedActiveHandle());
+  }
+  updateWeekendWrappedVisibility();
 }
 
 function triggerWrappedShare() {
+  markWeekendWrappedViewed(getWrappedActiveHandle());
   const handle = getWrappedActiveHandle();
   const profile = WRAPPED_PROFILES[handle] || WRAPPED_PROFILES['istashmacros'];
   const text = profile.shareText;
@@ -5738,6 +5799,9 @@ window.WRAPPED_PROFILES = WRAPPED_PROFILES;
 window.getWrappedActiveHandle = getWrappedActiveHandle;
 window.getWrappedCurrentSlide = () => wrappedCurrentSlide;
 window.isWrappedPaused = () => wrappedIsPaused;
+window.hasUserViewedWeekendWrapped = hasUserViewedWeekendWrapped;
+window.markWeekendWrappedViewed = markWeekendWrappedViewed;
+window.WRAPPED_CURRENT_EDITION = WRAPPED_CURRENT_EDITION;
 
 // ─── PWA Launch Handler Consumer (Captures deep links into active PWA) ───
 if ('launchQueue' in window) {

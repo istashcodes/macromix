@@ -837,6 +837,26 @@ export async function savePushSubscription(handle, subscription) {
   }
 }
 
+export async function syncWeekendWrappedViewedToFirestore(handle, edition = '2026_w45_nov') {
+  const database = initFirebaseDB();
+  if (!database || !handle) return false;
+  const clean = handle.trim().toLowerCase().replace(/^@+/, '');
+  try {
+    const docRef = doc(database, 'users', clean);
+    await setDoc(docRef, {
+      weekendReviewViewed: true,
+      weekendReviewViewedAt: serverTimestamp(),
+      weekendReviewEdition: edition,
+      lastActive: serverTimestamp()
+    }, { merge: true });
+    console.log(`[Macromix Firebase] Recorded Weekend Review viewed for @${clean}`);
+    return true;
+  } catch (err) {
+    console.warn(`[Macromix Firebase] Could not sync Weekend Review viewed for @${clean}:`, err);
+    return false;
+  }
+}
+
 // Auto-initialize on load
 initFirebase();
 
@@ -870,7 +890,8 @@ if (typeof window !== 'undefined') {
     subscribeFollowing,
     getMealsStorageKey,
     completeCustomTokenAuth,
-    savePushSubscription
+    savePushSubscription,
+    syncWeekendWrappedViewedToFirestore
   });
 }
 
