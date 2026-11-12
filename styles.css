@@ -819,23 +819,25 @@ body {
   animation: blocked-shake 0.32s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
-/* --- Neobrutalist Skeleton Loaders (Tactile Bone Silhouettes) --- */
+/* --- Neobrutalist Skeleton Loaders (Tactile Bone Silhouettes with Active Pulse) --- */
 @keyframes neo-pulse {
-  0%, 100% { opacity: 0.45; }
-  50% { opacity: 0.95; }
-}
-
-@keyframes neo-bar-flow {
-  0% { background-position: 0 0; }
-  100% { background-position: 28.28px 0; }
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.25;
+    transform: scale(0.995);
+  }
 }
 
 .macro-skeleton-pill {
   display: inline-block;
-  background: #EAE5D8;
+  background: #D4CBB9;
   border-radius: 4px;
-  animation: neo-pulse 1.3s ease-in-out infinite;
+  animation: neo-pulse 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   vertical-align: middle;
+  will-change: opacity, transform;
 }
 
 /* Main Top Card & Under Card in Loading State (CLS = 0) */
@@ -855,9 +857,10 @@ body {
   top: 2px;
   width: 96px;
   height: 13px;
-  background: #EAE5D8;
+  background: #D4CBB9;
   border-radius: 4px;
-  animation: neo-pulse 1.3s ease-in-out infinite;
+  animation: neo-pulse 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  will-change: opacity, transform;
 }
 
 .main-top-card.is-loading .cal-current {
@@ -866,10 +869,11 @@ body {
   height: 22px;
   color: transparent !important;
   user-select: none;
-  background: #EAE5D8;
+  background: #D4CBB9;
   border-radius: 4px;
-  animation: neo-pulse 1.3s ease-in-out infinite;
+  animation: neo-pulse 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   vertical-align: baseline;
+  will-change: opacity, transform;
 }
 
 .main-top-card.is-loading .ring-val-inside span {
@@ -880,27 +884,28 @@ body {
   min-height: 16px;
   color: transparent !important;
   user-select: none;
-  background: #EAE5D8;
+  background: #D4CBB9;
   border-radius: 4px;
-  animation: neo-pulse 1.3s ease-in-out infinite;
+  animation: neo-pulse 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   line-height: 16px;
+  will-change: opacity, transform;
 }
 
 .main-top-card.is-loading .cal-bar-fill {
-  background: repeating-linear-gradient(
-    45deg,
-    #EAE5D8,
-    #EAE5D8 10px,
-    #DFD9CA 10px,
-    #DFD9CA 20px
-  ) !important;
-  background-size: 28.28px 28.28px !important;
-  animation: neo-bar-flow 1.5s linear infinite !important;
+  background: #D4CBB9 !important;
+  animation: neo-pulse 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
   width: 35% !important;
   border-right: 1.5px solid #111111 !important;
+  will-change: opacity, transform;
+}
+
+.main-top-card.is-loading .ring-svg-wrap {
+  animation: neo-pulse 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
+  will-change: opacity, transform;
 }
 
 .main-top-card.is-loading .ring-progress {
+  stroke: #D4CBB9 !important;
   stroke-dashoffset: 89.2 !important;
 }
 
@@ -1174,10 +1179,11 @@ body {
 }
 
 .timeline-skeleton-line {
-  background: #EAE5D8;
+  background: #D4CBB9;
   border-radius: 4px;
-  animation: neo-pulse 1.3s ease-in-out infinite;
+  animation: neo-pulse 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   display: inline-block;
+  will-change: opacity, transform;
 }
 
 .timeline-skeleton-top {
@@ -1196,10 +1202,11 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #EAE5D8;
-  animation: neo-pulse 1.3s ease-in-out infinite;
+  background: #D4CBB9;
+  animation: neo-pulse 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   display: inline-block;
   flex-shrink: 0;
+  will-change: opacity, transform;
 }
 
 .timeline-skeleton-title {
@@ -1241,9 +1248,17 @@ body {
   width: 24px;
   height: 12px;
   border-radius: 3px;
-  background: #EAE5D8;
-  animation: neo-pulse 1.3s ease-in-out infinite;
+  background: #D4CBB9;
+  animation: neo-pulse 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   display: inline-block;
+  will-change: opacity, transform;
+}
+
+/* Staggered pulse wave for natural loading rhythm */
+.timeline-skeleton-card:nth-child(2) .timeline-skeleton-badge,
+.timeline-skeleton-card:nth-child(2) .timeline-skeleton-line,
+.timeline-skeleton-card:nth-child(2) .timeline-skeleton-chip {
+  animation-delay: 0.18s;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1252,11 +1267,12 @@ body {
   .main-top-card.is-loading .cal-current,
   .main-top-card.is-loading .ring-val-inside span,
   .main-top-card.is-loading .cal-bar-fill,
+  .main-top-card.is-loading .ring-svg-wrap,
   .timeline-skeleton-line,
   .timeline-skeleton-badge,
   .timeline-skeleton-chip {
     animation: none !important;
-    opacity: 0.7 !important;
+    opacity: 0.6 !important;
   }
 }
 
