@@ -386,14 +386,35 @@ window.changeDate = changeDate;
 window.resetToToday = resetToToday;
 window.updateLogButtonState = updateLogButtonState;
 
+function showFeedbackToast(text, isError = false) {
+  if (!text) return;
+  let toast = document.getElementById('macro-feedback-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'macro-feedback-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = text;
+  toast.className = 'macro-feedback-toast' + (isError ? ' is-error' : '') + ' show';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 3200);
+}
+
 function setMicStatus(text, isError = false) {
+  if (!text) return;
+  const lower = text.toLowerCase();
+  const isErr = isError || lower.includes('error') || lower.includes('failed') || lower.includes('could not') || lower.includes('no food') || lower.includes('required');
+  if (isErr) {
+    showFeedbackToast(text, true);
+  }
   const el = document.getElementById('mic-status-text');
   if (el) {
     el.textContent = text;
     if (text && text !== 'Mic Idle • Ready to Record') {
       el.classList.add('visible');
-      const lower = text.toLowerCase();
-      if (isError || lower.includes('error') || lower.includes('failed') || lower.includes('could not') || lower.includes('no food') || lower.includes('required')) {
+      if (isErr) {
         el.classList.add('status-error');
       } else {
         el.classList.remove('status-error');
@@ -2365,7 +2386,7 @@ async function startRecording() {
   isRecording = true;
   liveTranscript = '';
   btnTapRecord.classList.add('recording');
-  btnTapRecord.textContent = '⏹️ Stop Recording';
+  btnTapRecord.innerHTML = '<span>⏹️</span> <span class="btn-track-text">Listening... Tap to finish</span>';
   setMicStatus('Listening... Speak food item & portion');
 
   if (!speechRecognition) {
