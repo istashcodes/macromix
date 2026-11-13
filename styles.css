@@ -2651,28 +2651,25 @@ body {
 }
 
 /* ==========================================================================
-   Elevated Neo-Brutalist Top Announcement Banner Space
+   Elevated Announcement Banners - PERMANENTLY SUPPRESSED
    ========================================================================== */
 
 .top-announcement-banner,
-.pwa-install-banner {
-  display: none !important;
-  width: 100%;
-  overflow: hidden;
-  max-height: 0;
-  opacity: 0;
-  transform: translateY(-12px);
-  margin-bottom: 0;
-  pointer-events: none;
-}
-
+.pwa-install-banner,
 .top-announcement-banner.visible,
-.pwa-install-banner.visible {
-  max-height: 180px;
-  opacity: 1;
-  transform: translateY(0);
-  margin-bottom: 14px;
-  pointer-events: auto;
+.pwa-install-banner.visible,
+.announcement-card,
+.pwa-banner-card,
+#top-announcement-banner,
+#pwa-install-banner {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  max-height: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none !important;
 }
 
 .announcement-card,

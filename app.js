@@ -531,7 +531,11 @@ function setupLogButtonCapture() {
 function initServiceWorker() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js')
-      .then(() => console.log('[PWA] Service Worker active'))
+      .then((reg) => {
+        console.log('[PWA] Service Worker active');
+        // Check for updates immediately so clients pick up changes
+        reg.update().catch(() => {});
+      })
       .catch(err => console.log('[PWA] Service Worker registration note:', err));
   }
 }
@@ -4713,16 +4717,36 @@ function snoozeBanner(bannerId) {
   localStorage.setItem(`macromix_banner_snooze_${bannerId}`, until.toString());
 }
 
+function purgeAnnouncementBanners() {
+  try {
+    const stale = document.querySelectorAll(
+      '#top-announcement-banner, #pwa-install-banner, .top-announcement-banner, .pwa-install-banner, .announcement-card, .pwa-banner-card'
+    );
+    stale.forEach(el => el.remove());
+  } catch (e) {}
+}
+
+// Aggressive defensive removal on load or parse
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', purgeAnnouncementBanners);
+  } else {
+    purgeAnnouncementBanners();
+  }
+}
+
 const FEATURE_BANNERS = [
   // Smart banners (notifications opt-in & pwa install) removed per user request
 ];
 
 function updateTopAnnouncementBanner() {
+  purgeAnnouncementBanners();
   const container = document.getElementById('top-announcement-banner') || document.getElementById('pwa-install-banner');
   if (container) {
     container.classList.remove('visible');
     container.setAttribute('aria-hidden', 'true');
     container.style.display = 'none';
+    container.remove();
   }
   currentActiveBannerId = null;
 }
