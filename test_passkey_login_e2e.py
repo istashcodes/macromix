@@ -158,6 +158,74 @@ def test_missing_or_cancelled_passkey_guidance():
         print("✓ Missing passkey clean guidance verified!")
 
 
+def test_enter_key_passkey_login():
+    """Verify that pressing Enter in the handle input submits and processes the passkey login."""
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context()
+        page = context.new_page()
+
+        # Attach CDP Virtual Authenticator
+        cdp = context.new_cdp_session(page)
+        cdp.send("WebAuthn.enable")
+        cdp.send("WebAuthn.addVirtualAuthenticator", {
+            "options": {
+                "protocol": "ctap2",
+                "transport": "internal",
+                "hasResidentKey": True,
+                "hasUserVerification": True,
+                "isUserVerified": True,
+                "automaticPresenceSimulation": True,
+            }
+        })
+
+        page.goto(BASE_URL)
+        page.wait_for_timeout(1000)
+
+        # Pre-register credential for istashmacros
+        page.evaluate('''async () => {
+            const challenge = new Uint8Array(32);
+            window.crypto.getRandomValues(challenge);
+            await navigator.credentials.create({
+                publicKey: {
+                    challenge: challenge,
+                    rp: { name: "macromix", id: window.location.hostname },
+                    user: {
+                        id: new TextEncoder().encode("istashmacros"),
+                        name: "istashmacros",
+                        displayName: "istashmacros"
+                    },
+                    pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+                    authenticatorSelection: {
+                        authenticatorAttachment: "platform",
+                        requireResidentKey: true,
+                        userVerification: "preferred"
+                    }
+                }
+            });
+        }''')
+
+        handle_input = page.locator("#onboarding-handle-input")
+        assert handle_input.is_visible(), "Onboarding input should be visible"
+
+        # Type handle and hit ENTER instead of clicking the button
+        handle_input.fill("istashmacros")
+        handle_input.press("Enter")
+        page.wait_for_timeout(3000)
+
+        # Verify onboarding is dismissed and user logged in
+        onboarding = page.locator("#onboarding-screen")
+        is_hidden = onboarding.evaluate('el => el.classList.contains("hidden")')
+        assert is_hidden, "Onboarding screen should be dismissed when pressing Enter"
+
+        active_handle = page.evaluate('localStorage.getItem("macromix_user_handle")')
+        assert active_handle == "istashmacros", f"Expected active handle istashmacros, got {active_handle}"
+
+        browser.close()
+        print("✓ Enter key passkey login verified!")
+
+
 if __name__ == "__main__":
     test_existing_handle_passkey_login()
     test_missing_or_cancelled_passkey_guidance()
+    test_enter_key_passkey_login()

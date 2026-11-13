@@ -4535,6 +4535,9 @@ function getHandleInput() {
 
 // ─── Main entry point ─────────────────────────────────────────
 async function handlePasskeyAuth() {
+  const input = document.getElementById('onboarding-handle-input');
+  if (input) input.blur(); // Dismiss soft keyboard for biometric/passkey sheet
+
   await waitForFirebaseDB();
   const clean = getHandleInput();
   if (!clean) return;
@@ -5982,6 +5985,24 @@ function setupEventListeners() {
 
   bind('btn-onboard-google', 'click', handleGoogleAuth);
   bind('btn-onboard-passkey', 'click', handlePasskeyAuth);
+
+  const handleInput = document.getElementById('onboarding-handle-input');
+  if (handleInput) {
+    handleInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handlePasskeyAuth();
+      }
+    });
+  }
+
+  const onboardingForm = document.getElementById('onboarding-form');
+  if (onboardingForm) {
+    onboardingForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handlePasskeyAuth();
+    });
+  }
 
   const brand = document.getElementById('brand-wrapper');
   if (brand) {

@@ -67,7 +67,7 @@
         </div>
 
         <!-- Dual Auth: Google OIDC or Passkey -->
-        <div class="onboarding-form-card">
+        <form class="onboarding-form-card" id="onboarding-form" onsubmit="event.preventDefault(); return false;">
           <!-- 1-Tap Google OIDC Button -->
           <button type="button" id="btn-onboard-google" class="btn-onboard-google">
             <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
@@ -93,11 +93,11 @@
             💡 When asked where to save your passkey, choose <strong>Google Password Manager</strong> to access it on all your devices.
           </div>
 
-          <button type="button" id="btn-onboard-passkey" class="btn-onboard-passkey">
+          <button type="submit" id="btn-onboard-passkey" class="btn-onboard-passkey">
             <span class="btn-passkey-icon">🛡️</span>
             <span>Continue with Passkey</span>
           </button>
-        </div>
+        </form>
       </div>
     </div>
   </section>
@@ -1045,6 +1045,6 @@
   <script type="module" src="admin.js?v=1.2"></script>
 
   <!-- Frontend Controller -->
-  <script src="app.js?v=16.3"></script>
+  <script src="app.js?v=16.4"></script>
 </body>
 </html>
