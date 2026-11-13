@@ -212,6 +212,21 @@ body {
   margin: -6px -4px;
 }
 
+.env-test-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 800;
+  background: #DCFCE7;
+  color: #15803D;
+  border: 1.5px solid #16A34A;
+  border-radius: 4px;
+  padding: 1px 5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-left: 6px;
+  box-shadow: 1px 1px 0px #166534;
+}
+
 .header-actions {
   display: flex;
   align-items: center;

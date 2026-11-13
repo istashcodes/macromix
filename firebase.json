@@ -7,6 +7,7 @@
         "authorizedRedirectUris": [
           "https://macro-streak-tracker.firebaseapp.com/__/auth/handler",
           "https://macromix.web.app/__/auth/handler",
+          "https://macromix-test.web.app/__/auth/handler",
           "http://localhost:5000",
           "http://localhost:8000"
         ]
@@ -25,124 +26,256 @@
     "codebase": "default",
     "runtime": "nodejs20"
   },
-  "hosting": {
-    "site": "macromix",
-    "public": ".",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**",
-      "backend/**",
-      ".venv/**",
-      "test/**",
-      "test*.py",
-      "*.py",
-      "*.md",
-      "golden_benchmark.json",
-      ".env*",
-      "functions/**",
-      "scratch/**",
-      "scripts/**",
-      "voice-macro/**",
-      ".agents/**",
-      ".taste-skill/**",
-      "chatur_story_video.html",
-      "skills-lock.json",
-      "LICENSE"
-    ],
-    "headers": [
-      {
-        "source": "**",
-        "headers": [
-          {
-            "key": "X-Content-Type-Options",
-            "value": "nosniff"
-          },
-          {
-            "key": "X-Frame-Options",
-            "value": "DENY"
-          },
-          {
-            "key": "Referrer-Policy",
-            "value": "strict-origin-when-cross-origin"
-          },
-          {
-            "key": "Permissions-Policy",
-            "value": "camera=(), microphone=(self), geolocation=()"
-          }
-        ]
-      },
-      {
-        "source": "/index.html",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, must-revalidate"
-          }
-        ]
-      },
-      {
-        "source": "/manifest.json",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
-          }
-        ]
-      },
-      {
-        "source": "/sw.js",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, no-store, must-revalidate"
-          }
-        ]
-      },
-      {
-        "source": "**/*.@(jpg|jpeg|gif|png|svg|webp)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public, max-age=86400, stale-while-revalidate=604800"
-          }
-        ]
-      },
-      {
-        "source": "**/*.@(js|css)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache, must-revalidate"
-          }
-        ]
-      }
-    ],
-    "rewrites": [
-      {
-        "source": "/authRegisterBegin",
-        "function": "authRegisterBegin"
-      },
-      {
-        "source": "/authRegisterComplete",
-        "function": "authRegisterComplete"
-      },
-      {
-        "source": "/authLoginBegin",
-        "function": "authLoginBegin"
-      },
-      {
-        "source": "/authLoginComplete",
-        "function": "authLoginComplete"
-      },
-      {
-        "source": "/getLeaderboard",
-        "function": "getLeaderboard"
-      },
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  }
+  "hosting": [
+    {
+      "site": "macromix",
+      "public": ".",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        ".*/**",
+        ".github/**",
+        ".claude/**",
+        ".codex/**",
+        ".agents/**",
+        ".taste-skill/**",
+        ".pytest_cache/**",
+        "**/node_modules/**",
+        "backend/**",
+        ".venv/**",
+        "test/**",
+        "test*.py",
+        "*.py",
+        "*.md",
+        "golden_benchmark.json",
+        ".env*",
+        "functions/**",
+        "scratch/**",
+        "scripts/**",
+        "voice-macro/**",
+        "chatur_story_video.html",
+        "skills-lock.json",
+        "LICENSE"
+      ],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "DENY"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "key": "Permissions-Policy",
+              "value": "camera=(), microphone=(self), geolocation=()"
+            }
+          ]
+        },
+        {
+          "source": "/index.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "/manifest.json",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "/sw.js",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(jpg|jpeg|gif|png|svg|webp)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=86400, stale-while-revalidate=604800"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(js|css)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, must-revalidate"
+            }
+          ]
+        }
+      ],
+      "rewrites": [
+        {
+          "source": "/authRegisterBegin",
+          "function": "authRegisterBegin"
+        },
+        {
+          "source": "/authRegisterComplete",
+          "function": "authRegisterComplete"
+        },
+        {
+          "source": "/authLoginBegin",
+          "function": "authLoginBegin"
+        },
+        {
+          "source": "/authLoginComplete",
+          "function": "authLoginComplete"
+        },
+        {
+          "source": "/getLeaderboard",
+          "function": "getLeaderboard"
+        },
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    {
+      "site": "macromix-test",
+      "public": ".",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        ".*/**",
+        ".github/**",
+        ".claude/**",
+        ".codex/**",
+        ".agents/**",
+        ".taste-skill/**",
+        ".pytest_cache/**",
+        "**/node_modules/**",
+        "backend/**",
+        ".venv/**",
+        "test/**",
+        "test*.py",
+        "*.py",
+        "*.md",
+        "golden_benchmark.json",
+        ".env*",
+        "functions/**",
+        "scratch/**",
+        "scripts/**",
+        "voice-macro/**",
+        "chatur_story_video.html",
+        "skills-lock.json",
+        "LICENSE"
+      ],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "DENY"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "strict-origin-when-cross-origin"
+            },
+            {
+              "key": "Permissions-Policy",
+              "value": "camera=(), microphone=(self), geolocation=()"
+            }
+          ]
+        },
+        {
+          "source": "/index.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "/manifest.json",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "/sw.js",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, no-store, must-revalidate"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(jpg|jpeg|gif|png|svg|webp)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=86400, stale-while-revalidate=604800"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(js|css)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache, must-revalidate"
+            }
+          ]
+        }
+      ],
+      "rewrites": [
+        {
+          "source": "/authRegisterBegin",
+          "function": "authRegisterBegin"
+        },
+        {
+          "source": "/authRegisterComplete",
+          "function": "authRegisterComplete"
+        },
+        {
+          "source": "/authLoginBegin",
+          "function": "authLoginBegin"
+        },
+        {
+          "source": "/authLoginComplete",
+          "function": "authLoginComplete"
+        },
+        {
+          "source": "/getLeaderboard",
+          "function": "getLeaderboard"
+        },
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    }
+  ]
 }

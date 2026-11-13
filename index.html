@@ -34,8 +34,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=16.2">
-  <link rel="stylesheet" href="admin.css?v=1.1">
+  <link rel="stylesheet" href="styles.css?v=16.3">
+  <link rel="stylesheet" href="admin.css?v=1.2">
 </head>
 <body>
   <!-- Gooey SVG Filter for Header Tab Toggle (gooey-react technique) -->
@@ -108,6 +108,7 @@
       <div class="app-header">
         <div class="brand-wrapper" id="brand-wrapper" role="button" tabindex="0" style="cursor: pointer;" title="Back to My Tracker">
           <img src="icons/logo-full.png" alt="macromix logo" class="brand-logo-img">
+          <span id="env-test-pill" class="env-test-pill" style="display:none;">TEST</span>
         </div>
 
         <!-- Segmented pill toggle: Me (left) | Friends (right) - Centrally aligned between logo and streak badge -->
@@ -512,6 +513,24 @@
       </div>
 
       <div class="settings-section-divider"></div>
+      <!-- Blue-Green Deployment & Go-Ahead CTA for Test Version -->
+      <div id="settings-staging-section" style="display:none; margin-bottom:14px;">
+        <div class="account-auth-card" style="padding:14px; background:#F0FDF4; border:1.5px solid #16A34A; box-shadow:2px 2px 0px #166534;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+            <div style="font-size:12px; font-weight:800; color:#15803D; display:flex; align-items:center; gap:6px;">
+              <span>🧪 STAGING ENVIRONMENT</span>
+            </div>
+            <span id="staging-status-badge" style="font-size:10px; font-family:'JetBrains Mono', monospace; background:#DCFCE7; color:#166534; padding:2px 6px; border-radius:4px; font-weight:700; border:1px solid #86EFAC;">macromix-test</span>
+          </div>
+          <div style="font-size:11.5px; color:#166534; line-height:1.45; margin-bottom:12px;">
+            This is your private testing build. Test and verify all features here. When ready, click below to give go-ahead to deploy to live Production (<code>macromix.web.app</code>).
+          </div>
+          <button type="button" class="btn-primary" id="btn-staging-go-ahead" style="width:100%; padding:10px; font-size:13px; background:#15803D; color:#FFFFFF; border:1.5px solid #166534; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; font-weight:800; box-shadow:2px 2px 0px #064E3B;">
+            <span>🚀 Give Go-Ahead to Deploy to Production</span>
+          </button>
+          <div id="staging-go-ahead-feedback" style="font-size:11px; font-weight:700; color:#15803D; margin-top:8px; text-align:center; display:none; line-height:1.4;"></div>
+        </div>
+      </div>
       <div id="settings-admin-section" style="display:none; margin-bottom:12px;">
         <button type="button" class="btn-primary" id="btn-settings-admin" style="width:100%; padding:10px; font-size:13px; background:#181A1D; color:#FFFFFF; border:1.5px solid #181A1D; display:flex; align-items:center; justify-content:center; gap:8px;">
           <span>Operations Intelligence</span> <span style="font-size:10px; background:#C2410C; color:#FFF; padding:2px 6px; border-radius:4px; font-family:'JetBrains Mono', monospace;">ADMIN</span>
@@ -1023,9 +1042,9 @@
   <script src="env.js" onerror="/* optional env.js */"></script>
 
   <!-- Operations Intelligence Admin Controller -->
-  <script type="module" src="admin.js?v=1.1"></script>
+  <script type="module" src="admin.js?v=1.2"></script>
 
   <!-- Frontend Controller -->
-  <script src="app.js?v=16.2"></script>
+  <script src="app.js?v=16.3"></script>
 </body>
 </html>

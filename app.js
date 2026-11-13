@@ -450,6 +450,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   setupNotificationSettings();
   initWeekendWrappedEvents();
   updateWeekendWrappedVisibility();
+  updateEnvironmentBadges();
 
   try {
     await waitForFirebaseDB();
@@ -2505,6 +2506,11 @@ function setupSettingsModal() {
   const btn = document.getElementById('open-settings-btn');
   if (btn) btn.onclick = openSettingsModal;
 
+  const goAheadBtn = document.getElementById('btn-staging-go-ahead');
+  if (goAheadBtn) {
+    goAheadBtn.onclick = handleStagingGoAheadAction;
+  }
+
   // Close modals when clicking outside on backdrop
   window.addEventListener('click', (e) => {
     const settingsModal = document.getElementById('settings-modal');
@@ -2881,6 +2887,123 @@ function isAdminUser(handle) {
   return ADMIN_HANDLES.includes(clean);
 }
 
+// --- Blue-Green Deployment & Staging Environment Helpers ---
+function isTestEnvironment() {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname.toLowerCase();
+  return host === 'macromix-test.web.app' || 
+         host === 'macromix-test.firebaseapp.com' ||
+         window.location.search.includes('env=test');
+}
+
+function updateEnvironmentBadges() {
+  const pill = document.getElementById('env-test-pill');
+  if (pill) {
+    pill.style.display = isTestEnvironment() ? 'inline-block' : 'none';
+  }
+}
+
+function updateStagingGoAheadUI() {
+  const btn = document.getElementById('btn-staging-go-ahead');
+  const feedback = document.getElementById('staging-go-ahead-feedback');
+  const badge = document.getElementById('staging-status-badge');
+  if (!btn) return;
+
+  const raw = localStorage.getItem('macromix_go_ahead_approved');
+  if (raw) {
+    try {
+      const data = JSON.parse(raw);
+      if (data && data.approved) {
+        const timeStr = data.timestamp ? new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'recently';
+        btn.style.background = '#15803D';
+        btn.style.borderColor = '#166534';
+        btn.innerHTML = '<span>✅ Go-Ahead Granted</span>';
+        if (badge) {
+          badge.textContent = 'APPROVED';
+          badge.style.background = '#DCFCE7';
+          badge.style.color = '#15803D';
+        }
+        if (feedback) {
+          feedback.style.display = 'block';
+          feedback.innerHTML = `Production deployment authorized at ${timeStr}.<br><span style="color:#047857; font-weight:600;">Ready for live release to macromix.web.app</span>`;
+        }
+        return;
+      }
+    } catch (e) {}
+  }
+
+  btn.style.background = '#15803D';
+  btn.innerHTML = '<span>🚀 Give Go-Ahead to Deploy to Production</span>';
+  if (badge) {
+    badge.textContent = 'macromix-test';
+    badge.style.background = '#DCFCE7';
+    badge.style.color = '#166534';
+  }
+  if (feedback) {
+    feedback.style.display = 'none';
+  }
+}
+
+async function handleStagingGoAheadAction() {
+  const btn = document.getElementById('btn-staging-go-ahead');
+  const feedback = document.getElementById('staging-go-ahead-feedback');
+  const badge = document.getElementById('staging-status-badge');
+  if (!btn) return;
+
+  const now = Date.now();
+  const currentHandle = currentUserHandle || localStorage.getItem('macromix_user_handle') || '@satish';
+
+  // 1. Save approval record to localStorage
+  const approvalRecord = {
+    approved: true,
+    timestamp: now,
+    approvedBy: currentHandle,
+    sourceSite: window.location.hostname,
+    targetSite: 'macromix.web.app',
+    status: 'ready_to_deploy'
+  };
+  localStorage.setItem('macromix_go_ahead_approved', JSON.stringify(approvalRecord));
+
+  // 2. Log telemetry event
+  AppLogger.log('DEPLOYMENT', 'Go-Ahead granted for Production deployment', approvalRecord);
+
+  // 3. Persist to Firestore if user profile exists
+  try {
+    if (window.MacromixFirebase && typeof window.MacromixFirebase.getDb === 'function') {
+      const db = window.MacromixFirebase.getDb();
+      if (db && currentHandle) {
+        const clean = currentHandle.trim().toLowerCase().replace(/^@+/, '');
+        await db.collection('users').doc(clean).set({
+          lastGoAheadApproval: {
+            approved: true,
+            timestamp: new Date().toISOString(),
+            approvedBy: clean,
+            sourceSite: window.location.hostname,
+            targetSite: 'macromix.web.app'
+          }
+        }, { merge: true });
+      }
+    }
+  } catch (err) {
+    console.warn('[Staging] Note on Firestore go-ahead log:', err);
+  }
+
+  // 4. Update UI
+  if (navigator.vibrate) {
+    try { navigator.vibrate([40, 60, 100]); } catch (e) {}
+  }
+  btn.innerHTML = '<span>✅ Go-Ahead Granted</span>';
+  if (badge) {
+    badge.textContent = 'APPROVED';
+    badge.style.background = '#DCFCE7';
+    badge.style.color = '#15803D';
+  }
+  if (feedback) {
+    feedback.style.display = 'block';
+    feedback.innerHTML = `🎉 <strong>Go-Ahead Recorded!</strong><br>Tell Antigravity in chat to deploy changes to production (<code>macromix.web.app</code>).`;
+  }
+}
+
 function openSettingsModal() {
   if (isVisitorMode) {
     // Read-only visitor mode: settings cannot be edited
@@ -2904,6 +3027,16 @@ function openSettingsModal() {
   const handleEl = document.getElementById('settings-account-handle');
   if (handleEl) {
     handleEl.textContent = currentHandle ? `@${currentHandle.replace(/^@+/, '')}` : '@you';
+  }
+
+  const stagingSection = document.getElementById('settings-staging-section');
+  if (stagingSection) {
+    if (isTestEnvironment()) {
+      stagingSection.style.display = 'block';
+      updateStagingGoAheadUI();
+    } else {
+      stagingSection.style.display = 'none';
+    }
   }
 
   const adminSection = document.getElementById('settings-admin-section');

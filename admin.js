@@ -64,30 +64,46 @@ function renderAdminShell(container) {
         
         <!-- Top Command Header -->
         <header class="admin-header">
-          <div>
-            <h1 class="admin-header-title">
-              Macromix Intelligence
-              <span class="admin-ops-badge">OPS · ADMIN</span>
-            </h1>
-            <div class="admin-subline">
-              <span>Admin: <strong class="admin-user-pill">@${currentAdmin}</strong></span>
-              <span>•</span>
-              <span id="admin-last-sync-time">Streaming telemetry</span>
-              <span>•</span>
-              <span style="color: var(--admin-forest); font-weight: 600;">● Live onSnapshot</span>
+          <div class="admin-header-main">
+            <!-- Mobile Navigation Bar (visible only on mobile) -->
+            <div class="admin-mobile-top-bar">
+              <button type="button" class="admin-btn-back btn-admin-return-app" title="Return to Meal Tracker">
+                ← Return to Tracker
+              </button>
+              <div class="admin-live-badge">
+                <span class="admin-pulse-dot"></span>
+                <span>Live Telemetry</span>
+              </div>
+            </div>
+
+            <div class="admin-header-title-block">
+              <h1 class="admin-header-title">
+                <span>Macromix Intelligence</span>
+                <span class="admin-ops-badge">OPS · ADMIN</span>
+              </h1>
+              <div class="admin-subline">
+                <span>Admin: <strong class="admin-user-pill">@${currentAdmin}</strong></span>
+                <span class="admin-subline-sep">•</span>
+                <span id="admin-last-sync-time">Streaming telemetry</span>
+                <span class="admin-subline-sep">•</span>
+                <span class="admin-live-status-text">● Live onSnapshot</span>
+              </div>
             </div>
           </div>
 
           <div class="admin-header-actions">
-            <button type="button" class="admin-btn-back" id="btn-admin-return-app" title="Return to Meal Tracker">
+            <!-- Desktop Return to Tracker -->
+            <button type="button" class="admin-btn-back admin-desktop-only btn-admin-return-app" id="btn-admin-return-app" title="Return to Meal Tracker">
               ← Return to Tracker
             </button>
 
-            <div class="admin-live-badge">
+            <!-- Desktop Live Badge -->
+            <div class="admin-live-badge admin-desktop-only">
               <span class="admin-pulse-dot"></span>
               <span id="admin-live-pulse-text">Live Telemetry</span>
             </div>
 
+            <!-- Segmented Range Picker -->
             <div class="admin-segmented-picker">
               <button class="admin-segmented-btn" data-range="today">Today</button>
               <button class="admin-segmented-btn active" data-range="7d">7D</button>
@@ -444,10 +460,10 @@ function renderAdminShell(container) {
  * Attach button interactions (time range filters, return to tracker)
  */
 function setupAdminEventHandlers(container) {
-  // Return to tracker
-  const backBtn = container.querySelector('#btn-admin-return-app');
-  if (backBtn) {
-    backBtn.addEventListener('click', () => {
+  // Return to tracker (both mobile top bar and desktop header actions)
+  const backBtns = container.querySelectorAll('.btn-admin-return-app, #btn-admin-return-app');
+  backBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
       if (typeof window.exitAdminDashboard === 'function') {
         window.exitAdminDashboard();
       } else {
@@ -457,9 +473,10 @@ function setupAdminEventHandlers(container) {
         const viewMe = document.getElementById('view-me');
         if (viewAdmin) viewAdmin.classList.add('hidden');
         if (viewMe) viewMe.classList.remove('hidden');
+        document.body.classList.remove('is-admin-view');
       }
     });
-  }
+  });
 
   // Time range segmented picker
   const pickerBtns = container.querySelectorAll('.admin-segmented-btn');

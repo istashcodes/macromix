@@ -16,7 +16,9 @@ const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 function getAllowedOrigins() {
   return [
     'https://macromix.web.app',
+    'https://macromix-test.web.app',
     'https://macro-streak-tracker.firebaseapp.com',
+    'https://macromix-test.firebaseapp.com',
     'http://localhost:5000',
     'http://127.0.0.1:5000',
     'http://localhost:8000',
@@ -27,6 +29,7 @@ function getAllowedOrigins() {
 function getRpId(req) {
   const host = (req.headers.host || req.hostname || '').split(':')[0].toLowerCase();
   if (host === 'macromix.web.app') return 'macromix.web.app';
+  if (host === 'macromix-test.web.app') return 'macromix-test.web.app';
   if (host === 'macro-streak-tracker.firebaseapp.com') return 'macro-streak-tracker.firebaseapp.com';
   if (host === 'localhost' || host === '127.0.0.1') return 'localhost';
   return process.env.PASSKEY_RP_ID || (host || 'macromix.web.app');
