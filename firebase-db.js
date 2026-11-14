@@ -927,6 +927,25 @@ export async function syncWeekendWrappedViewedToFirestore(handle, edition = '202
   }
 }
 
+export async function syncWeekendWrappedResetToFirestore(handle) {
+  const database = initFirebaseDB();
+  if (!database || !handle) return false;
+  const clean = handle.trim().toLowerCase().replace(/^@+/, '');
+  try {
+    const docRef = doc(database, 'users', clean);
+    await setDoc(docRef, {
+      weekendReviewViewed: false,
+      weekendReviewResetAt: serverTimestamp(),
+      lastActive: serverTimestamp()
+    }, { merge: true });
+    console.log(`[Macromix Firebase] Reset Weekend Review viewed to false for @${clean}`);
+    return true;
+  } catch (err) {
+    console.warn(`[Macromix Firebase] Could not reset Weekend Review viewed for @${clean}:`, err);
+    return false;
+  }
+}
+
 export async function syncWeekendReviewCompleted(handle) {
   const database = initFirebaseDB();
   if (!database || !handle) return false;
@@ -1063,6 +1082,7 @@ if (typeof window !== 'undefined') {
     completeCustomTokenAuth,
     savePushSubscription,
     syncWeekendWrappedViewedToFirestore,
+    syncWeekendWrappedResetToFirestore,
     syncWeekendReviewCompleted,
     syncWeekendReviewShared,
     syncPwaInstalledToFirestore,
