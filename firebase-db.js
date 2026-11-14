@@ -901,12 +901,19 @@ export async function syncWeekendWrappedViewedToFirestore(handle, edition = '202
   const clean = handle.trim().toLowerCase().replace(/^@+/, '');
   try {
     const docRef = doc(database, 'users', clean);
-    await setDoc(docRef, {
+    const snap = await getDoc(docRef);
+    const existing = snap.exists() ? snap.data() : null;
+    const hasExistingTimestamp = existing && existing.weekendReviewViewed && existing.weekendReviewViewedAt;
+
+    const payload = {
       weekendReviewViewed: true,
-      weekendReviewViewedAt: serverTimestamp(),
       weekendReviewEdition: edition,
       lastActive: serverTimestamp()
-    }, { merge: true });
+    };
+    if (!hasExistingTimestamp) {
+      payload.weekendReviewViewedAt = serverTimestamp();
+    }
+    await setDoc(docRef, payload, { merge: true });
 
     // Atomic increment to admin_stats
     try {
@@ -935,6 +942,7 @@ export async function syncWeekendWrappedResetToFirestore(handle) {
     const docRef = doc(database, 'users', clean);
     await setDoc(docRef, {
       weekendReviewViewed: false,
+      weekendReviewViewedAt: null,
       weekendReviewResetAt: serverTimestamp(),
       lastActive: serverTimestamp()
     }, { merge: true });

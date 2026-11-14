@@ -4852,6 +4852,7 @@ function closeIosInstallModal() {
 // ==========================================================================
 const WRAPPED_SLIDE_DURATION_MS = 6500;
 const WRAPPED_CURRENT_EDITION = '2026_w45_nov';
+const WRAPPED_24H_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
 let wrappedCurrentSlide = 0;
 let wrappedSlideTimer = null;
 let wrappedStartTime = 0;
@@ -4863,6 +4864,43 @@ let _wrappedEventsInitialized = false;
 let _wrappedSlideViewedCount = 0;
 let _wrappedOpenTime = 0;
 const _firestoreWeekendReviewViewedCache = {};
+const _firestoreWeekendReviewViewedAtCache = {};
+
+function parseTimestampToMillis(ts) {
+  if (!ts) return null;
+  if (typeof ts === 'number') return ts;
+  if (typeof ts.toMillis === 'function') return ts.toMillis();
+  if (typeof ts.seconds === 'number') return ts.seconds * 1000;
+  if (typeof ts === 'string') {
+    const parsed = Date.parse(ts);
+    if (!isNaN(parsed)) return parsed;
+  }
+  if (ts instanceof Date) return ts.getTime();
+  return null;
+}
+
+function getWeekendWrappedViewedAt(handle) {
+  const clean = (handle || getWrappedActiveHandle() || '').trim().toLowerCase().replace(/^@+/, '');
+  if (!clean) return null;
+
+  if (typeof _firestoreWeekendReviewViewedAtCache[clean] === 'number') {
+    return _firestoreWeekendReviewViewedAtCache[clean];
+  }
+
+  if (typeof localStorage !== 'undefined') {
+    const raw = localStorage.getItem(`macromix_wrapped_viewed_at_${clean}_${WRAPPED_CURRENT_EDITION}`) ||
+                localStorage.getItem(`macromix_wrapped_viewed_at_${clean}`);
+    if (raw) {
+      const parsed = parseInt(raw, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        _firestoreWeekendReviewViewedAtCache[clean] = parsed;
+        return parsed;
+      }
+    }
+  }
+
+  return null;
+}
 
 function hasUserViewedWeekendWrapped(handle) {
   const clean = (handle || getWrappedActiveHandle() || '').trim().toLowerCase().replace(/^@+/, '');
@@ -4873,7 +4911,12 @@ function hasUserViewedWeekendWrapped(handle) {
     return false;
   }
 
-  // 2. Check localStorage (only edition-versioned key to avoid stale sticky flags)
+  // 2. Check in-memory Firestore cache if true
+  if (_firestoreWeekendReviewViewedCache[clean] === true) {
+    return true;
+  }
+
+  // 3. Check localStorage (only edition-versioned key to avoid stale sticky flags)
   if (typeof localStorage !== 'undefined') {
     if (localStorage.getItem(`macromix_wrapped_viewed_${clean}_${WRAPPED_CURRENT_EDITION}`) === '1') {
       return true;
@@ -4890,17 +4933,31 @@ function syncWeekendReviewViewedState(profile, handle) {
     _firestoreWeekendReviewViewedCache[clean] = profile.weekendReviewViewed;
   }
 
+  const viewedAtMillis = parseTimestampToMillis(profile.weekendReviewViewedAt);
+  if (viewedAtMillis) {
+    _firestoreWeekendReviewViewedAtCache[clean] = viewedAtMillis;
+  }
+
   if (profile.weekendReviewViewed === false) {
-    // Cloud state is UNVIEWED: wipe all viewed flags from localStorage!
+    // Cloud state is UNVIEWED: wipe all viewed flags and timestamps from localStorage and cache!
+    _firestoreWeekendReviewViewedCache[clean] = false;
+    delete _firestoreWeekendReviewViewedAtCache[clean];
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(`macromix_wrapped_viewed_${clean}`);
       localStorage.removeItem(`macromix_wrapped_viewed_${clean}_${WRAPPED_CURRENT_EDITION}`);
       localStorage.removeItem(`macromix_wrapped_viewed_${clean}_2026_w45_nov`);
       localStorage.removeItem(`macromix_wrapped_viewed_${clean}_2026_w46_nov`);
+      localStorage.removeItem(`macromix_wrapped_viewed_at_${clean}`);
+      localStorage.removeItem(`macromix_wrapped_viewed_at_${clean}_${WRAPPED_CURRENT_EDITION}`);
+      localStorage.removeItem(`macromix_wrapped_viewed_at_${clean}_2026_w45_nov`);
+      localStorage.removeItem(`macromix_wrapped_viewed_at_${clean}_2026_w46_nov`);
     }
   } else if (profile.weekendReviewViewed === true) {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(`macromix_wrapped_viewed_${clean}_${WRAPPED_CURRENT_EDITION}`, '1');
+      if (viewedAtMillis) {
+        localStorage.setItem(`macromix_wrapped_viewed_at_${clean}_${WRAPPED_CURRENT_EDITION}`, String(viewedAtMillis));
+      }
     }
   }
   updateWeekendWrappedVisibility();
@@ -4911,6 +4968,16 @@ function markWeekendWrappedViewed(handle) {
   if (!clean) return;
 
   _firestoreWeekendReviewViewedCache[clean] = true;
+
+  const now = Date.now();
+  let existingTimestamp = getWeekendWrappedViewedAt(clean);
+  if (!existingTimestamp) {
+    existingTimestamp = now;
+    _firestoreWeekendReviewViewedAtCache[clean] = now;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(`macromix_wrapped_viewed_at_${clean}_${WRAPPED_CURRENT_EDITION}`, String(now));
+    }
+  }
 
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem(`macromix_wrapped_viewed_${clean}_${WRAPPED_CURRENT_EDITION}`, '1');
@@ -5129,13 +5196,25 @@ function isWeekendWrappedEligible() {
     }
   }
 
-  // Keep it available until the user has accessed it and viewed it at least once
   const hasViewed = hasUserViewedWeekendWrapped(handle);
+  // Rule 1: Remains active and visible until the user has watched it at least once
   if (!hasViewed) {
     return true;
   }
 
-  // Once viewed at least once, the glowing ring is dismissed on weekdays and regular days
+  // Rule 2: After watching, it remains active and available for 24 hours from the first watch
+  const viewedAt = getWeekendWrappedViewedAt(handle);
+  if (!viewedAt) {
+    // If flagged viewed but timestamp is pending or not recorded yet, keep it visible
+    return true;
+  }
+
+  const elapsed = Date.now() - viewedAt;
+  if (elapsed >= 0 && elapsed < WRAPPED_24H_WINDOW_MS) {
+    return true; // Still within the 24-hour viewing window
+  }
+
+  // 24 hours have elapsed since first watch, glowing ring disappears
   return false;
 }
 
@@ -6124,6 +6203,8 @@ window.getWrappedCurrentSlide = () => wrappedCurrentSlide;
 window.isWrappedPaused = () => wrappedIsPaused;
 window.hasUserViewedWeekendWrapped = hasUserViewedWeekendWrapped;
 window.markWeekendWrappedViewed = markWeekendWrappedViewed;
+window.getWeekendWrappedViewedAt = getWeekendWrappedViewedAt;
+window.WRAPPED_24H_WINDOW_MS = WRAPPED_24H_WINDOW_MS;
 window.exitAdminDashboard = function() {
   switchTab('me', true);
   window.history.pushState(null, '', '/');
