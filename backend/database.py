@@ -522,8 +522,16 @@ def update_logged_food_item(item_id: int, quantity: float, standardized_weight_g
         new_fiber = round((standardized_weight_g / 100.0) * ref["fiber_per_100g"], 2)
     else:
         # Scale proportionally from existing item macros
-        old_weight = float(item["standardized_weight_g"]) if item["standardized_weight_g"] else 100.0
-        ratio = (standardized_weight_g / old_weight) if old_weight > 0 else 1.0
+        old_weight = float(item["standardized_weight_g"]) if item["standardized_weight_g"] else 0.0
+        old_qty = float(item["quantity"]) if item["quantity"] else 0.0
+        if old_qty > 0 and abs(quantity - old_qty) > 0.001:
+            ratio = quantity / old_qty
+        elif old_weight > 0 and abs(standardized_weight_g - old_weight) > 0.001:
+            ratio = standardized_weight_g / old_weight
+        elif old_weight > 0:
+            ratio = standardized_weight_g / old_weight
+        else:
+            ratio = 1.0
         new_cals = round(float(item["calories"]) * ratio, 2)
         new_prot = round(float(item["protein_g"]) * ratio, 2)
         new_carb = round(float(item["carbs_g"]) * ratio, 2)

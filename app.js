@@ -38,7 +38,7 @@ function isLocalBackend() {
 }
 
 function getMealsStorageKey(handle) {
-  const h = handle || currentUserHandle;
+  const h = handle || currentUserHandle || (typeof localStorage !== 'undefined' ? localStorage.getItem('macromix_user_handle') : '');
   const clean = h ? h.trim().toLowerCase().replace(/^@+/, '') : '';
   return clean ? `macronomics_meals_${clean}` : 'macronomics_meals';
 }
@@ -1652,7 +1652,7 @@ function renderTimeline(logsToUse = null, direction = null) {
               </div>
               ${!isVisitorMode ? `
               <div class="item-actions">
-                <button type="button" class="item-action-btn edit-item-btn" data-id="${it.id}" data-food="${escapeHtml(it.food_name)}" data-quantity="${it.quantity}" data-unit="${escapeHtml(it.unit)}" data-weight="${it.standardized_weight_g}" title="Edit Portion">✏️</button>
+                <button type="button" class="item-action-btn edit-item-btn" data-id="${it.id}" data-food="${escapeHtml(it.food_name)}" data-quantity="${it.quantity}" data-unit="${escapeHtml(it.unit)}" data-weight="${it.standardized_weight_g}" data-calories="${it.calories || 0}" data-protein="${it.protein_g || 0}" data-carbs="${it.carbs_g || 0}" data-fiber="${it.fiber_g || 0}" data-fat="${it.fat_g || 0}" title="Edit Portion">✏️</button>
                 <button type="button" class="item-action-btn delete-item-btn" data-id="${it.id}" title="Delete Item">🗑️</button>
               </div>` : ''}
             </div>
@@ -1730,12 +1730,17 @@ function setupTimelineDelegation() {
   container.addEventListener('click', (e) => {
     const editBtn = e.target.closest('.edit-item-btn');
     if (editBtn) {
-      const id = parseInt(editBtn.dataset.id, 10);
+      const id = editBtn.dataset.id;
       const food = editBtn.dataset.food;
       const qty = parseFloat(editBtn.dataset.quantity);
       const unit = editBtn.dataset.unit;
       const weight = parseFloat(editBtn.dataset.weight);
-      openEditModal(id, food, qty, unit, weight);
+      const cal = parseFloat(editBtn.dataset.calories);
+      const prot = parseFloat(editBtn.dataset.protein);
+      const carbs = parseFloat(editBtn.dataset.carbs);
+      const fib = parseFloat(editBtn.dataset.fiber);
+      const fat = parseFloat(editBtn.dataset.fat);
+      openEditModal(id, food, qty, unit, weight, { cal, prot, carbs, fib, fat });
       return;
     }
     const delBtn = e.target.closest('.delete-item-btn');
@@ -3394,27 +3399,164 @@ function closeGeminiModal() {
 }
 
 // --- Inline Item Edit Drawer ---
-function openEditModal(itemId, foodName, qty, unit, weightG) {
-  AppLogger.log('UI', `Opened edit drawer for item #${itemId} (${foodName})`, { itemId, foodName, qty, unit, weightG });
-  document.getElementById('edit-item-id').value = itemId;
-  document.getElementById('edit-food-name-label').textContent = foodName;
-  const numQty = parseFloat(qty) || 1;
-  const numWeight = parseFloat(weightG) > 0 ? parseFloat(weightG) : numQty;
-  document.getElementById('edit-quantity').value = numQty;
-  document.getElementById('edit-unit').value = unit || 'g';
-  document.getElementById('edit-weight-g').value = numWeight;
+let _activeEditingItem = null;
 
-  document.getElementById('edit-item-modal').classList.remove('hidden');
+function findItemAndMealById(itemId) {
+  const strId = String(itemId);
+  for (const m of (currentLogs || [])) {
+    for (const it of (m.items || [])) {
+      if (String(it.id) === strId) {
+        return { meal: m, item: it };
+      }
+    }
+  }
+  try {
+    const storageKey = getMealsStorageKey(currentUserHandle);
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      const meals = JSON.parse(stored);
+      for (const m of meals) {
+        for (const it of (m.items || [])) {
+          if (String(it.id) === strId) {
+            return { meal: m, item: it };
+          }
+        }
+      }
+    }
+  } catch (e) {}
+  return { meal: null, item: null };
+}
+
+function updateEditModalMacroPreview(ratio = 1) {
+  if (!_activeEditingItem) return;
+  const safeRatio = (typeof ratio === 'number' && isFinite(ratio) && ratio >= 0) ? ratio : 1;
+
+  const calEl = document.getElementById('edit-preview-cal');
+  const protEl = document.getElementById('edit-preview-prot');
+  const carbEl = document.getElementById('edit-preview-carb');
+  const fibEl = document.getElementById('edit-preview-fib');
+  const fatEl = document.getElementById('edit-preview-fat');
+
+  const cal = Math.round(_activeEditingItem.baseCalories * safeRatio);
+  const prot = Math.round(_activeEditingItem.baseProtein * safeRatio * 10) / 10;
+  const carb = Math.round(_activeEditingItem.baseCarbs * safeRatio * 10) / 10;
+  const fib = Math.round(_activeEditingItem.baseFiber * safeRatio * 10) / 10;
+  const fat = Math.round(_activeEditingItem.baseFat * safeRatio * 10) / 10;
+
+  if (calEl) calEl.textContent = `${cal} kcal`;
+  if (protEl) protEl.textContent = `${prot}g prot`;
+  if (carbEl) carbEl.textContent = `${carb}g carbs`;
+  if (fibEl) fibEl.textContent = `${fib}g fiber`;
+  if (fatEl) fatEl.textContent = `${fat}g fat`;
+}
+
+function handleEditQuantityChange() {
+  if (!_activeEditingItem) return;
+  const qtyInput = document.getElementById('edit-quantity');
+  if (!qtyInput) return;
+  const newQty = parseFloat(qtyInput.value);
+  if (isNaN(newQty) || newQty <= 0) return;
+
+  const ratio = _activeEditingItem.baseQty > 0 ? (newQty / _activeEditingItem.baseQty) : 1;
+  const newWeight = Math.round(_activeEditingItem.baseWeight * ratio * 10) / 10;
+
+  const weightInput = document.getElementById('edit-weight-g');
+  if (weightInput) {
+    weightInput.value = newWeight;
+  }
+
+  updateEditModalMacroPreview(ratio);
+}
+
+function handleEditWeightChange() {
+  if (!_activeEditingItem) return;
+  const weightInput = document.getElementById('edit-weight-g');
+  if (!weightInput) return;
+  const newWeight = parseFloat(weightInput.value);
+  if (isNaN(newWeight) || newWeight <= 0) return;
+
+  const ratio = _activeEditingItem.baseWeight > 0 ? (newWeight / _activeEditingItem.baseWeight) : 1;
+  const newQty = Math.round(_activeEditingItem.baseQty * ratio * 100) / 100;
+
+  const qtyInput = document.getElementById('edit-quantity');
+  if (qtyInput) {
+    qtyInput.value = newQty;
+  }
+
+  updateEditModalMacroPreview(ratio);
+}
+
+function openEditModal(itemId, foodName, qty, unit, weightG, macroHints = null) {
+  const { meal, item } = findItemAndMealById(itemId);
+
+  const numQty = (parseFloat(qty) > 0 ? parseFloat(qty) : (item ? parseFloat(item.quantity) : 1)) || 1;
+  const numWeight = (parseFloat(weightG) > 0 ? parseFloat(weightG) : (item && parseFloat(item.standardized_weight_g) > 0 ? parseFloat(item.standardized_weight_g) : (numQty > 0 ? numQty : 100))) || numQty;
+
+  const baseCal = item ? (Number(item.calories) || 0) : (macroHints && !isNaN(macroHints.cal) ? macroHints.cal : 0);
+  const baseProt = item ? (Number(item.protein_g) || 0) : (macroHints && !isNaN(macroHints.prot) ? macroHints.prot : 0);
+  const baseCarb = item ? (Number(item.carbs_g) || 0) : (macroHints && !isNaN(macroHints.carbs) ? macroHints.carbs : 0);
+  const baseFib = item ? (Number(item.fiber_g) || 0) : (macroHints && !isNaN(macroHints.fib) ? macroHints.fib : 0);
+  const baseFat = item ? (Number(item.fat_g) || 0) : (macroHints && !isNaN(macroHints.fat) ? macroHints.fat : 0);
+
+  _activeEditingItem = {
+    itemId: itemId,
+    foodName: foodName || (item ? item.food_name : 'Food Item'),
+    unit: unit || (item ? item.unit : 'serving') || 'serving',
+    baseQty: numQty,
+    baseWeight: numWeight,
+    baseCalories: baseCal,
+    baseProtein: baseProt,
+    baseCarbs: baseCarb,
+    baseFiber: baseFib,
+    baseFat: baseFat,
+    weightPerUnit: numQty > 0 ? (numWeight / numQty) : (numWeight > 0 ? numWeight : 1),
+    calPerUnit: numQty > 0 ? (baseCal / numQty) : 0,
+    protPerUnit: numQty > 0 ? (baseProt / numQty) : 0,
+    carbPerUnit: numQty > 0 ? (baseCarb / numQty) : 0,
+    fibPerUnit: numQty > 0 ? (baseFib / numQty) : 0,
+    fatPerUnit: numQty > 0 ? (baseFat / numQty) : 0
+  };
+
+  AppLogger.log('UI', `Opened edit drawer for item #${itemId} (${_activeEditingItem.foodName})`, _activeEditingItem);
+
+  const idInput = document.getElementById('edit-item-id');
+  if (idInput) idInput.value = itemId;
+
+  const labelEl = document.getElementById('edit-food-name-label');
+  if (labelEl) labelEl.textContent = _activeEditingItem.foodName;
+
+  const qtyInput = document.getElementById('edit-quantity');
+  if (qtyInput) qtyInput.value = numQty;
+
+  const unitInput = document.getElementById('edit-unit');
+  if (unitInput) unitInput.value = _activeEditingItem.unit;
+
+  const weightInput = document.getElementById('edit-weight-g');
+  if (weightInput) weightInput.value = numWeight;
+
+  updateEditModalMacroPreview(1);
+
+  const modal = document.getElementById('edit-item-modal');
+  if (modal) modal.classList.remove('hidden');
+
+  setTimeout(() => {
+    if (qtyInput) {
+      qtyInput.focus();
+      qtyInput.select();
+    }
+  }, 50);
 }
 
 function closeEditModal() {
   AppLogger.log('UI', 'Closed edit item modal');
-  document.getElementById('edit-item-modal').classList.add('hidden');
+  _activeEditingItem = null;
+  const modal = document.getElementById('edit-item-modal');
+  if (modal) modal.classList.add('hidden');
 }
 
 async function saveItemEdit() {
   if (isVisitorMode) return;
-  const itemId = parseInt(document.getElementById('edit-item-id').value, 10);
+  const itemId = document.getElementById('edit-item-id').value;
   const qty = parseFloat(document.getElementById('edit-quantity').value);
   let weightG = parseFloat(document.getElementById('edit-weight-g').value);
 
@@ -3423,7 +3565,7 @@ async function saveItemEdit() {
     return;
   }
   if (isNaN(weightG) || weightG <= 0) {
-    weightG = qty;
+    weightG = _activeEditingItem ? Math.round(qty * _activeEditingItem.weightPerUnit * 10) / 10 : qty;
   }
 
   AppLogger.log('UI', `User saving portion edit for item #${itemId}`, { quantity: qty, standardized_weight_g: weightG });
@@ -3441,43 +3583,76 @@ async function saveItemEdit() {
     } catch (e) {}
   }
 
-  const storageKey = getMealsStorageKey(currentUserHandle);
-  let stored = localStorage.getItem(storageKey);
-  let editedMeal = null;
-  if (stored) {
-    try {
-      let meals = JSON.parse(stored);
-      meals.forEach(m => {
-        let hasEdit = false;
-        (m.items || []).forEach(it => {
-          if (it.id === itemId) {
-            const oldWeight = (it.standardized_weight_g && it.standardized_weight_g > 0) ? it.standardized_weight_g : (it.quantity > 0 ? it.quantity : weightG);
-            const ratio = oldWeight > 0 ? (weightG / oldWeight) : 1;
-            it.quantity = qty;
-            it.standardized_weight_g = weightG;
-            it.calories = Math.round((it.calories || 0) * ratio * 10) / 10;
-            it.protein_g = Math.round((it.protein_g || 0) * ratio * 10) / 10;
-            it.carbs_g = Math.round((it.carbs_g || 0) * ratio * 10) / 10;
-            it.fiber_g = Math.round((it.fiber_g || 0) * ratio * 10) / 10;
-            it.fat_g = Math.round((it.fat_g || 0) * ratio * 10) / 10;
-            hasEdit = true;
-          }
-        });
-        if (hasEdit) {
-          m.total_calories = Math.round((m.items || []).reduce((s, i) => s + (Number(i.calories) || 0), 0) * 10) / 10;
-          m.total_protein_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.protein_g) || 0), 0) * 10) / 10;
-          m.total_carbs_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.carbs_g) || 0), 0) * 10) / 10;
-          m.total_fiber_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.fiber_g) || 0), 0) * 10) / 10;
-          m.total_fat_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.fat_g) || 0), 0) * 10) / 10;
-          m.updated_at = new Date().toISOString();
-          editedMeal = m;
-        }
-      });
-      localStorage.setItem(storageKey, JSON.stringify(meals));
-      currentLogs = meals;
-    } catch (err) {}
+  const activeHandle = (currentUserHandle || (typeof localStorage !== 'undefined' ? localStorage.getItem('macromix_user_handle') : '') || '').trim().toLowerCase().replace(/^@+/, '');
+  if (activeHandle && !currentUserHandle) {
+    currentUserHandle = activeHandle;
+    if (typeof window !== 'undefined') window.currentUserHandle = activeHandle;
   }
 
+  const storageKey = getMealsStorageKey(activeHandle);
+  let stored = localStorage.getItem(storageKey);
+  let editedMeal = null;
+  let meals = [];
+  if (stored) {
+    try {
+      meals = JSON.parse(stored);
+    } catch (err) {}
+  }
+  if (!Array.isArray(meals) || meals.length === 0) {
+    meals = Array.isArray(currentLogs) ? currentLogs : [];
+  }
+
+  meals.forEach(m => {
+    let hasEdit = false;
+    (m.items || []).forEach(it => {
+      if (String(it.id) === String(itemId)) {
+        let ratio = 1;
+        if (_activeEditingItem && String(_activeEditingItem.itemId) === String(itemId) && _activeEditingItem.baseQty > 0) {
+          ratio = qty / _activeEditingItem.baseQty;
+        } else if (typeof it.quantity === 'number' && it.quantity > 0) {
+          ratio = qty / it.quantity;
+        } else if (typeof it.standardized_weight_g === 'number' && it.standardized_weight_g > 0 && weightG > 0) {
+          ratio = weightG / it.standardized_weight_g;
+        }
+
+        if (!isFinite(ratio) || ratio <= 0) ratio = 1;
+
+        it.quantity = qty;
+        it.standardized_weight_g = weightG;
+
+        if (_activeEditingItem && String(_activeEditingItem.itemId) === String(itemId)) {
+          it.calories = Math.round(_activeEditingItem.baseCalories * ratio * 10) / 10;
+          it.protein_g = Math.round(_activeEditingItem.baseProtein * ratio * 10) / 10;
+          it.carbs_g = Math.round(_activeEditingItem.baseCarbs * ratio * 10) / 10;
+          it.fiber_g = Math.round(_activeEditingItem.baseFiber * ratio * 10) / 10;
+          it.fat_g = Math.round(_activeEditingItem.baseFat * ratio * 10) / 10;
+        } else {
+          it.calories = Math.round((Number(it.calories) || 0) * ratio * 10) / 10;
+          it.protein_g = Math.round((Number(it.protein_g) || 0) * ratio * 10) / 10;
+          it.carbs_g = Math.round((Number(it.carbs_g) || 0) * ratio * 10) / 10;
+          it.fiber_g = Math.round((Number(it.fiber_g) || 0) * ratio * 10) / 10;
+          it.fat_g = Math.round((Number(it.fat_g) || 0) * ratio * 10) / 10;
+        }
+        hasEdit = true;
+      }
+    });
+    if (hasEdit) {
+      m.total_calories = Math.round((m.items || []).reduce((s, i) => s + (Number(i.calories) || 0), 0) * 10) / 10;
+      m.total_protein_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.protein_g) || 0), 0) * 10) / 10;
+      m.total_carbs_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.carbs_g) || 0), 0) * 10) / 10;
+      m.total_fiber_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.fiber_g) || 0), 0) * 10) / 10;
+      m.total_fat_g = Math.round((m.items || []).reduce((s, i) => s + (Number(i.fat_g) || 0), 0) * 10) / 10;
+      m.updated_at = new Date().toISOString();
+      editedMeal = m;
+    }
+  });
+
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(meals));
+  } catch (e) {}
+  currentLogs = meals;
+
+  _activeEditingItem = null;
   closeEditModal();
   filterAndRenderSelectedDate();
 
@@ -6118,6 +6293,28 @@ function setupEventListeners() {
   bind('btn-close-edit-modal', 'click', closeEditModal);
   bind('btn-save-item-edit', 'click', saveItemEdit);
 
+  const editQtyInput = document.getElementById('edit-quantity');
+  if (editQtyInput) {
+    editQtyInput.addEventListener('input', handleEditQuantityChange);
+    editQtyInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        saveItemEdit();
+      }
+    });
+  }
+
+  const editWeightInput = document.getElementById('edit-weight-g');
+  if (editWeightInput) {
+    editWeightInput.addEventListener('input', handleEditWeightChange);
+    editWeightInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        saveItemEdit();
+      }
+    });
+  }
+
   window.exitAdminDashboard = () => {
     window.location.hash = '';
     switchTab('me', false);
@@ -6205,6 +6402,14 @@ window.hasUserViewedWeekendWrapped = hasUserViewedWeekendWrapped;
 window.markWeekendWrappedViewed = markWeekendWrappedViewed;
 window.getWeekendWrappedViewedAt = getWeekendWrappedViewedAt;
 window.WRAPPED_24H_WINDOW_MS = WRAPPED_24H_WINDOW_MS;
+window.openEditModal = openEditModal;
+window.closeEditModal = closeEditModal;
+window.saveItemEdit = saveItemEdit;
+window.findItemAndMealById = findItemAndMealById;
+window.filterAndRenderSelectedDate = filterAndRenderSelectedDate;
+window.getTodayDateString = getTodayDateString;
+window.getCurrentLogs = () => currentLogs;
+window.setCurrentLogs = (logs) => { currentLogs = logs; };
 window.exitAdminDashboard = function() {
   switchTab('me', true);
   window.history.pushState(null, '', '/');
