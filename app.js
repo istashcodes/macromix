@@ -4872,12 +4872,6 @@ function hasUserViewedWeekendWrapped(handle) {
   if (_firestoreWeekendReviewViewedCache[clean] === false) {
     return false;
   }
-  if ((clean === 'istashmacros' || clean === 'satish') && _firestoreWeekendReviewViewedCache['istashmacros'] === false) {
-    return false;
-  }
-  if ((clean === 'kalay' || clean === 'kalei') && (_firestoreWeekendReviewViewedCache['kalay'] === false || _firestoreWeekendReviewViewedCache['kalei'] === false)) {
-    return false;
-  }
 
   // 2. Check localStorage (only edition-versioned key to avoid stale sticky flags)
   if (typeof localStorage !== 'undefined') {
@@ -4894,29 +4888,15 @@ function syncWeekendReviewViewedState(profile, handle) {
 
   if (typeof profile.weekendReviewViewed === 'boolean') {
     _firestoreWeekendReviewViewedCache[clean] = profile.weekendReviewViewed;
-    if (clean === 'istashmacros' || clean === 'satish') {
-      _firestoreWeekendReviewViewedCache['istashmacros'] = profile.weekendReviewViewed;
-      _firestoreWeekendReviewViewedCache['satish'] = profile.weekendReviewViewed;
-    }
-    if (clean === 'kalay' || clean === 'kalei') {
-      _firestoreWeekendReviewViewedCache['kalay'] = profile.weekendReviewViewed;
-      _firestoreWeekendReviewViewedCache['kalei'] = profile.weekendReviewViewed;
-    }
   }
 
   if (profile.weekendReviewViewed === false) {
     // Cloud state is UNVIEWED: wipe all viewed flags from localStorage!
     if (typeof localStorage !== 'undefined') {
-      const handlesToPurge = (clean === 'istashmacros' || clean === 'satish')
-        ? ['istashmacros', 'satish']
-        : ((clean === 'kalay' || clean === 'kalei') ? ['kalay', 'kalei'] : [clean]);
-
-      handlesToPurge.forEach(h => {
-        localStorage.removeItem(`macromix_wrapped_viewed_${h}`);
-        localStorage.removeItem(`macromix_wrapped_viewed_${h}_${WRAPPED_CURRENT_EDITION}`);
-        localStorage.removeItem(`macromix_wrapped_viewed_${h}_2026_w45_nov`);
-        localStorage.removeItem(`macromix_wrapped_viewed_${h}_2026_w46_nov`);
-      });
+      localStorage.removeItem(`macromix_wrapped_viewed_${clean}`);
+      localStorage.removeItem(`macromix_wrapped_viewed_${clean}_${WRAPPED_CURRENT_EDITION}`);
+      localStorage.removeItem(`macromix_wrapped_viewed_${clean}_2026_w45_nov`);
+      localStorage.removeItem(`macromix_wrapped_viewed_${clean}_2026_w46_nov`);
     }
   } else if (profile.weekendReviewViewed === true) {
     if (typeof localStorage !== 'undefined') {
@@ -4931,14 +4911,6 @@ function markWeekendWrappedViewed(handle) {
   if (!clean) return;
 
   _firestoreWeekendReviewViewedCache[clean] = true;
-  if (clean === 'istashmacros' || clean === 'satish') {
-    _firestoreWeekendReviewViewedCache['istashmacros'] = true;
-    _firestoreWeekendReviewViewedCache['satish'] = true;
-  }
-  if (clean === 'kalay' || clean === 'kalei') {
-    _firestoreWeekendReviewViewedCache['kalay'] = true;
-    _firestoreWeekendReviewViewedCache['kalei'] = true;
-  }
 
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem(`macromix_wrapped_viewed_${clean}_${WRAPPED_CURRENT_EDITION}`, '1');
@@ -5139,39 +5111,15 @@ const WRAPPED_PROFILES = {
   }
 };
 
-// Aliases for user handles
-WRAPPED_PROFILES.kalei = {
-  ...WRAPPED_PROFILES.kalay,
-  handle: '@kalei',
-  shareText: (WRAPPED_PROFILES.kalay.shareText || '').replace(/@kalay/g, '@kalei'),
-  slide7: {
-    ...WRAPPED_PROFILES.kalay.slide7,
-    handle: '@kalei'
-  }
-};
-
-WRAPPED_PROFILES.satish = {
-  ...WRAPPED_PROFILES.istashmacros,
-  handle: '@satish',
-  shareText: (WRAPPED_PROFILES.istashmacros.shareText || '').replace(/@istashmacros/g, '@satish'),
-  slide7: {
-    ...WRAPPED_PROFILES.istashmacros.slide7,
-    handle: '@satish'
-  }
-};
-
 function getWrappedActiveHandle() {
   const handle = (currentUserHandle || (typeof localStorage !== 'undefined' ? localStorage.getItem('macromix_user_handle') : '') || '').trim().toLowerCase().replace(/^@+/, '');
   if (WRAPPED_PROFILES[handle]) return handle;
-  if (handle === 'kalei') return 'kalei';
-  if (handle === 'satish') return 'satish';
   return 'istashmacros';
 }
 
 function isWeekendWrappedEligible() {
   const handle = (currentUserHandle || (typeof localStorage !== 'undefined' ? localStorage.getItem('macromix_user_handle') : '') || '').trim().toLowerCase().replace(/^@+/, '');
-  const isEligible = handle === 'istashmacros' || handle === 'kalay' || handle === 'kalei' || handle === 'satish';
-  if (!isEligible) return false;
+  if (handle !== 'istashmacros' && handle !== 'kalay') return false;
 
   // Check URL query param ?wrapped=1 or ?wrapped=true
   if (typeof window !== 'undefined' && window.location) {
@@ -5805,7 +5753,7 @@ function initWeekendWrappedEvents() {
 
   // Purge legacy unversioned keys so they never mask unviewed state
   if (typeof localStorage !== 'undefined') {
-    ['istashmacros', 'kalay', 'kalei', 'satish'].forEach(h => {
+    ['istashmacros', 'kalay'].forEach(h => {
       localStorage.removeItem(`macromix_wrapped_viewed_${h}`);
     });
   }
