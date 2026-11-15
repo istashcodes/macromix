@@ -1025,6 +1025,50 @@ body {
   animation: pulse-red 1s infinite;
 }
 
+.btn-primary.processing {
+  background: repeating-linear-gradient(
+    -45deg,
+    #FFE600,
+    #FFE600 12px,
+    #FFF066 12px,
+    #FFF066 24px
+  );
+  background-size: 200% 200%;
+  animation: btn-processing-stripes 1.2s linear infinite;
+  cursor: wait;
+  border-color: #111111;
+  box-shadow: 2px 2px 0 #111111;
+  pointer-events: none;
+}
+
+.btn-primary.btn-disabled {
+  opacity: 0.85;
+  cursor: not-allowed;
+}
+
+.btn-primary.processing.btn-disabled {
+  opacity: 1;
+}
+
+@keyframes btn-processing-stripes {
+  0% { background-position: 0 0; }
+  100% { background-position: 48px 0; }
+}
+
+.btn-processing-sparkle {
+  display: inline-block;
+  animation: sparkle-spin 1.8s ease-in-out infinite;
+  font-size: 1.15rem;
+  line-height: 1;
+  margin-right: 4px;
+}
+
+@keyframes sparkle-spin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.25); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
 @keyframes pulse-red {
   0% { transform: scale(1); }
   50% { transform: scale(0.98); }
@@ -1288,6 +1332,210 @@ body {
   .timeline-skeleton-chip {
     animation: none !important;
     opacity: 0.6 !important;
+  }
+}
+
+/* --- Processing Meal Skeleton Card in Logged Meals Feed --- */
+.processing-meal-card {
+  position: relative;
+  overflow: hidden;
+  background: #FFFFFF;
+  border: 1.5px solid #111111;
+  box-shadow: 2px 2px 0 #181A1D;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: processing-card-entrance 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes processing-card-entrance {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Diagonal ambient shimmer sweep across the card */
+.processing-meal-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 150%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 230, 0, 0.12) 30%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 230, 0, 0.12) 70%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  animation: processing-shimmer-sweep 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes processing-shimmer-sweep {
+  0% { left: -150%; }
+  100% { left: 150%; }
+}
+
+.processing-meal-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.processing-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  border: 1px solid #111111;
+  text-transform: uppercase;
+}
+
+.processing-status-pill.badge-listening {
+  background: #FF5252;
+  color: #FFFFFF;
+  box-shadow: 1px 1px 0 #111111;
+}
+
+.processing-status-pill.badge-analyzing {
+  background: #FFE600;
+  color: #111111;
+  box-shadow: 1px 1px 0 #111111;
+}
+
+.processing-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
+  animation: processing-dot-ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes processing-dot-ping {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(1.35); }
+}
+
+.processing-ai-sparkle {
+  display: inline-block;
+  animation: sparkle-spin 1.8s ease-in-out infinite;
+  font-size: 0.85rem;
+}
+
+.processing-time-hint {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #888888;
+  letter-spacing: 0.02em;
+}
+
+.processing-transcript-preview {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #181A1D;
+  min-height: 22px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.processing-ghost-text {
+  color: #777777;
+  font-style: italic;
+  font-weight: 600;
+}
+
+.processing-skeleton-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1.5px dashed #E5DFD3;
+}
+
+.processing-bar-line {
+  height: 12px;
+  border-radius: 4px;
+  background: #E8E2D2;
+  animation: neo-pulse 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.processing-bar-line.bar-title {
+  width: 55%;
+}
+
+.processing-macro-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.processing-chip-skel {
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid #111111;
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  animation: neo-pulse 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.processing-chip-skel.chip-cal {
+  background: #FFF4E5;
+  color: #D97706;
+  border-color: #D97706;
+}
+
+.processing-chip-skel.chip-prot {
+  background: #FEE2E2;
+  color: #DC2626;
+  border-color: #DC2626;
+  animation-delay: 0.12s;
+}
+
+.processing-chip-skel.chip-carb {
+  background: #EFF6FF;
+  color: #2563EB;
+  border-color: #2563EB;
+  animation-delay: 0.24s;
+}
+
+.processing-chip-skel.chip-fat {
+  background: #FEF3C7;
+  color: #B45309;
+  border-color: #B45309;
+  animation-delay: 0.36s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-processing-sparkle,
+  .processing-meal-card,
+  .processing-meal-card::after,
+  .processing-pulse-dot,
+  .processing-ai-sparkle,
+  .processing-bar-line,
+  .processing-chip-skel {
+    animation: none !important;
   }
 }
 

@@ -1079,6 +1079,115 @@ function getTimelineSkeletonHtml() {
   `;
 }
 
+function setTrackButtonState(state) {
+  const btn = document.getElementById('btn-tap-record');
+  if (!btn) return;
+  if (state === 'recording') {
+    btn.disabled = false;
+    btn.classList.remove('btn-disabled', 'processing');
+    btn.classList.add('recording');
+    btn.style.pointerEvents = 'auto';
+    btn.innerHTML = '<span>⏹️</span> <span class="btn-track-text">Listening... Tap to finish</span>';
+  } else if (state === 'processing') {
+    btn.disabled = true;
+    btn.classList.remove('recording');
+    btn.classList.add('btn-disabled', 'processing');
+    btn.style.pointerEvents = 'none';
+    btn.innerHTML = '<span class="btn-processing-sparkle">✨</span> <span class="btn-track-text">Analyzing your macro<span class="btn-brand-mix">mix</span>...</span>';
+  } else {
+    btn.disabled = false;
+    btn.classList.remove('btn-disabled', 'recording', 'processing');
+    btn.style.pointerEvents = 'auto';
+    btn.innerHTML = '<span class="btn-mic-icon">🎙️</span><span class="btn-track-text">Track your macro<span class="btn-brand-mix">mix</span></span>';
+  }
+}
+
+function showProcessingMealSkeleton(state = 'analyzing', initialText = '') {
+  const container = document.getElementById('meal-timeline-content');
+  if (!container) return;
+
+  const isListening = state === 'listening';
+  const badgeClass = isListening ? 'badge-listening' : 'badge-analyzing';
+  const badgeIcon = isListening ? '<span class="processing-pulse-dot"></span>' : '<span class="processing-ai-sparkle">✨</span>';
+  const badgeText = isListening ? 'LISTENING' : 'ANALYZING WITH GEMINI...';
+
+  let transcriptHtml = '';
+  if (initialText && initialText.trim()) {
+    transcriptHtml = `“${escapeHtml(initialText.trim())}”`;
+  } else if (isListening) {
+    transcriptHtml = '<span class="processing-ghost-text">Listening... speak food item & portion</span>';
+  } else {
+    transcriptHtml = '<span class="processing-ghost-text">Analyzing meal details & calculating macros...</span>';
+  }
+
+  let skeleton = document.getElementById('processing-meal-skeleton');
+  if (skeleton) {
+    skeleton.className = `processing-meal-card ${isListening ? 'is-listening' : 'is-analyzing'}`;
+    const pill = skeleton.querySelector('.processing-status-pill');
+    if (pill) {
+      pill.className = `processing-status-pill ${badgeClass}`;
+      pill.innerHTML = `${badgeIcon} <span class="processing-status-text">${badgeText}</span>`;
+    }
+    const preview = skeleton.querySelector('#processing-transcript-preview');
+    if (preview) {
+      preview.innerHTML = transcriptHtml;
+    }
+    return;
+  }
+
+  // Temporarily hide empty state so skeleton is displayed prominently at the top
+  const emptyState = container.querySelector('.empty-state');
+  if (emptyState) {
+    emptyState.style.display = 'none';
+  }
+
+  const skeletonHtml = `
+    <div id="processing-meal-skeleton" class="processing-meal-card ${isListening ? 'is-listening' : 'is-analyzing'}" aria-live="polite" aria-busy="true">
+      <div class="processing-meal-top">
+        <div class="processing-status-pill ${badgeClass}">
+          ${badgeIcon}
+          <span class="processing-status-text">${badgeText}</span>
+        </div>
+        <span class="processing-time-hint">Just now</span>
+      </div>
+      <div class="processing-transcript-preview" id="processing-transcript-preview">${transcriptHtml}</div>
+      <div class="processing-skeleton-bars">
+        <div class="processing-bar-line bar-title"></div>
+        <div class="processing-macro-chips">
+          <span class="processing-chip-skel chip-cal">🔥 Calories</span>
+          <span class="processing-chip-skel chip-prot">🥩 Protein</span>
+          <span class="processing-chip-skel chip-carb">🌾 Carbs</span>
+          <span class="processing-chip-skel chip-fat">🥑 Fat</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  container.insertAdjacentHTML('afterbegin', skeletonHtml);
+}
+
+function updateProcessingMealSkeletonText(text) {
+  const preview = document.getElementById('processing-transcript-preview');
+  if (!preview) return;
+  if (text && text.trim()) {
+    preview.innerHTML = `“${escapeHtml(text.trim())}”`;
+  }
+}
+
+function hideProcessingMealSkeleton() {
+  const skeleton = document.getElementById('processing-meal-skeleton');
+  if (skeleton) {
+    skeleton.remove();
+  }
+  const container = document.getElementById('meal-timeline-content');
+  if (container) {
+    const emptyState = container.querySelector('.empty-state');
+    if (emptyState && !container.querySelector('.meal-group')) {
+      emptyState.style.display = '';
+    }
+  }
+}
+
 function filterAndRenderSelectedDate(direction = null, animateFromZero = true) {
   setCardLoadingState(false);
   const filtered = currentLogs.filter(log => getLogDate(log) === selectedDate);
@@ -1871,11 +1980,8 @@ async function handleTextLog(e) {
     submitBtn.classList.add('btn-logging');
     submitBtn.style.pointerEvents = 'none';
   }
-  if (btnTapRecord) {
-    btnTapRecord.disabled = true;
-    btnTapRecord.classList.add('btn-disabled');
-    btnTapRecord.style.pointerEvents = 'none';
-  }
+  setTrackButtonState('processing');
+  showProcessingMealSkeleton('analyzing', text);
 
   manualTextInput.disabled = true;
   manualTextInput.placeholder = 'Logging meal...';
@@ -1889,6 +1995,8 @@ async function handleTextLog(e) {
     // Retain input text in manualTextInput on error
   } finally {
     isProcessingLog = false;
+    hideProcessingMealSkeleton();
+    setTrackButtonState('idle');
     if (manualTextInput) {
       manualTextInput.disabled = false;
       manualTextInput.placeholder = 'Or type e.g. 200g veg pulao and some veggies';
@@ -1898,11 +2006,6 @@ async function handleTextLog(e) {
       submitBtn.innerHTML = '<span class="btn-log-text">Log</span> <svg class="btn-log-bolt-svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>';
     }
     updateLogButtonState();
-    if (btnTapRecord) {
-      btnTapRecord.disabled = false;
-      btnTapRecord.classList.remove('btn-disabled');
-      btnTapRecord.style.pointerEvents = 'auto';
-    }
   }
 }
 
@@ -2045,6 +2148,8 @@ async function processTranscript(transcript, audioBase64 = null, inputSource = '
   if ((!transcript || !transcript.trim()) && !audioBase64) {
     setMicStatus("Please speak or enter what you ate.", true);
     AppLogger.log('UI', 'Log request cancelled: transcript and audio were empty');
+    hideProcessingMealSkeleton();
+    setTrackButtonState('idle');
     return false;
   }
 
@@ -2057,13 +2162,11 @@ async function processTranscript(transcript, audioBase64 = null, inputSource = '
       submitBtn.classList.add('btn-logging');
       submitBtn.style.pointerEvents = 'none';
     }
-    if (btnTapRecord) {
-      btnTapRecord.disabled = true;
-      btnTapRecord.classList.add('btn-disabled');
-      btnTapRecord.style.pointerEvents = 'none';
-    }
     manualTextInput.disabled = true;
   }
+
+  setTrackButtonState('processing');
+  showProcessingMealSkeleton('analyzing', transcript);
 
   setMicStatus("Analyzing meal with Gemini AI...");
   AppLogger.log('UI', 'Starting pipeline via Gemini AI', {
@@ -2282,6 +2385,8 @@ async function processTranscript(transcript, audioBase64 = null, inputSource = '
     return false;
   } finally {
     isProcessingLog = false;
+    hideProcessingMealSkeleton();
+    setTrackButtonState('idle');
     if (manualTextInput) {
       manualTextInput.disabled = false;
       manualTextInput.placeholder = 'Or type e.g. 200g veg pulao and some veggies';
@@ -2291,11 +2396,6 @@ async function processTranscript(transcript, audioBase64 = null, inputSource = '
       submitBtn.innerHTML = '<span class="btn-log-text">Log</span> <svg class="btn-log-bolt-svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>';
     }
     updateLogButtonState();
-    if (btnTapRecord) {
-      btnTapRecord.disabled = false;
-      btnTapRecord.classList.remove('btn-disabled');
-      btnTapRecord.style.pointerEvents = 'auto';
-    }
   }
 }
 
@@ -2352,6 +2452,7 @@ function initSpeechRecognition() {
 
     const combined = (liveTranscript + (interim ? ' ' + interim : '')).trim();
     if (combined && !isProcessingLog) {
+      updateProcessingMealSkeletonText(combined);
       setMicStatus(`🗣️ "${combined}"`);
       if (liveTranscript) {
         AppLogger.log('UI', `Speech recognition transcript (accumulated): "${liveTranscript}"`, { accumulated: liveTranscript, interim: interim.trim() });
@@ -2380,8 +2481,8 @@ async function startRecording() {
 
   isRecording = true;
   liveTranscript = '';
-  btnTapRecord.classList.add('recording');
-  btnTapRecord.innerHTML = '<span>⏹️</span> <span class="btn-track-text">Listening... Tap to finish</span>';
+  setTrackButtonState('recording');
+  showProcessingMealSkeleton('listening');
   setMicStatus('Listening... Speak food item & portion');
 
   if (!speechRecognition) {
@@ -2432,8 +2533,8 @@ function stopRecording() {
   if (!isRecording) return;
   AppLogger.log('UI', 'User stopped microphone recording');
   isRecording = false;
-  btnTapRecord.classList.remove('recording');
-  btnTapRecord.innerHTML = '<span class="btn-mic-icon">🎙️</span><span class="btn-track-text">Track your macro<span class="btn-brand-mix">mix</span></span>';
+  setTrackButtonState('processing');
+  showProcessingMealSkeleton('analyzing', liveTranscript);
 
   if (silenceTimer) clearTimeout(silenceTimer);
 
@@ -2451,28 +2552,36 @@ function stopRecording() {
 
 async function processRecordedAudio(audioBase64, capturedTranscript = "") {
   setMicStatus('Analyzing voice...');
+  setTrackButtonState('processing');
+  showProcessingMealSkeleton('analyzing', capturedTranscript);
   
-  const textToUse = (capturedTranscript || "").trim();
-  if (textToUse) {
-    await processTranscript(textToUse, null);
-    return;
-  }
-
-  // Fallback if browser SpeechRecognition was not available
-  if (currentEngine === 'gemini') {
-    await processTranscript("", audioBase64);
-  } else {
-    try {
-      const res = await fetch('/api/audio/transcribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audio_base64: audioBase64 })
-      });
-      const data = await res.json();
-      await processTranscript(data.transcript || (manualTextInput ? manualTextInput.value.trim() : "") || "");
-    } catch (e) {
-      await processTranscript((manualTextInput ? manualTextInput.value.trim() : "") || "");
+  try {
+    const textToUse = (capturedTranscript || "").trim();
+    if (textToUse) {
+      await processTranscript(textToUse, null);
+      return;
     }
+
+    // Fallback if browser SpeechRecognition was not available
+    if (currentEngine === 'gemini') {
+      await processTranscript("", audioBase64);
+    } else {
+      try {
+        const res = await fetch('/api/audio/transcribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ audio_base64: audioBase64 })
+        });
+        const data = await res.json();
+        await processTranscript(data.transcript || (manualTextInput ? manualTextInput.value.trim() : "") || "");
+      } catch (e) {
+        await processTranscript((manualTextInput ? manualTextInput.value.trim() : "") || "");
+      }
+    }
+  } catch (err) {
+    console.error("Audio processing failed:", err);
+    hideProcessingMealSkeleton();
+    setTrackButtonState('idle');
   }
 }
 
