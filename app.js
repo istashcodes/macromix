@@ -388,6 +388,11 @@ window.updateLogButtonState = updateLogButtonState;
 
 function showFeedbackToast(text, isError = false) {
   if (!text) return;
+  // If it's an error message or "no food", skip toast - the inline CTA banner is used instead
+  const lower = text.toLowerCase();
+  if (isError || lower.includes('no food') || lower.includes('error') || lower.includes('failed')) {
+    return;
+  }
   let toast = document.getElementById('macro-feedback-toast');
   if (!toast) {
     toast = document.createElement('div');
@@ -395,7 +400,7 @@ function showFeedbackToast(text, isError = false) {
     document.body.appendChild(toast);
   }
   toast.textContent = text;
-  toast.className = 'macro-feedback-toast' + (isError ? ' is-error' : '') + ' show';
+  toast.className = 'macro-feedback-toast show';
   clearTimeout(toast._timer);
   toast._timer = setTimeout(() => {
     toast.classList.remove('show');
@@ -407,7 +412,6 @@ function setMicStatus(text, isError = false) {
   const lower = text.toLowerCase();
   const isErr = isError || lower.includes('error') || lower.includes('failed') || lower.includes('could not') || lower.includes('no food') || lower.includes('required');
   if (isErr) {
-    showFeedbackToast(text, true);
     showCtaInlineError(text);
   }
   const el = document.getElementById('mic-status-text');
