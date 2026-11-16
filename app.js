@@ -408,6 +408,7 @@ function setMicStatus(text, isError = false) {
   const isErr = isError || lower.includes('error') || lower.includes('failed') || lower.includes('could not') || lower.includes('no food') || lower.includes('required');
   if (isErr) {
     showFeedbackToast(text, true);
+    showCtaInlineError(text);
   }
   const el = document.getElementById('mic-status-text');
   if (el) {
@@ -1079,6 +1080,36 @@ function getTimelineSkeletonHtml() {
   `;
 }
 
+let ctaErrorTimer = null;
+
+function showCtaInlineError(message) {
+  const banner = document.getElementById('error-banner');
+  const textEl = document.getElementById('error-banner-text');
+  if (!banner) return;
+  if (textEl && message) {
+    textEl.textContent = message;
+  }
+  banner.style.display = 'flex';
+
+  if (ctaErrorTimer) {
+    clearTimeout(ctaErrorTimer);
+  }
+  ctaErrorTimer = setTimeout(() => {
+    hideCtaInlineError();
+  }, 5000);
+}
+
+function hideCtaInlineError() {
+  const banner = document.getElementById('error-banner');
+  if (banner) {
+    banner.style.display = 'none';
+  }
+  if (ctaErrorTimer) {
+    clearTimeout(ctaErrorTimer);
+    ctaErrorTimer = null;
+  }
+}
+
 function setTrackButtonState(state) {
   const btn = document.getElementById('btn-tap-record');
   if (!btn) return;
@@ -1087,91 +1118,43 @@ function setTrackButtonState(state) {
     btn.classList.remove('btn-disabled', 'processing');
     btn.classList.add('recording');
     btn.style.pointerEvents = 'auto';
-    btn.innerHTML = '<span>⏹️</span> <span class="btn-track-text">Listening... Tap to finish</span>';
+    btn.innerHTML = `
+      <span class="cta-animation-group">
+        <span class="pulse-dot-white"></span>
+        <span class="audio-equalizer-bars-white" id="cta-audio-bars">
+          <span class="eq-bar-white b1"></span>
+          <span class="eq-bar-white b2"></span>
+          <span class="eq-bar-white b3"></span>
+          <span class="eq-bar-white b4"></span>
+          <span class="eq-bar-white b5"></span>
+        </span>
+      </span>
+      <span class="cta-listening-text">Listening... Tap to finish</span>
+    `;
   } else if (state === 'processing') {
     btn.disabled = true;
     btn.classList.remove('recording');
     btn.classList.add('btn-disabled', 'processing');
     btn.style.pointerEvents = 'none';
-    btn.innerHTML = '<span class="btn-processing-sparkle">✨</span> <span class="btn-track-text">Analyzing your macro<span class="btn-brand-mix">mix</span>...</span>';
+    btn.innerHTML = `
+      <span class="btn-processing-sparkle">✨</span>
+      <span class="cta-analyzing-text">Analyzing your macro<span class="btn-brand-mix">mix</span>...</span>
+    `;
   } else {
     btn.disabled = false;
     btn.classList.remove('btn-disabled', 'recording', 'processing');
     btn.style.pointerEvents = 'auto';
-    btn.innerHTML = '<span class="btn-mic-icon">🎙️</span><span class="btn-track-text">Track your macro<span class="btn-brand-mix">mix</span></span>';
+    btn.innerHTML = '<span class="btn-mic-icon">🎙️</span><span class="btn-track-text" id="btn-track-text-main">Track your macro<span class="btn-brand-mix">mix</span></span>';
   }
 }
 
 function showProcessingMealSkeleton(state = 'analyzing', initialText = '') {
-  const container = document.getElementById('meal-timeline-content');
-  if (!container) return;
-
-  const isListening = state === 'listening';
-  const badgeClass = isListening ? 'badge-listening' : 'badge-analyzing';
-  const badgeIcon = isListening ? '<span class="processing-pulse-dot"></span>' : '<span class="processing-ai-sparkle">✨</span>';
-  const badgeText = isListening ? 'LISTENING' : 'ANALYZING WITH GEMINI...';
-
-  let transcriptHtml = '';
-  if (initialText && initialText.trim()) {
-    transcriptHtml = `“${escapeHtml(initialText.trim())}”`;
-  } else if (isListening) {
-    transcriptHtml = '<span class="processing-ghost-text">Listening... speak food item & portion</span>';
-  } else {
-    transcriptHtml = '<span class="processing-ghost-text">Analyzing meal details & calculating macros...</span>';
-  }
-
-  let skeleton = document.getElementById('processing-meal-skeleton');
-  if (skeleton) {
-    skeleton.className = `processing-meal-card ${isListening ? 'is-listening' : 'is-analyzing'}`;
-    const pill = skeleton.querySelector('.processing-status-pill');
-    if (pill) {
-      pill.className = `processing-status-pill ${badgeClass}`;
-      pill.innerHTML = `${badgeIcon} <span class="processing-status-text">${badgeText}</span>`;
-    }
-    const preview = skeleton.querySelector('#processing-transcript-preview');
-    if (preview) {
-      preview.innerHTML = transcriptHtml;
-    }
-    return;
-  }
-
-  // Temporarily hide empty state so skeleton is displayed prominently at the top
-  const emptyState = container.querySelector('.empty-state');
-  if (emptyState) {
-    emptyState.style.display = 'none';
-  }
-
-  const skeletonHtml = `
-    <div id="processing-meal-skeleton" class="processing-meal-card ${isListening ? 'is-listening' : 'is-analyzing'}" aria-live="polite" aria-busy="true">
-      <div class="processing-meal-top">
-        <div class="processing-status-pill ${badgeClass}">
-          ${badgeIcon}
-          <span class="processing-status-text">${badgeText}</span>
-        </div>
-        <span class="processing-time-hint">Just now</span>
-      </div>
-      <div class="processing-transcript-preview" id="processing-transcript-preview">${transcriptHtml}</div>
-      <div class="processing-skeleton-bars">
-        <div class="processing-bar-line bar-title"></div>
-        <div class="processing-macro-chips">
-          <span class="processing-chip-skel chip-cal">🔥 Calories</span>
-          <span class="processing-chip-skel chip-prot">🥩 Protein</span>
-          <span class="processing-chip-skel chip-carb">🌾 Carbs</span>
-          <span class="processing-chip-skel chip-fat">🥑 Fat</span>
-        </div>
-      </div>
-    </div>
-  `;
-
-  container.insertAdjacentHTML('afterbegin', skeletonHtml);
+  // Retain animations in CTA button only across 3 states per user request
+  hideProcessingMealSkeleton();
 }
 
 function updateProcessingMealSkeletonText(text) {
-  const preview = document.getElementById('processing-transcript-preview');
-  if (!preview) return;
-  if (text && text.trim()) {
-    preview.innerHTML = `“${escapeHtml(text.trim())}”`;
-  }
+  // No-op: transcript display removed per user request
 }
 
 function hideProcessingMealSkeleton() {
@@ -1956,6 +1939,7 @@ async function deleteMealLog(logId) {
 // --- Text Logging Fallback ---
 async function handleTextLog(e) {
   e.preventDefault();
+  hideCtaInlineError();
   const submitBtn = document.getElementById('btn-submit-log');
   if (isProcessingLog || (submitBtn && submitBtn.disabled)) {
     console.warn("[macronomics] Blocked 2nd click on Log CTA during in-flight processing.");
@@ -2470,6 +2454,7 @@ function initSpeechRecognition() {
 
 async function startRecording() {
   if (isProcessingLog) return;
+  hideCtaInlineError();
   AppLogger.log('UI', 'User started microphone recording');
   try {
     micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -2603,6 +2588,16 @@ function startAudioVolumeTracker() {
     const avgVolume = volumeSum / bufferLength;
     if (avgVolume > 12) {
       resetSilenceTimer();
+    }
+
+    const bars = document.querySelectorAll('#cta-audio-bars .eq-bar-white');
+    if (bars && bars.length > 0) {
+      const step = Math.floor(bufferLength / (bars.length + 1));
+      bars.forEach((bar, idx) => {
+        const val = dataArray[(idx + 1) * step] || 0;
+        const scale = Math.max(0.35, Math.min(1.75, val / 45));
+        bar.style.transform = `scaleY(${scale.toFixed(2)})`;
+      });
     }
   }
 
@@ -3905,6 +3900,7 @@ function setVisitorMode(isVisitor, targetHandle = null) {
   const targetHandleEl = document.getElementById('visitor-target-handle');
   const visitorStreakPill = document.getElementById('visitor-streak-pill');
   const voiceToolCard = document.getElementById('voice-tool-card');
+  const timelineInputZone = document.getElementById('timeline-input-zone');
   const voiceRow = document.querySelector('.voice-buttons-row');
   const micBanner = document.getElementById('mic-status-text');
   const textLogForm = document.getElementById('text-log-form');
@@ -3931,6 +3927,7 @@ function setVisitorMode(isVisitor, targetHandle = null) {
       visitorStreakPill.classList.add('hidden');
     }
     if (voiceToolCard) voiceToolCard.classList.add('hidden');
+    if (timelineInputZone) timelineInputZone.classList.add('hidden');
     if (voiceRow) voiceRow.classList.add('hidden');
     if (micBanner) micBanner.classList.add('hidden');
     if (textLogForm) textLogForm.classList.add('hidden');
@@ -3941,6 +3938,7 @@ function setVisitorMode(isVisitor, targetHandle = null) {
     if (visitorBanner) visitorBanner.classList.add('hidden');
     if (visitorStreakPill) visitorStreakPill.classList.add('hidden');
     if (voiceToolCard) voiceToolCard.classList.remove('hidden');
+    if (timelineInputZone) timelineInputZone.classList.remove('hidden');
     if (voiceRow) voiceRow.classList.remove('hidden');
     if (micBanner) micBanner.classList.remove('hidden');
     if (textLogForm) textLogForm.classList.remove('hidden');
@@ -6292,6 +6290,7 @@ function setupEventListeners() {
     if (el) el.addEventListener(event, handler);
   };
 
+  bind('error-dismiss-btn', 'click', hideCtaInlineError);
   bind('btn-onboard-google', 'click', handleGoogleAuth);
   bind('btn-onboard-passkey', 'click', handlePasskeyAuth);
 
@@ -6519,6 +6518,9 @@ window.filterAndRenderSelectedDate = filterAndRenderSelectedDate;
 window.getTodayDateString = getTodayDateString;
 window.getCurrentLogs = () => currentLogs;
 window.setCurrentLogs = (logs) => { currentLogs = logs; };
+window.setTrackButtonState = setTrackButtonState;
+window.showCtaInlineError = showCtaInlineError;
+window.hideCtaInlineError = hideCtaInlineError;
 window.exitAdminDashboard = function() {
   switchTab('me', true);
   window.history.pushState(null, '', '/');

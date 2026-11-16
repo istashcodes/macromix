@@ -34,7 +34,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=17.1">
+  <link rel="stylesheet" href="styles.css?v=17.2">
   <link rel="stylesheet" href="admin.css?v=1.2">
 </head>
 <body>
@@ -350,27 +350,36 @@
         </section>
       </div>
 
-      <!-- Decoupled Input Tool Bar (Docked Anchor) -->
-      <section class="main-container-card voice-tool-card" id="voice-tool-card" aria-label="Meal Input Bar">
-        <div class="voice-buttons-row">
-          <button type="button" class="btn-primary" id="btn-tap-record">
-            <span class="btn-mic-icon">🎙️</span><span class="btn-track-text" id="btn-track-text-main">Track your macro<span class="btn-brand-mix">mix</span></span>
-          </button>
-        </div>
-
-        <form id="text-log-form" class="text-input-wrap">
-          <input type="text" id="manual-text-input" class="neo-input" placeholder="Or type e.g. 200g veg pulao and some veggies" autocomplete="off">
-          <button type="submit" class="btn-log" id="btn-submit-log" disabled><span class="btn-log-text">Log</span> <svg class="btn-log-bolt-svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></button>
-        </form>
-      </section>
-
-      <!-- Decoupled Chronological Meal Timeline Feed -->
+      <!-- Chronological Meal Timeline Feed with Integrated Meal Input Zone -->
       <section class="timeline-box" id="timeline-box-section" aria-label="Logged Meals Feed">
         <div class="timeline-header">
           <div class="timeline-title-wrap">
             <span class="timeline-title">LOGGED MEALS</span>
             <span class="meals-total-badge" id="meals-total-badge">0 meals · 0 kcal</span>
           </div>
+        </div>
+
+        <!-- Integrated Meal Input Controls Zone -->
+        <div class="timeline-input-zone" id="timeline-input-zone">
+          <div class="voice-buttons-row">
+            <button type="button" class="btn-primary" id="btn-tap-record" aria-label="Track your macromix">
+              <span class="btn-mic-icon">🎙️</span><span class="btn-track-text" id="btn-track-text-main">Track your macro<span class="btn-brand-mix">mix</span></span>
+            </button>
+          </div>
+
+          <!-- Inline Error Banner (Disappears after 5 seconds) -->
+          <div class="cta-error-banner" id="error-banner" style="display: none;" role="alert">
+            <div class="error-banner-left">
+              <span class="error-icon">⚠️</span>
+              <span class="error-text" id="error-banner-text">No food detected. Please specify what you ate (e.g. 2 boiled eggs).</span>
+            </div>
+            <button type="button" class="error-dismiss-btn" id="error-dismiss-btn" aria-label="Dismiss error">✕</button>
+          </div>
+
+          <form id="text-log-form" class="text-input-wrap">
+            <input type="text" id="manual-text-input" class="neo-input" placeholder="Or type e.g. 200g veg pulao and some veggies" autocomplete="off">
+            <button type="submit" class="btn-log" id="btn-submit-log" disabled><span class="btn-log-text">Log</span> <svg class="btn-log-bolt-svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></button>
+          </form>
         </div>
         <div id="meal-timeline-content" class="logged-meals-container">
           <div class="timeline-skeleton-wrap" aria-busy="true">
@@ -1040,6 +1049,6 @@
   <script type="module" src="admin.js?v=1.2"></script>
 
   <!-- Frontend Controller -->
-  <script src="app.js?v=17.1"></script>
+  <script src="app.js?v=17.2"></script>
 </body>
 </html>

@@ -108,7 +108,6 @@ def test_refined_design_and_swiping_e2e(server_url):
         card_selectors = [
             '.app-header',
             '#main-top-card',
-            '#voice-tool-card',
             '#timeline-box-section'
         ]
         for sel in card_selectors:
