@@ -1087,7 +1087,8 @@ function showCtaInlineError(message) {
   const textEl = document.getElementById('error-banner-text');
   if (!banner) return;
   if (textEl && message) {
-    textEl.textContent = message;
+    const cleanMsg = String(message).replace(/^[\s⚠️!]+/, '').trim();
+    textEl.textContent = cleanMsg || "No food detected. Please specify what you ate (e.g. 2 boiled eggs).";
   }
   banner.style.display = 'flex';
 
