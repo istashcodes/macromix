@@ -46,6 +46,10 @@ node_modules/
 # Agent IDE metadata
 .agents/
 .claude/
+.codex/
+.github/agents/
+.github/hooks/
+.github/skills/
 skills-lock.json
 
 # Mac OS

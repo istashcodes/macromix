@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Macromix Weekend Wrapped — Trio Showcase</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;900&family=Plus+Jakarta+Sans:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --card-border: 3.5px solid #111111;
+      --card-shadow: 5px 5px 0px #111111;
+      --yellow: #FFE600;
+      --pink: #FF3366;
+      --lime: #00F59B;
+      --purple: #A855F7;
+      --orange: #FF6B00;
+      --cyan: #00F0FF;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 15% 20%, rgba(255, 230, 0, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 85% 80%, rgba(0, 245, 155, 0.12) 0%, transparent 45%),
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #111;
+      padding: 16px;
+      overflow-x: hidden;
+    }
+
+    /* User Switcher Bar */
+    .user-switcher-bar {
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #1e293b;
+      border: 2px solid #334155;
+      padding: 6px 12px;
+      border-radius: 999px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+    }
+
+    .user-tab-btn {
+      background: transparent;
+      color: #94a3b8;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .user-tab-btn.active {
+      background: var(--yellow);
+      color: #111;
+      box-shadow: 2px 2px 0 #111;
+    }
+
+    /* Mobile Phone Shell */
+    .story-viewport {
+      width: 100%;
+      max-width: 410px;
+      height: 740px;
+      max-height: calc(100vh - 90px);
+      position: relative;
+      border-radius: 36px;
+      border: 5px solid #1e293b;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255,255,255,0.1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: #000;
+      cursor: pointer;
+    }
+
+    /* Top Progress Bars */
+    .progress-bar-container {
+      position: absolute;
+      top: 14px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      gap: 6px;
+      z-index: 100;
+    }
+    .progress-segment {
+      flex: 1;
+      height: 4.5px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 999px;
+      overflow: hidden;
+      backdrop-filter: blur(4px);
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: #ffffff;
+      border-radius: 999px;
+      transition: width 0.1s linear;
+    }
+
+    /* Story Meta Header */
+    .story-meta-header {
+      position: absolute;
+      top: 28px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+    }
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.65);
+      border: 2px solid rgba(255, 255, 255, 0.85);
+      padding: 6px 12px;
+      border-radius: 999px;
+      backdrop-filter: blur(8px);
+    }
+    .user-avatar {
+      width: 24px;
+      height: 24px;
+      background: var(--yellow);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 900;
+      border: 1.5px solid #111;
+    }
+    .user-handle {
+      color: #fff;
+      font-weight: 800;
+      font-size: 13px;
+    }
+    .story-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .control-btn {
+      width: 32px;
+      height: 32px;
+      background: rgba(0, 0, 0, 0.65);
+      border: 2px solid rgba(255, 255, 255, 0.85);
+      border-radius: 50%;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+    }
+
+    /* Tap Zone Overlays */
+    .tap-zone {
+      position: absolute;
+      top: 70px;
+      bottom: 75px;
+      z-index: 50;
+    }
+    .tap-zone.left {
+      left: 0;
+      width: 40%;
+    }
+    .tap-zone.right {
+      right: 0;
+      width: 60%;
+    }
+
+    /* Slides Deck */
+    .slides-deck {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 80px 22px 30px;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.96) translateY(12px);
+      transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 1;
+    }
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1) translateY(0);
+      z-index: 10;
+    }
+
+    /* Slide Themes */
+    .slide-1 { background: linear-gradient(170deg, #FFE600 0%, #FF8A00 100%); }
+    .slide-2 { background: linear-gradient(165deg, #FF6B00 0%, #FF3366 100%); color: #fff; }
+    .slide-3 { background: linear-gradient(175deg, #00F59B 0%, #00B4D8 100%); }
+    .slide-4 { background: linear-gradient(160deg, #A855F7 0%, #4338CA 100%); color: #fff; }
+    .slide-5 { background: linear-gradient(170deg, #FF3366 0%, #7928CA 100%); color: #fff; }
+    .slide-6 { background: linear-gradient(180deg, #00F0FF 0%, #0051FF 100%); color: #fff; }
+    .slide-7 { background: #0f172a; color: #fff; }
+
+    /* Neo-Brutalist Components */
+    .brutal-card {
+      background: #ffffff;
+      border: var(--card-border);
+      box-shadow: var(--card-shadow);
+      border-radius: 20px;
+      padding: 16px;
+      color: #111;
+      position: relative;
+    }
+    .brutal-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: var(--card-border);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      box-shadow: 2px 2px 0px #111;
+    }
+    .font-grotesk { font-family: 'Space Grotesk', sans-serif; }
+    .stat-hero-number {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 42px;
+      line-height: 0.95;
+      font-weight: 900;
+      letter-spacing: -2px;
+    }
+    .sub-hero-label {
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* Bottom Action Bar */
+    .story-bottom-action {
+      position: absolute;
+      bottom: 16px;
+      left: 18px;
+      right: 18px;
+      display: flex;
+      gap: 10px;
+      z-index: 100;
+    }
+    .share-pill-btn {
+      flex: 1;
+      background: #111;
+      color: #FFE600;
+      border: 2.5px solid #FFE600;
+      box-shadow: 4px 4px 0px rgba(0,0,0,0.6);
+      padding: 12px 16px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    .share-pill-btn.secondary {
+      flex: 0 0 46px;
+      background: #fff;
+      color: #111;
+      border: 2.5px solid #111;
+      padding: 0;
+    }
+
+    .toast-msg {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #111;
+      color: #FFE600;
+      border: 2px solid #FFE600;
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 13px;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s ease;
+      z-index: 200;
+      white-space: nowrap;
+    }
+    .toast-msg.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Trio User Switcher -->
+  <div class="user-switcher-bar">
+    <button class="user-tab-btn active" data-user="istashmacros">🥣 @istashmacros</button>
+    <button class="user-tab-btn" data-user="kalay">☕ @kalay</button>
+    <button class="user-tab-btn" data-user="katara">🌾 @katara</button>
+  </div>
+
+  <!-- Mobile Story Container -->
+  <div class="story-viewport" id="storyViewport">
+
+    <!-- Progress Bars -->
+    <div class="progress-bar-container">
+      <div class="progress-segment"><div class="progress-fill" id="fill-0"></div></div>
+      <div class="progress-segment"><div class="progress-fill" id="fill-1"></div></div>
+      <div class="progress-segment"><div class="progress-fill" id="fill-2"></div></div>
+      <div class="progress-segment"><div class="progress-fill" id="fill-3"></div></div>
+      <div class="progress-segment"><div class="progress-fill" id="fill-4"></div></div>
+      <div class="progress-segment"><div class="progress-fill" id="fill-5"></div></div>
+      <div class="progress-segment"><div class="progress-fill" id="fill-6"></div></div>
+    </div>
+
+    <!-- Header Meta -->
+    <div class="story-meta-header">
+      <div class="user-pill">
+        <div class="user-avatar" id="reelAvatar">🥣</div>
+        <span class="user-handle" id="reelHandle">@istashmacros</span>
+      </div>
+      <div class="story-controls">
+        <button class="control-btn" id="soundBtn" title="Toggle audio">🔊</button>
+        <button class="control-btn" id="pauseBtn" title="Pause / Play">⏸</button>
+      </div>
+    </div>
+
+    <!-- Tap Zones -->
+    <div class="tap-zone left" id="tapLeft"></div>
+    <div class="tap-zone right" id="tapRight"></div>
+
+    <!-- Slides Deck Container (populated via JS) -->
+    <div class="slides-deck" id="slidesDeck"></div>
+
+    <!-- Bottom Actions -->
+    <div class="story-bottom-action">
+      <button class="share-pill-btn" id="quickShareBtn">
+        <span>⚡</span> Share My Week
+      </button>
+      <button class="share-pill-btn secondary" id="prevSlideBtn">&larr;</button>
+      <button class="share-pill-btn secondary" id="nextSlideBtn">&rarr;</button>
+    </div>
+
+    <div class="toast-msg" id="toastMsg">Card copied to clipboard! ✨</div>
+  </div>
+
+  <script>
+    const PROFILES_DATA = {
+      istashmacros: {
+        avatar: '🥣',
+        handle: '@istashmacros',
+        badgeTitle: 'WEEK OF NOV 14 – NOV 20',
+        shareText: "🥣 @istashmacros's Weekend Review Wrapped:\n" +
+                   "🔥 10-day streak unbroken!\n" +
+                   "💪 849.2g Protein banked (28 chicken breasts equivalent)\n" +
+                   "🌾 221.4g Fiber (surged to 42.2g on Nov 20!)\n" +
+                   "🧬 Persona: The Skyr & Seed Master\n" +
+                   "Tracked on macromix.web.app",
+        slide1: {
+          title: "Your Week<br><span style='background: #111; color: #fff; padding: 2px 8px; border-radius: 8px;'>In Fuel</span>",
+          sub: "Logged 7 out of 7 days without missing a single beat.",
+          calVal: "15,212",
+          badge1: "54 MEALS",
+          protVal: "849.2g",
+          protSub: "Equivalent to <strong>28 chicken breasts</strong> or <strong>140 whole eggs</strong>!",
+          streakVal: "10-DAY STREAK",
+          streakSub: "Unbroken fire alive!"
+        },
+        slide2: {
+          badge: "👑 YOUR #1 COMFORT WEAPON",
+          title: "The Dosa, Oats &<br><span style='background: #111; color: #FFE600; padding: 2px 8px; border-radius: 8px;'>Seed Engine</span>",
+          sub: "Your morning staple playbook delivered clean energy and fiber.",
+          items: [
+            { name: "🍌 Bananas", count: "10 Times", bg: "#FFE600" },
+            { name: "🥞 Crispy Dosa", count: "5 Times", bg: "#fed7aa" },
+            { name: "🥣 Rolled Oats & Walnuts", count: "5 Times", bg: "#e2e8f0" },
+            { name: "🌱 Chia & Pumpkin Seeds", count: "8 Times", bg: "#bbf7d0" }
+          ],
+          quote: "I had 60g rolled oats, 8 walnut halves, yeast protein... then rice with 2 boiled eggs and paneer.",
+          peakTime: "08:00 – 10:00 AM"
+        },
+        slide3: {
+          badge: "🏆 THE MASTERCLASS DAY",
+          title: "Tuesday, Nov 17<br><span style='background: #111; color: #fff; padding: 2px 8px; border-radius: 8px;'>Protein Peak</span>",
+          sub: "Macros aligned with clinical precision across all 9 meals.",
+          peakVal: "161.1g",
+          peakSub: "+115% OF GOAL",
+          card1Label: "Fiber Target (38g)",
+          card1Val: "31.6g Avg (83% Match)",
+          card1Pct: "83%",
+          card2Label: "Protein Target (140g)",
+          card2Val: "121.3g Avg (87% Match)",
+          card2Pct: "87%",
+          winTitle: "Massive Fiber Surge:",
+          winBody: "Adding chia and pumpkin seeds boosted your fiber to an all-time high of <strong>42.2g on Nov 20</strong>!"
+        },
+        slide4: {
+          badge: "💡 NUTRITION RECOMMENDATION",
+          title: "The Evening Deficit<br><span style='background: #FFE600; color: #111; padding: 2px 8px; border-radius: 8px;'>Smart Swaps</span>",
+          sub: "You averaged 2,173 kcal vs 2,700 kcal goal (-527 kcal). Here is how to fuel evening recovery:",
+          swap1Badge: "SWAP 1 • AFTERNOON",
+          swap1Gain: "+25g P & +320 KCAL",
+          swap1Name: "High-Protein Milk + Banana & Almond Shake",
+          swap1Desc: "Ties directly into your existing pantry staples and bridges your evening energy dip.",
+          swap2Badge: "SWAP 2 • DINNER",
+          swap2Gain: "+18g P & +6g FIBER",
+          swap2Name: "Grilled Soya Chunks or Chicken Rice Bowl",
+          swap2Desc: "Prevents waking up at a steep caloric deficit while keeping fats lean."
+        },
+        slide5: {
+          badge: "⚖️ THE BALANCE BEAM",
+          title: "Under-Eating<br><span style='background: #fff; color: #FF3366; padding: 2px 8px; border-radius: 8px;'>Deficit Detected</span>",
+          sub: "Cumulative deficit reached <strong>~3,688 kcal</strong> this week.",
+          boxLabel: "DAILY AVERAGE INTAKE",
+          boxBadge: "-527 KCAL DEFICIT",
+          boxVal: "2,173 kcal",
+          boxSub: "Target: <strong>2,700 kcal</strong> • High: <strong>2,521 kcal</strong> (Nov 15)",
+          tip1: "Don't restrict before weekend dining: You have massive caloric runway.",
+          tip2: "Keep the seeds in your oats: It successfully took your fiber from 24g to 32g+!"
+        },
+        slide6: {
+          badge: "🧬 YOUR OFFICIAL PERSONA",
+          title: "The Skyr & Seed<br><span style='background: #111; color: #00F0FF; padding: 2px 8px; border-radius: 8px;'>Master</span>",
+          sub: "You blend classic South Indian comfort with Scandinavian biohacking and prebiotic seeds.",
+          emoji: "🥣🌱⚡🍌",
+          archetype: "The Seed Master Archetype",
+          quote: "Dosas for the soul, Chia & Pumpkin seeds for gut health, Skyr for the gains.",
+          tags: ["🥞 Dosa Loyalist", "🌱 Seed Champion", "☕ Kaapi Fan", "🔥 10d Streaker"],
+          tier: "Silver Spark Member"
+        },
+        slide7: {
+          personaUpper: "THE SKYR & SEED MASTER",
+          stat1Val: "15,212", stat1Label: "Calories",
+          stat2Val: "849.2g", stat2Label: "Protein",
+          stat3Val: "🔥 10d", stat3Label: "Streak",
+          stat4Val: "221.4g", stat4Label: "Fiber Banked"
+        }
+      },
+
+      kalay: {
+        avatar: '☕',
+        handle: '@kalay',
+        badgeTitle: 'WEEK OF NOV 14 – NOV 20',
+        shareText: "☕ @kalay's Weekend Review Wrapped:\n" +
+                   "🔥 4-day streak rolling strong!\n" +
+                   "💪 550.9g Protein banked (137.7g daily avg)\n" +
+                   "🥞 Top fuel: Idli, Egg Dosa, Methi Paratha & Kaapi\n" +
+                   "🧬 Persona: The Ghee & Gains Virtuoso\n" +
+                   "Tracked on macromix.web.app",
+        slide1: {
+          title: "Your Week<br><span style='background: #111; color: #fff; padding: 2px 8px; border-radius: 8px;'>In Fuel</span>",
+          sub: "Brought fierce appetite and heavy traditional flavor to the table.",
+          calVal: "8,662",
+          badge1: "26 MEALS",
+          protVal: "550.9g",
+          protSub: "Equivalent to <strong>18 whole chicken breasts</strong> or <strong>92 whole eggs</strong>!",
+          streakVal: "4-DAY STREAK",
+          streakSub: "Active momentum rolling!"
+        },
+        slide2: {
+          badge: "👑 YOUR #1 COMFORT WEAPON",
+          title: "Idli, Paratha &<br><span style='background: #111; color: #FFE600; padding: 2px 8px; border-radius: 8px;'>Filter Kaapi</span>",
+          sub: "From hot morning filter coffee to evening parathas, you stayed true to comfort.",
+          items: [
+            { name: "🥞 Idlis & Dosas", count: "11 Times", bg: "#fed7aa" },
+            { name: "☕ Filter Coffee / Latte", count: "6 Times", bg: "#FFE600" },
+            { name: "🍗 Chicken Gravy & Eggs", count: "5 Times", bg: "#dbeafe" },
+            { name: "🫓 Methi & Pinwheel Chapati", count: "3 Times", bg: "#bbf7d0" }
+          ],
+          quote: "breakfast: wheat chapati 1 piece, 3 idlis, 6ml ghee, chicken gravy (150gm), 2 boiled eggs...",
+          peakTime: "08:30 AM & 05:00 PM Kaapi"
+        },
+        slide3: {
+          badge: "🏆 THE MASTERCLASS DAY",
+          title: "Wednesday, Nov 18<br><span style='background: #111; color: #fff; padding: 2px 8px; border-radius: 8px;'>Power Surge</span>",
+          sub: "Crushed a monstrous protein total with chicken gravy and high-protein milk.",
+          peakVal: "165.2g",
+          peakSub: "+110% OF GOAL",
+          card1Label: "Protein Target (150g)",
+          card1Val: "137.7g Avg (92% Match)",
+          card1Pct: "92%",
+          card2Label: "Fiber Target (30g)",
+          card2Val: "24.9g Avg (83% Match)",
+          card2Pct: "83%",
+          winTitle: "Pinwheel Chapati Innovation:",
+          winBody: "Your vegetable pinwheel chapati (carrot, beetroot, spinach & chana) was the week's MVP clean carb dish!"
+        },
+        slide4: {
+          badge: "💡 NUTRITION RECOMMENDATION",
+          title: "The Ghee & Fat<br><span style='background: #FFE600; color: #111; padding: 2px 8px; border-radius: 8px;'>Micro-Tuning</span>",
+          sub: "Fat averaged 79.6g vs 65g target (+14.6g). Here is how to keep flavor without surplus fat:",
+          swap1Badge: "SWAP 1 • COOKING",
+          swap1Gain: "SAVE 120 KCAL & 14g FAT",
+          swap1Name: "Use 3ml Ghee instead of 8-10ml on Idlis & Dosas",
+          swap1Desc: "Gives the exact same aromatic richness while saving 120 surplus calories per meal.",
+          swap2Badge: "SWAP 2 • FIBER BRIDGE",
+          swap2Gain: "+6g FIBER & 30g TARGET HIT",
+          swap2Name: "Add 1 Katori of Sprouted Moong to Paratha Dinners",
+          swap2Desc: "Bridges the 5g fiber gap to your 30g target with high-enzyme digestion."
+        },
+        slide5: {
+          badge: "⚖️ THE BALANCE BEAM",
+          title: "Lean Surplus<br><span style='background: #fff; color: #FF3366; padding: 2px 8px; border-radius: 8px;'>Clean Fuel</span>",
+          sub: "Averaged <strong>2,166 kcal</strong> against your 2,000 kcal target — a gentle +166 kcal surplus.",
+          boxLabel: "DAILY AVERAGE INTAKE",
+          boxBadge: "+166 KCAL SURPLUS",
+          boxVal: "2,166 kcal",
+          boxSub: "Target: <strong>2,000 kcal</strong> • Peak day: <strong>2,368 kcal</strong> (Nov 19)",
+          tip1: "Great for muscle hypertrophy: 138g protein avg easily fuels recovery.",
+          tip2: "Post-dinner 15-min walk: Helps channel carb-rich paratha dinners into glycogen."
+        },
+        slide6: {
+          badge: "🧬 YOUR OFFICIAL PERSONA",
+          title: "The Ghee & Gains<br><span style='background: #111; color: #00F0FF; padding: 2px 8px; border-radius: 8px;'>Virtuoso</span>",
+          sub: "Combines authentic South Indian home cooking with relentless protein prioritization.",
+          emoji: "☕🥞🍗🔥",
+          archetype: "The Virtuoso Archetype",
+          quote: "Homemade idlis with ghee, chicken gravy for fuel, filter coffee for focus.",
+          tags: ["☕ Kaapi Lover", "🥞 Dosa King", "🍗 Chicken Fan", "🔥 4d Streaker"],
+          tier: "Gold Feast Member"
+        },
+        slide7: {
+          personaUpper: "THE GHEE & GAINS VIRTUOSO",
+          stat1Val: "8,662", stat1Label: "Calories",
+          stat2Val: "550.9g", stat2Label: "Protein",
+          stat3Val: "🔥 4d", stat3Label: "Streak",
+          stat4Val: "99.8g", stat4Label: "Fiber Banked"
+        }
+      },
+
+      katara: {
+        avatar: '🌾',
+        handle: '@katara',
+        badgeTitle: 'ACTIVE WINDOW SNAPSHOT',
+        shareText: "🌾 @katara's Weekend Review Wrapped:\n" +
+                   "🔥 Reignited with 4 meals logged!\n" +
+                   "💪 92.8g Protein banked\n" +
+                   "🌾 26.8g Fiber hit (89% of 30g goal)\n" +
+                   "🧬 Persona: The Ragi Mudde Mystic\n" +
+                   "Tracked on macromix.web.app",
+        slide1: {
+          title: "Your Week<br><span style='background: #111; color: #fff; padding: 2px 8px; border-radius: 8px;'>In Fuel</span>",
+          sub: "Reignited with Karnataka ancestral staples and clean dairy protein.",
+          calVal: "1,772",
+          badge1: "4 MEALS LOGGED",
+          protVal: "92.8g",
+          protSub: "Equivalent to <strong>3 whole chicken breasts</strong> or <strong>16 whole eggs</strong>!",
+          streakVal: "1-DAY STREAK",
+          streakSub: "Momentum reignited!"
+        },
+        slide2: {
+          badge: "👑 YOUR #1 COMFORT WEAPON",
+          title: "Ragi Mudde &<br><span style='background: #111; color: #FFE600; padding: 2px 8px; border-radius: 8px;'>Paneer Power</span>",
+          sub: "Rich, dense, complex carbohydrates paired with satisfying dairy fats.",
+          items: [
+            { name: "🌾 Ragi Mudde (Ball)", count: "3 Times", bg: "#FFE600" },
+            { name: "🧀 Paneer Butter Fry", count: "2 Times", bg: "#fed7aa" },
+            { name: "🥚 Whole Boiled Eggs", count: "4 Eggs", bg: "#dbeafe" },
+            { name: "🥣 Rolled Oats & Dal", count: "2 Times", bg: "#e2e8f0" }
+          ],
+          quote: "3 idli, 1 cup cooked dal, greek yogurt, ragi ball, followed by paneer butter fry 100gm...",
+          peakTime: "12:30 PM Mudde Lunch"
+        },
+        slide3: {
+          badge: "🏆 THE MASTERCLASS DAY",
+          title: "Wednesday, Nov 11<br><span style='background: #111; color: #fff; padding: 2px 8px; border-radius: 8px;'>Comeback Peak</span>",
+          sub: "Delivered 92.8g protein and 26.8g fiber across 4 nutrient-dense meals.",
+          peakVal: "92.8g",
+          peakSub: "62% OF GOAL",
+          card1Label: "Fiber Target (30g)",
+          card1Val: "26.8g (89% Precision)",
+          card1Pct: "89%",
+          card2Label: "Protein Target (150g)",
+          card2Val: "92.8g (62% Compliance)",
+          card2Pct: "62%",
+          winTitle: "Whole Food Mineral Win:",
+          winBody: "Ragi mudde and cooked dal pushed your daily fiber to <strong>26.8g</strong> with zero synthetic additives!"
+        },
+        slide4: {
+          badge: "💡 NUTRITION RECOMMENDATION",
+          title: "The Protein Bridge<br><span style='background: #FFE600; color: #111; padding: 2px 8px; border-radius: 8px;'>Smart Swaps</span>",
+          sub: "Your healthy fats and fiber are primed. Here is how to easily elevate protein toward 150g:",
+          swap1Badge: "SWAP 1 • LUNCH",
+          swap1Gain: "+25g PROTEIN",
+          swap1Name: "Pair Ragi Mudde & Dal with 150g Paneer or Greek Yogurt",
+          swap1Desc: "Doubles your protein density without modifying your favorite comfort lunch.",
+          swap2Badge: "SWAP 2 • EVENING",
+          swap2Gain: "+14g PROTEIN & +6g FIBER",
+          swap2Name: "Pair Buttermilk with 1 Bowl of Spiced Roasted Chana",
+          swap2Desc: "Cuts empty snacking while adding gut-friendly prebiotics and essential amino acids."
+        },
+        slide5: {
+          badge: "⚖️ THE BALANCE BEAM",
+          title: "Calorie Deficit<br><span style='background: #fff; color: #FF3366; padding: 2px 8px; border-radius: 8px;'>Runway Ahead</span>",
+          sub: "Logged <strong>1,772 kcal</strong> against your 2,000 kcal target — running at -228 kcal deficit.",
+          boxLabel: "LOGGED DAY INTAKE",
+          boxBadge: "-228 KCAL DEFICIT",
+          boxVal: "1,772 kcal",
+          boxSub: "Target: <strong>2,000 kcal</strong> • Protein: <strong>92.8g</strong> • Fiber: <strong>26.8g</strong>",
+          tip1: "Don't fear extra fuel: You have plenty of calorie runway to hit 150g protein.",
+          tip2: "Streak Shields: Use Macromix's new Fridge Freezes so missed days never reset your count."
+        },
+        slide6: {
+          badge: "🧬 YOUR OFFICIAL PERSONA",
+          title: "The Ragi Mudde<br><span style='background: #111; color: #00F0FF; padding: 2px 8px; border-radius: 8px;'>Mystic</span>",
+          sub: "You power your body with Karnataka's legendary complex carb superfood and rustic vitality.",
+          emoji: "🌾🧀🥚🥣",
+          archetype: "The Mystic Archetype",
+          quote: "Ancient grains, high-energy mudde, and pure rustic vitality.",
+          tags: ["🌾 Mudde Mystic", "🧀 Paneer Lover", "🥚 Egg Crusher", "🔥 1d Streaker"],
+          tier: "Bronze Spark Member"
+        },
+        slide7: {
+          personaUpper: "THE RAGI MUDDE MYSTIC",
+          stat1Val: "1,772", stat1Label: "Calories",
+          stat2Val: "92.8g", stat2Label: "Protein",
+          stat3Val: "🔥 1d", stat3Label: "Streak",
+          stat4Val: "26.8g", stat4Label: "Fiber (89%)"
+        }
+      }
+    };
+
+    let currentUser = 'istashmacros';
+    let currentSlide = 0;
+    let isPaused = false;
+    let slideTimer = null;
+    let slideStartTime = Date.now();
+    let slideElapsed = 0;
+    let soundEnabled = true;
+
+    const audioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
+    function playTone(freq, type, duration) {
+      if (!soundEnabled || !audioCtx) return;
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type || 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch(e) {}
+    }
+
+    function renderUserSlides(userKey) {
+      const data = PROFILES_DATA[userKey];
+      document.getElementById('reelAvatar').textContent = data.avatar;
+      document.getElementById('reelHandle').textContent = data.handle;
+
+      const deck = document.getElementById('slidesDeck');
+      deck.innerHTML = `
+        <!-- Slide 1 -->
+        <div class="slide slide-1 active" data-slide="0">
+          <div>
+            <div class="brutal-badge" style="background: #111; color: var(--yellow);">${data.badgeTitle}</div>
+            <h1 class="font-grotesk" style="font-size: 34px; line-height: 1.02; font-weight: 900; margin-top: 12px; text-transform: uppercase;">${data.slide1.title}</h1>
+            <p style="font-size: 13px; font-weight: 700; margin-top: 8px; color: #222;">${data.slide1.sub}</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="brutal-card" style="transform: rotate(-1deg);">
+              <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                  <div class="stat-hero-number" style="color: #FF3366;">${data.slide1.calVal}</div>
+                  <div class="sub-hero-label" style="color: #64748b;">Calories Logged</div>
+                </div>
+                <div class="brutal-badge" style="background: var(--yellow); font-size: 11px;">${data.slide1.badge1}</div>
+              </div>
+            </div>
+            <div class="brutal-card" style="transform: rotate(1.5deg);">
+              <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                  <div class="stat-hero-number" style="color: #111;">${data.slide1.protVal}</div>
+                  <div class="sub-hero-label" style="color: #64748b;">Protein Banked</div>
+                </div>
+                <div style="font-size: 28px;">🍗</div>
+              </div>
+              <p style="font-size: 11px; font-weight: 700; color: #475569; margin-top: 6px;">${data.slide1.protSub}</p>
+            </div>
+            <div class="brutal-card" style="background: #111; color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 28px;">🔥</span>
+                <div>
+                  <div style="font-size: 16px; font-weight: 900; color: var(--yellow);">${data.slide1.streakVal}</div>
+                  <div style="font-size: 11px; color: #94a3b8; font-weight: 700;">${data.slide1.streakSub}</div>
+                </div>
+              </div>
+              <div class="brutal-badge" style="background: #00F59B; color: #111;">ACTIVE</div>
+            </div>
+          </div>
+          <div style="text-align: center; font-size: 11px; font-weight: 800; color: rgba(0,0,0,0.6);">TAP TO CONTINUE &rarr;</div>
+        </div>
+
+        <!-- Slide 2 -->
+        <div class="slide slide-2" data-slide="1">
+          <div>
+            <div class="brutal-badge" style="background: #FFE600; color: #111;">${data.slide2.badge}</div>
+            <h2 class="font-grotesk" style="font-size: 32px; line-height: 1.05; font-weight: 900; margin-top: 12px; text-transform: uppercase;">${data.slide2.title}</h2>
+            <p style="font-size: 13px; font-weight: 600; margin-top: 6px; color: #ffe4e6;">${data.slide2.sub}</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="brutal-card">
+              <div style="font-size: 11px; font-weight: 900; color: #e11d48; text-transform: uppercase; margin-bottom: 6px;">Top Logged Fuel</div>
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                ${data.slide2.items.map(it => `
+                  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #e2e8f0; padding-bottom: 4px;">
+                    <span style="font-weight: 800; font-size: 13px;">${it.name}</span>
+                    <span class="brutal-badge" style="background: ${it.bg}; font-size: 10px;">${it.count}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            <div class="brutal-card" style="background: #111; color: #fff; border-color: #FFE600;">
+              <p style="font-size: 12px; font-style: italic; font-weight: 600; color: #f8fafc; line-height: 1.35;">&ldquo;${data.slide2.quote}&rdquo;</p>
+            </div>
+          </div>
+          <div style="text-align: center; font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.7);">TAP TO VIEW HIGHLIGHTS &rarr;</div>
+        </div>
+
+        <!-- Slide 3 -->
+        <div class="slide slide-3" data-slide="2">
+          <div>
+            <div class="brutal-badge" style="background: #111; color: #00F59B;">${data.slide3.badge}</div>
+            <h2 class="font-grotesk" style="font-size: 32px; line-height: 1.05; font-weight: 900; margin-top: 12px; text-transform: uppercase;">${data.slide3.title}</h2>
+            <p style="font-size: 13px; font-weight: 700; margin-top: 6px; color: #064e3b;">${data.slide3.sub}</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="brutal-card">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-size: 11px; font-weight: 800; color: #64748b;">RECORD SURGE</div>
+                  <div class="stat-hero-number" style="color: #059669; font-size: 38px;">${data.slide3.peakVal}</div>
+                </div>
+                <div class="brutal-badge" style="background: #d1fae5; color: #065f46; border: 1.5px solid #059669;">${data.slide3.peakSub}</div>
+              </div>
+            </div>
+            <div class="brutal-card">
+              <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800;">
+                <span>${data.slide3.card1Label}</span><span style="color: #059669;">${data.slide3.card1Val}</span>
+              </div>
+              <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin: 4px 0 8px;">
+                <div style="width: ${data.slide3.card1Pct}; height: 100%; background: #059669;"></div>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 800;">
+                <span>${data.slide3.card2Label}</span><span style="color: #0284c7;">${data.slide3.card2Val}</span>
+              </div>
+              <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin-top: 4px;">
+                <div style="width: ${data.slide3.card2Pct}; height: 100%; background: #0284c7;"></div>
+              </div>
+            </div>
+            <div class="brutal-card" style="background: #111; color: #fff; padding: 10px 14px;">
+              <div style="font-size: 11px; font-weight: 800; color: #00F59B;">✨ ${data.slide3.winTitle}</div>
+              <p style="font-size: 12px; font-weight: 600; color: #cbd5e1; margin-top: 3px;">${data.slide3.winBody}</p>
+            </div>
+          </div>
+          <div style="text-align: center; font-size: 11px; font-weight: 800; color: rgba(0,0,0,0.6);">TAP FOR RECOMMENDATIONS &rarr;</div>
+        </div>
+
+        <!-- Slide 4 -->
+        <div class="slide slide-4" data-slide="3">
+          <div>
+            <div class="brutal-badge" style="background: #FFE600; color: #111;">${data.slide4.badge}</div>
+            <h2 class="font-grotesk" style="font-size: 30px; line-height: 1.05; font-weight: 900; margin-top: 12px; text-transform: uppercase;">${data.slide4.title}</h2>
+            <p style="font-size: 12px; font-weight: 600; margin-top: 6px; color: #f3e8ff;">${data.slide4.sub}</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="brutal-card">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span class="brutal-badge" style="background: #c084fc; color: #fff; font-size: 9px;">${data.slide4.swap1Badge}</span>
+                <span style="font-weight: 900; font-size: 11px; color: #7c3aed;">${data.slide4.swap1Gain}</span>
+              </div>
+              <div style="font-weight: 800; font-size: 13px; margin-top: 6px;">${data.slide4.swap1Name}</div>
+              <p style="font-size: 11px; color: #475569; font-weight: 600; margin-top: 3px;">${data.slide4.swap1Desc}</p>
+            </div>
+            <div class="brutal-card">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span class="brutal-badge" style="background: #fde047; color: #111; font-size: 9px;">${data.slide4.swap2Badge}</span>
+                <span style="font-weight: 900; font-size: 11px; color: #059669;">${data.slide4.swap2Gain}</span>
+              </div>
+              <div style="font-weight: 800; font-size: 13px; margin-top: 6px;">${data.slide4.swap2Name}</div>
+              <p style="font-size: 11px; color: #475569; font-weight: 600; margin-top: 3px;">${data.slide4.swap2Desc}</p>
+            </div>
+          </div>
+          <div style="text-align: center; font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.7);">TAP FOR OVER/UNDER &rarr;</div>
+        </div>
+
+        <!-- Slide 5 -->
+        <div class="slide slide-5" data-slide="4">
+          <div>
+            <div class="brutal-badge" style="background: #fff; color: #111;">${data.slide5.badge}</div>
+            <h2 class="font-grotesk" style="font-size: 30px; line-height: 1.05; font-weight: 900; margin-top: 12px; text-transform: uppercase;">${data.slide5.title}</h2>
+            <p style="font-size: 12px; font-weight: 600; margin-top: 6px; color: #ffe4e6;">${data.slide5.sub}</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="brutal-card">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                <span style="font-size: 11px; font-weight: 800; color: #64748b;">${data.slide5.boxLabel}</span>
+                <span class="brutal-badge" style="background: #fee2e2; color: #dc2626; font-size: 9px;">${data.slide5.boxBadge}</span>
+              </div>
+              <div class="stat-hero-number" style="color: #FF3366; margin-top: 4px; font-size: 38px;">${data.slide5.boxVal}</div>
+              <p style="font-size: 11px; font-weight: 700; color: #475569; margin-top: 4px;">${data.slide5.boxSub}</p>
+            </div>
+            <div class="brutal-card" style="background: #111; color: #fff; border-color: #FFE600;">
+              <div style="font-size: 10px; font-weight: 900; color: #FFE600; text-transform: uppercase;">🛡️ Strategy Prescription</div>
+              <div style="font-size: 11px; font-weight: 600; color: #f1f5f9; margin-top: 6px; line-height: 1.4;">
+                &bull; <strong>${data.slide5.tip1}</strong><br>
+                &bull; <strong>${data.slide5.tip2}</strong>
+              </div>
+            </div>
+          </div>
+          <div style="text-align: center; font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.7);">TAP TO REVEAL PERSONA &rarr;</div>
+        </div>
+
+        <!-- Slide 6 -->
+        <div class="slide slide-6" data-slide="5">
+          <div>
+            <div class="brutal-badge" style="background: #111; color: #00F0FF;">${data.slide6.badge}</div>
+            <h2 class="font-grotesk" style="font-size: 30px; line-height: 1.05; font-weight: 900; margin-top: 12px; text-transform: uppercase;">${data.slide6.title}</h2>
+            <p style="font-size: 12px; font-weight: 600; margin-top: 6px; color: #e0f2fe;">${data.slide6.sub}</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="brutal-card" style="text-align: center; padding: 14px;">
+              <div style="font-size: 44px;">${data.slide6.emoji}</div>
+              <div class="font-grotesk" style="font-size: 18px; font-weight: 900; text-transform: uppercase; margin-top: 4px;">${data.slide6.archetype}</div>
+              <div style="font-size: 11px; font-weight: 700; color: #64748b; margin-top: 2px;">&ldquo;${data.slide6.quote}&rdquo;</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 10px;">
+                ${data.slide6.tags.map(t => `<span class="brutal-badge" style="background: #fef08a; font-size: 9px;">${t}</span>`).join('')}
+              </div>
+            </div>
+          </div>
+          <div style="text-align: center; font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.7);">TAP FOR SHARE CARD &rarr;</div>
+        </div>
+
+        <!-- Slide 7 -->
+        <div class="slide slide-7" data-slide="6">
+          <div>
+            <div class="brutal-badge" style="background: #FFE600; color: #111;">✨ REPORT CARD</div>
+            <h2 class="font-grotesk" style="font-size: 30px; line-height: 1.05; font-weight: 900; margin-top: 10px; text-transform: uppercase;">
+              Your 7-Day<br><span style="background: #00F59B; color: #111; padding: 2px 8px; border-radius: 8px;">Mastercard</span>
+            </h2>
+          </div>
+          <div class="brutal-card" style="background: #182234; border-color: #FFE600; color: #fff; padding: 16px; box-shadow: 5px 5px 0px #FFE600;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #334155; padding-bottom: 8px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="font-size: 18px;">${data.avatar}</span>
+                <span style="font-weight: 900; font-size: 14px;">macromix wrapped</span>
+              </div>
+              <span class="brutal-badge" style="background: #FFE600; color: #111; font-size: 9px;">${data.handle}</span>
+            </div>
+            <div style="text-align: center; margin: 12px 0 10px;">
+              <div style="font-size: 10px; font-weight: 800; color: #00F0FF; text-transform: uppercase;">WEEKLY PERSONA</div>
+              <div class="font-grotesk" style="font-size: 18px; font-weight: 900; color: #fff; margin-top: 2px;">${data.slide7.personaUpper}</div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div style="background: #0f172a; border: 2px solid #334155; border-radius: 10px; padding: 8px; text-align: center;">
+                <div style="font-size: 18px; font-weight: 900; color: #FF3366;" class="font-grotesk">${data.slide7.stat1Val}</div>
+                <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">${data.slide7.stat1Label}</div>
+              </div>
+              <div style="background: #0f172a; border: 2px solid #334155; border-radius: 10px; padding: 8px; text-align: center;">
+                <div style="font-size: 18px; font-weight: 900; color: #00F59B;" class="font-grotesk">${data.slide7.stat2Val}</div>
+                <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">${data.slide7.stat2Label}</div>
+              </div>
+              <div style="background: #0f172a; border: 2px solid #334155; border-radius: 10px; padding: 8px; text-align: center;">
+                <div style="font-size: 18px; font-weight: 900; color: #FFE600;" class="font-grotesk">${data.slide7.stat3Val}</div>
+                <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">${data.slide7.stat3Label}</div>
+              </div>
+              <div style="background: #0f172a; border: 2px solid #334155; border-radius: 10px; padding: 8px; text-align: center;">
+                <div style="font-size: 18px; font-weight: 900; color: #A855F7;" class="font-grotesk">${data.slide7.stat4Val}</div>
+                <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">${data.slide7.stat4Label}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('copyShareBtn')?.addEventListener('click', (e) => { e.stopPropagation(); triggerShare(); });
+      document.getElementById('replayBtn')?.addEventListener('click', (e) => { e.stopPropagation(); goToSlide(0); });
+    }
+
+    const TOTAL_SLIDES = 7;
+    const SLIDE_DURATION_MS = 6500;
+    const fills = Array.from({ length: TOTAL_SLIDES }, (_, i) => document.getElementById(`fill-${i}`));
+    const toast = document.getElementById('toastMsg');
+    const soundBtn = document.getElementById('soundBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+
+    function updateSlideUI() {
+      const slides = Array.from(document.querySelectorAll('#slidesDeck .slide'));
+      slides.forEach((s, idx) => {
+        if (idx === currentSlide) s.classList.add('active');
+        else s.classList.remove('active');
+      });
+
+      fills.forEach((fill, idx) => {
+        if (!fill) return;
+        if (idx < currentSlide) {
+          fill.style.transition = 'none';
+          fill.style.width = '100%';
+        } else if (idx > currentSlide) {
+          fill.style.transition = 'none';
+          fill.style.width = '0%';
+        }
+      });
+      playTone(440 + (currentSlide * 60), 'triangle', 0.22);
+    }
+
+    function startSlideProgress() {
+      cancelAnimationFrame(slideTimer);
+      slideStartTime = Date.now() - slideElapsed;
+      function tick() {
+        if (isPaused) return;
+        const now = Date.now();
+        const elapsed = now - slideStartTime;
+        const pct = Math.min(100, (elapsed / SLIDE_DURATION_MS) * 100);
+        if (fills[currentSlide]) {
+          fills[currentSlide].style.transition = 'width 0.1s linear';
+          fills[currentSlide].style.width = `${pct}%`;
+        }
+        if (elapsed >= SLIDE_DURATION_MS) {
+          if (currentSlide < TOTAL_SLIDES - 1) {
+            goToSlide(currentSlide + 1);
+          } else {
+            isPaused = true;
+            pauseBtn.textContent = '▶';
+          }
+        } else {
+          slideTimer = requestAnimationFrame(tick);
+        }
+      }
+      slideTimer = requestAnimationFrame(tick);
+    }
+
+    function goToSlide(targetIdx) {
+      if (targetIdx < 0) targetIdx = 0;
+      if (targetIdx >= TOTAL_SLIDES) targetIdx = TOTAL_SLIDES - 1;
+      currentSlide = targetIdx;
+      slideElapsed = 0;
+      updateSlideUI();
+      startSlideProgress();
+    }
+
+    function togglePause() {
+      isPaused = !isPaused;
+      pauseBtn.textContent = isPaused ? '▶' : '⏸';
+      if (!isPaused) {
+        slideStartTime = Date.now() - slideElapsed;
+        startSlideProgress();
+      } else {
+        slideElapsed = Date.now() - slideStartTime;
+      }
+    }
+
+    function showToast(text) {
+      toast.textContent = text;
+      toast.classList.add('show');
+      playTone(660, 'sine', 0.15);
+      setTimeout(() => toast.classList.remove('show'), 2400);
+    }
+
+    function triggerShare() {
+      const text = PROFILES_DATA[currentUser].shareText;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => showToast('Summary copied! 🚀')).catch(() => showToast('Ready to share! ✨'));
+      } else {
+        showToast('Ready to share! ✨');
+      }
+    }
+
+    // Tab buttons
+    document.querySelectorAll('.user-tab-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.user-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentUser = btn.getAttribute('data-user');
+        renderUserSlides(currentUser);
+        goToSlide(0);
+        showToast(`Loaded @${currentUser}'s Wrapped ✨`);
+      });
+    });
+
+    document.getElementById('tapLeft').addEventListener('click', (e) => { e.stopPropagation(); if (currentSlide > 0) goToSlide(currentSlide - 1); });
+    document.getElementById('tapRight').addEventListener('click', (e) => { e.stopPropagation(); if (currentSlide < TOTAL_SLIDES - 1) goToSlide(currentSlide + 1); });
+    document.getElementById('prevSlideBtn').addEventListener('click', (e) => { e.stopPropagation(); if (currentSlide > 0) goToSlide(currentSlide - 1); });
+    document.getElementById('nextSlideBtn').addEventListener('click', (e) => { e.stopPropagation(); if (currentSlide < TOTAL_SLIDES - 1) goToSlide(currentSlide + 1); });
+    document.getElementById('quickShareBtn').addEventListener('click', (e) => { e.stopPropagation(); triggerShare(); });
+    pauseBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePause(); });
+    soundBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      soundEnabled = !soundEnabled;
+      soundBtn.textContent = soundEnabled ? '🔊' : '🔇';
+      showToast(soundEnabled ? 'Audio On' : 'Audio Muted');
+    });
+
+    // Press & hold
+    const phoneShell = document.getElementById('storyViewport');
+    let pressTimer = null;
+    phoneShell.addEventListener('mousedown', () => { pressTimer = setTimeout(() => { isPaused = true; pauseBtn.textContent = '▶'; }, 180); });
+    phoneShell.addEventListener('mouseup', () => { clearTimeout(pressTimer); if (isPaused) { isPaused = false; pauseBtn.textContent = '⏸'; startSlideProgress(); } });
+
+    // Keydown
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') { if (currentSlide < TOTAL_SLIDES - 1) goToSlide(currentSlide + 1); }
+      else if (e.key === 'ArrowLeft') { if (currentSlide > 0) goToSlide(currentSlide - 1); }
+      else if (e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); togglePause(); }
+    });
+
+    // Init
+    renderUserSlides(currentUser);
+    goToSlide(0);
+  </script>
+</body>
+</html>

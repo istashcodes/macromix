@@ -5462,6 +5462,99 @@ const WRAPPED_PROFILES = {
       stat4Val: '188g',
       stat4Label: 'Fiber (105%)'
     }
+  },
+  katara: {
+    avatar: '🌾',
+    handle: '@katara',
+    fridayTag: 'WEEKEND WRAPPED',
+    shareText: "🌾 @katara's Weekend Review Wrapped:\n" +
+               "🔥 Ragi Mudde & Paneer power!\n" +
+               "💪 92.8g Protein banked across 4 meals\n" +
+               "🧬 Persona: The Ragi Mudde Mystic\n" +
+               "Tracked on macromix.web.app",
+    slide1: {
+      subtitle: 'You powered up with Karnataka superfoods and kept your ancestral nutrition strong.',
+      totalCalories: '1,772',
+      badge: '4 MEALS LOGGED',
+      totalProtein: '92.8',
+      proteinEquiv: 'Equivalent to <strong>3 whole chicken breasts</strong> or <strong>16 whole eggs</strong>!',
+      streak: '1-DAY STREAK',
+      streakSubtitle: 'Reignited momentum!'
+    },
+    slide2: {
+      title: 'Ragi Mudde &<br><span style="background: #111; color: #FFE600; padding: 2px 8px; border-radius: 8px;">Paneer Power</span>',
+      subtitle: 'When hunger struck, your hearty Karnataka comfort meals delivered clean, complex fuel.',
+      topItems: [
+        { name: '🌾 Ragi Mudde (Ball)', badge: '3 Times', bg: '#FFE600' },
+        { name: '🧀 Paneer Butter Fry', badge: '2 Times', bg: '#fed7aa' },
+        { name: '🥚 Whole Boiled Eggs', badge: '4 Eggs', bg: '#dbeafe' },
+        { name: '🥣 Rolled Oats & Dal', badge: '2 Times', bg: '#e2e8f0' }
+      ],
+      quote: '3 idli, 1 cup cooked dal, greek yogurt, ragi ball, followed by paneer butter fry 100gm...',
+      peakLabel: 'Peak Power Ritual',
+      peakTime: '12:30 PM Mudde Lunch'
+    },
+    slide3: {
+      dayTitle: 'Wednesday, Nov 11',
+      subtitle: 'When you logged with intention, your micro and macro density hit a high peak.',
+      peakProtein: '92.8',
+      pctGoal: '62% OF GOAL',
+      targetProtein: '150g',
+      scorecard1: { label: 'Fiber Target (30g)', value: '26.8g (89% Precision)', pct: 89 },
+      scorecard2: { label: 'Protein Target (150g)', value: '92.8g (62% Compliance)', pct: 62 },
+      winTitle: 'Fiber & Mineral Win',
+      winBody: 'Ragi mudde and cooked dal pushed your daily fiber to <strong>26.8g</strong> with zero artificial supplements!'
+    },
+    slide4: {
+      title: 'The Protein Bridge<br><span style="background: #FFE600; color: #111; padding: 2px 8px; border-radius: 8px;">Smart Swaps</span>',
+      subtitle: 'Your fiber and healthy fats are dialed. Here is how to easily elevate protein toward 150g:',
+      swap1: {
+        badge: 'SWAP 1 • LUNCH',
+        gain: '+25g PROTEIN',
+        name: 'Pair Ragi Mudde & Dal with 150g Grilled Paneer/Chicken or Skyr',
+        desc: 'Keeps the soulful traditional mudde experience while doubling your protein density effortlessly.'
+      },
+      swap2: {
+        badge: 'SWAP 2 • EVENING',
+        gain: '+14g PROTEIN & +6g FIBER',
+        name: 'Pair 100ml Buttermilk with Spiced Chana or Roasted Soya Chunks',
+        desc: 'Replaces empty snacks with prebiotic fiber and high-bioavailability amino acids.'
+      }
+    },
+    slide5: {
+      title: 'Calorie Deficit<br><span style="background: #fff; color: #FF3366; padding: 2px 8px; border-radius: 8px;">Runway Ahead</span>',
+      subtitle: 'You logged <strong>1,772 kcal</strong> against your 2,000 kcal target — running at an energy deficit of -228 kcal.',
+      badge: '-228 KCAL DEFICIT',
+      avgKcal: '1,772',
+      targetDetail: 'Target: <strong>2,000 kcal</strong> &bull; Protein: <strong>92.8g</strong> &bull; Fiber: <strong>26.8g</strong>.',
+      prescriptionHtml: '&bull; <strong>Don\'t fear extra fuel:</strong> You have plenty of calorie runway. Adding a post-workout recovery bowl or protein shake fits your targets easily.<br>&bull; <strong>Streak Shields:</strong> Use Macromix\'s new Fridge Freezes so life never interrupts your streak momentum again.'
+    },
+    slide6: {
+      title: 'The Ragi Mudde<br><span style="background: #111; color: #00F0FF; padding: 2px 8px; border-radius: 8px;">Mystic</span>',
+      subtitle: 'You fuel your body with Karnataka\'s legendary complex carb superfood paired with nutrient-dense dairy and eggs.',
+      emoji: '🌾🧀🥚🥣',
+      archetypeName: 'The Mystic Archetype',
+      quote: 'Ancient grains, high-energy mudde, and pure rustic vitality.',
+      tags: [
+        { text: '🌾 Mudde Mystic', bg: '#fef08a' },
+        { text: '🧀 Paneer Lover', bg: '#bae6fd' },
+        { text: '🥚 Egg Crusher', bg: '#bbf7d0' },
+        { text: '🔥 1d Streaker', bg: '#fbcfe8' }
+      ],
+      tier: 'Bronze Spark Member'
+    },
+    slide7: {
+      handle: '@katara',
+      personaUpper: 'THE RAGI MUDDE MYSTIC',
+      stat1Val: '1,772',
+      stat1Label: 'Calories',
+      stat2Val: '92.8g',
+      stat2Label: 'Protein',
+      stat3Val: '🔥 1d',
+      stat3Label: 'Streak',
+      stat4Val: '26.8g',
+      stat4Label: 'Fiber (89%)'
+    }
   }
 };
 
@@ -5473,7 +5566,7 @@ function getWrappedActiveHandle() {
 
 function isWeekendWrappedEligible() {
   const handle = (currentUserHandle || (typeof localStorage !== 'undefined' ? localStorage.getItem('macromix_user_handle') : '') || '').trim().toLowerCase().replace(/^@+/, '');
-  if (handle !== 'istashmacros' && handle !== 'kalay') return false;
+  if (handle !== 'istashmacros' && handle !== 'kalay' && handle !== 'katara') return false;
 
   // Check URL query param ?wrapped=1 or ?wrapped=true
   if (typeof window !== 'undefined' && window.location) {
@@ -5619,16 +5712,9 @@ function renderWeeklyWrappedSlides(handle) {
         </div>
 
         <div class="wrapped-brutal-card" style="background: #111; color: #fff; border-color: #FFE600;">
-          <div style="font-size: 10px; font-weight: 800; color: #FFE600; text-transform: uppercase;">
-            🎙️ From Your Real Audio Logs:
-          </div>
-          <p style="font-size: 12px; font-style: italic; font-weight: 600; margin-top: 4px; color: #f8fafc; line-height: 1.35;">
+          <p style="font-size: 12px; font-style: italic; font-weight: 600; color: #f8fafc; line-height: 1.35;">
             &ldquo;${s2.quote}&rdquo;
           </p>
-        </div>
-
-        <div class="wrapped-brutal-badge" style="background: #fff; color: #111; align-self: flex-start; font-size: 11px;">
-          ⏰ ${s2.peakLabel}: <strong>${s2.peakTime}</strong>
         </div>
       </div>
 
@@ -5824,14 +5910,6 @@ function renderWeeklyWrappedSlides(handle) {
             ${tagsHtml}
           </div>
         </div>
-
-        <div class="wrapped-brutal-card" style="background: #111; color: #fff; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between;">
-          <div>
-            <div style="font-size: 10px; font-weight: 800; color: #00F0FF;">MACROMIX SOCIETY TIER</div>
-            <div style="font-size: 13px; font-weight: 900; color: #fff;">${s6.tier}</div>
-          </div>
-          <span style="font-size: 22px;">🛡️</span>
-        </div>
       </div>
 
       <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.7);">
@@ -5886,12 +5964,6 @@ function renderWeeklyWrappedSlides(handle) {
             <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">${s7.stat4Label}</div>
           </div>
         </div>
-      </div>
-
-      <div style="margin-top: 14px; width: 100%;">
-        <button type="button" class="wrapped-cta-btn" id="wrappedCopyShareBtn" style="width: 100%; font-size: 14px; padding: 12px 18px;">
-          <span>⚡</span> Share Story Card
-        </button>
       </div>
     </div>
   `;
@@ -6119,7 +6191,7 @@ function initWeekendWrappedEvents() {
 
   // Purge legacy unversioned keys so they never mask unviewed state
   if (typeof localStorage !== 'undefined') {
-    ['istashmacros', 'kalay'].forEach(h => {
+    ['istashmacros', 'kalay', 'katara'].forEach(h => {
       localStorage.removeItem(`macromix_wrapped_viewed_${h}`);
     });
   }
