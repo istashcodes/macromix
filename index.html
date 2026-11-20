@@ -34,7 +34,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,500;0,6..72,600;1,6..72,500&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="styles.css?v=17.5">
+  <link rel="stylesheet" href="styles.css?v=17.6">
   <link rel="stylesheet" href="admin.css?v=1.2">
 </head>
 <body>
@@ -700,10 +700,6 @@
               <div class="wrapped-brutal-badge" style="background: #00F59B; color: #111;">ACTIVE</div>
             </div>
           </div>
-
-          <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(0,0,0,0.6);">
-            TAP ANYWHERE TO CONTINUE &rarr;
-          </div>
         </div>
 
         <!-- SLIDE 2: The MVP Meal & Habit -->
@@ -744,17 +740,6 @@
                 </div>
               </div>
             </div>
-
-            <!-- Voice Quote -->
-            <div class="wrapped-brutal-card" style="background: #111; color: #fff; border-color: #FFE600;">
-              <p style="font-size: 12px; font-style: italic; font-weight: 600; color: #f8fafc; line-height: 1.35;">
-                &ldquo;I started off by having four dosas, rolled oats with walnuts and yeast protein... then 200g of Skyr.&rdquo;
-              </p>
-            </div>
-          </div>
-
-          <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.7);">
-            TAP TO VIEW HIGHLIGHTS &rarr;
           </div>
         </div>
 
@@ -823,10 +808,6 @@
               </p>
             </div>
           </div>
-
-          <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(0,0,0,0.6);">
-            TAP TO UNLOCK DIET RECOMMENDATIONS &rarr;
-          </div>
         </div>
 
         <!-- SLIDE 4: The Intelligent Gap & Culturally Tailored Swaps -->
@@ -872,10 +853,6 @@
               </p>
             </div>
           </div>
-
-          <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.7);">
-            TAP FOR OVER/UNDER ANALYSIS &rarr;
-          </div>
         </div>
 
         <!-- SLIDE 5: Over/Under Intake & Weekend Prep -->
@@ -914,10 +891,6 @@
               </div>
             </div>
           </div>
-
-          <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.7);">
-            TAP TO REVEAL YOUR PERSONA &rarr;
-          </div>
         </div>
 
         <!-- SLIDE 6: The Archetype Persona -->
@@ -952,15 +925,11 @@
               </div>
             </div>
           </div>
-
-          <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.7);">
-            TAP FOR YOUR SHARE CARD &rarr;
-          </div>
         </div>
 
         <!-- SLIDE 7: The Master Share Card (Zero mention of powered by gemini) -->
-        <div class="wrapped-slide wrapped-slide-7" data-slide="6">
-          <div>
+        <div class="wrapped-slide wrapped-slide-7" data-slide="6" style="justify-content: center; gap: 20px;">
+          <div style="text-align: center;">
             <div class="wrapped-brutal-badge" style="background: #FFE600; color: #111;">
               ✨ WEEKEND REVIEW SUMMARY
             </div>
@@ -970,7 +939,7 @@
           </div>
 
           <!-- Master Shareable Card Preview -->
-          <div class="wrapped-brutal-card" id="wrappedShareableCard" style="background: #182234; border-color: #FFE600; color: #fff; padding: 16px; box-shadow: 5px 5px 0px #FFE600;">
+          <div class="wrapped-brutal-card" id="wrappedShareableCard" style="background: #182234; border-color: #FFE600; color: #fff; padding: 16px; box-shadow: 5px 5px 0px #FFE600; width: 100%; max-width: 360px; margin: 0 auto;">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #334155; padding-bottom: 8px;">
               <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="font-size: 18px;">🥣</span>
@@ -1016,7 +985,7 @@
   </div>
 
   <!-- Firebase Cloud Firestore Integration -->
-  <script type="module" src="firebase-db.js?v=17.5"></script>
+  <script type="module" src="firebase-db.js?v=17.6"></script>
 
   <!-- SimpleWebAuthn Browser SDK -->
   <script src="simplewebauthn-browser.min.js"></script>
@@ -1028,6 +997,6 @@
   <script type="module" src="admin.js?v=1.2"></script>
 
   <!-- Frontend Controller -->
-  <script src="app.js?v=17.5"></script>
+  <script src="app.js?v=17.6"></script>
 </body>
 </html>

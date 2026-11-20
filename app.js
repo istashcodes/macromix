@@ -5973,10 +5973,6 @@ function renderWeeklyWrappedSlides(handle) {
           <div class="wrapped-brutal-badge" style="background: #00F59B; color: #111;">ACTIVE</div>
         </div>
       </div>
-
-      <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(0,0,0,0.6);">
-        TAP ANYWHERE TO CONTINUE &rarr;
-      </div>
     </div>
 
     <!-- SLIDE 2: The MVP Meal & Habit -->
@@ -6002,16 +5998,6 @@ function renderWeeklyWrappedSlides(handle) {
             ${topItemsHtml}
           </div>
         </div>
-
-        <div class="wrapped-brutal-card" style="background: #111; color: #fff; border-color: #FFE600;">
-          <p style="font-size: 12px; font-style: italic; font-weight: 600; color: #f8fafc; line-height: 1.35;">
-            &ldquo;${s2.quote}&rdquo;
-          </p>
-        </div>
-      </div>
-
-      <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.7);">
-        TAP TO VIEW HIGHLIGHTS &rarr;
       </div>
     </div>
 
@@ -6080,10 +6066,6 @@ function renderWeeklyWrappedSlides(handle) {
           </p>
         </div>
       </div>
-
-      <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(0,0,0,0.6);">
-        TAP TO UNLOCK DIET RECOMMENDATIONS &rarr;
-      </div>
     </div>
 
     <!-- SLIDE 4: The Intelligent Gap & Culturally Tailored Swaps -->
@@ -6127,10 +6109,6 @@ function renderWeeklyWrappedSlides(handle) {
           </p>
         </div>
       </div>
-
-      <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.7);">
-        TAP FOR OVER/UNDER ANALYSIS &rarr;
-      </div>
     </div>
 
     <!-- SLIDE 5: Over/Under Intake -->
@@ -6168,10 +6146,6 @@ function renderWeeklyWrappedSlides(handle) {
           </div>
         </div>
       </div>
-
-      <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.7);">
-        TAP TO REVEAL YOUR PERSONA &rarr;
-      </div>
     </div>
 
     <!-- SLIDE 6: The Archetype Persona -->
@@ -6203,15 +6177,11 @@ function renderWeeklyWrappedSlides(handle) {
           </div>
         </div>
       </div>
-
-      <div style="text-align: center; font-size: 12px; font-weight: 800; color: rgba(255,255,255,0.7);">
-        TAP FOR YOUR SHARE CARD &rarr;
-      </div>
     </div>
 
     <!-- SLIDE 7: The Master Share Card -->
-    <div class="wrapped-slide wrapped-slide-7" data-slide="6">
-      <div>
+    <div class="wrapped-slide wrapped-slide-7" data-slide="6" style="justify-content: center; gap: 20px;">
+      <div style="text-align: center;">
         <div class="wrapped-brutal-badge" style="background: #FFE600; color: #111;">
           ✨ WEEKEND REVIEW SUMMARY
         </div>
@@ -6221,7 +6191,7 @@ function renderWeeklyWrappedSlides(handle) {
       </div>
 
       <!-- Master Shareable Card Preview -->
-      <div class="wrapped-brutal-card" id="wrappedShareableCard" style="background: #182234; border-color: #FFE600; color: #fff; padding: 16px; box-shadow: 5px 5px 0px #FFE600;">
+      <div class="wrapped-brutal-card" id="wrappedShareableCard" style="background: #182234; border-color: #FFE600; color: #fff; padding: 16px; box-shadow: 5px 5px 0px #FFE600; width: 100%; max-width: 360px; margin: 0 auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #334155; padding-bottom: 8px;">
           <div style="display: flex; align-items: center; gap: 6px;">
             <span style="font-size: 18px;">🥣</span>

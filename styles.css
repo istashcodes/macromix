@@ -3512,7 +3512,8 @@ body.is-visitor-mode #timeline-input-zone,
   inset: 0;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 18px;
   padding: 76px 18px 26px;
   opacity: 0;
   pointer-events: none;
@@ -3554,6 +3555,8 @@ body.is-visitor-mode #timeline-input-zone,
 .wrapped-slide-7 {
   background: #0f172a;
   color: #fff;
+  justify-content: center;
+  gap: 20px;
 }
 
 /* Neo-Brutalist Components */

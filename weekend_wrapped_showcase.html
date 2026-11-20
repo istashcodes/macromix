@@ -210,7 +210,8 @@
       inset: 0;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      justify-content: flex-start;
+      gap: 18px;
       padding: 80px 22px 30px;
       opacity: 0;
       pointer-events: none;
@@ -232,7 +233,7 @@
     .slide-4 { background: linear-gradient(160deg, #A855F7 0%, #4338CA 100%); color: #fff; }
     .slide-5 { background: linear-gradient(170deg, #FF3366 0%, #7928CA 100%); color: #fff; }
     .slide-6 { background: linear-gradient(180deg, #00F0FF 0%, #0051FF 100%); color: #fff; }
-    .slide-7 { background: #0f172a; color: #fff; }
+    .slide-7 { background: #0f172a; color: #fff; justify-content: center; gap: 20px; }
 
     /* Neo-Brutalist Components */
     .brutal-card {
@@ -730,7 +731,6 @@
               <div class="brutal-badge" style="background: #00F59B; color: #111;">ACTIVE</div>
             </div>
           </div>
-          <div style="text-align: center; font-size: 11px; font-weight: 800; color: rgba(0,0,0,0.6);">TAP TO CONTINUE &rarr;</div>
         </div>
 
         <!-- Slide 2 -->
@@ -752,11 +752,7 @@
                 `).join('')}
               </div>
             </div>
-            <div class="brutal-card" style="background: #111; color: #fff; border-color: #FFE600;">
-              <p style="font-size: 12px; font-style: italic; font-weight: 600; color: #f8fafc; line-height: 1.35;">&ldquo;${data.slide2.quote}&rdquo;</p>
-            </div>
           </div>
-          <div style="text-align: center; font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.7);">TAP TO VIEW HIGHLIGHTS &rarr;</div>
         </div>
 
         <!-- Slide 3 -->
@@ -795,7 +791,6 @@
               <p style="font-size: 12px; font-weight: 600; color: #cbd5e1; margin-top: 3px;">${data.slide3.winBody}</p>
             </div>
           </div>
-          <div style="text-align: center; font-size: 11px; font-weight: 800; color: rgba(0,0,0,0.6);">TAP FOR RECOMMENDATIONS &rarr;</div>
         </div>
 
         <!-- Slide 4 -->
@@ -823,7 +818,6 @@
               <p style="font-size: 11px; color: #475569; font-weight: 600; margin-top: 3px;">${data.slide4.swap2Desc}</p>
             </div>
           </div>
-          <div style="text-align: center; font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.7);">TAP FOR OVER/UNDER &rarr;</div>
         </div>
 
         <!-- Slide 5 -->
@@ -850,7 +844,6 @@
               </div>
             </div>
           </div>
-          <div style="text-align: center; font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.7);">TAP TO REVEAL PERSONA &rarr;</div>
         </div>
 
         <!-- Slide 6 -->
@@ -870,18 +863,17 @@
               </div>
             </div>
           </div>
-          <div style="text-align: center; font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.7);">TAP FOR SHARE CARD &rarr;</div>
         </div>
 
         <!-- Slide 7 -->
-        <div class="slide slide-7" data-slide="6">
+        <div class="slide slide-7" data-slide="6" style="justify-content: center; gap: 20px;">
           <div>
             <div class="brutal-badge" style="background: #FFE600; color: #111;">✨ REPORT CARD</div>
             <h2 class="font-grotesk" style="font-size: 30px; line-height: 1.05; font-weight: 900; margin-top: 10px; text-transform: uppercase;">
               Your 7-Day<br><span style="background: #00F59B; color: #111; padding: 2px 8px; border-radius: 8px;">Mastercard</span>
             </h2>
           </div>
-          <div class="brutal-card" style="background: #182234; border-color: #FFE600; color: #fff; padding: 16px; box-shadow: 5px 5px 0px #FFE600;">
+          <div class="brutal-card" style="background: #182234; border-color: #FFE600; color: #fff; padding: 16px; box-shadow: 5px 5px 0px #FFE600; width: 100%; max-width: 360px; margin: 0 auto;">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #334155; padding-bottom: 8px;">
               <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="font-size: 18px;">${data.avatar}</span>

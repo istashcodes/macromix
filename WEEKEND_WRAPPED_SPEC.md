@@ -33,9 +33,10 @@ Developers and coding agents working on Macromix must strictly enforce these con
 | Rule | Requirement |
 |---|---|
 | **Zero AI / Gemini Branding** | Never display "powered by google gemini..." or AI mentions anywhere in the wrapped slides or story deck. |
-| **Slide 2 (MVP Dishes)** | **NO** `"🎙️ From Your Real Audio Logs:"` header. Show the clean quote directly. **NO** `"Peak Fuel Window"` or `"peak"` badge. |
+| **No "Tap To..." Commentary** | Do NOT display "TAP ANYWHERE TO CONTINUE &rarr;" or "TAP TO..." hint lines at the bottom of slides. The story auto-advances or taps natively via overlay tap zones. |
+| **Slide 2 (MVP Dishes)** | Clean view: only shows title block and the Top Logged Fuel Items box. Entire audio transcript / voice quote box is removed (nothing below top items). **NO** `"Peak Fuel Window"` or `"peak"` badge. |
 | **Slide 6 (Archetype)** | **NO** `"MACROMIX SOCIETY TIER"` card. Focus purely on the gamified Persona Archetype and descriptive tags. |
-| **Slide 7 (Grand Finale Card)** | **NO** buttons, CTAs, or share boxes at the bottom of the final slide. The modal already features native header controls. |
+| **Slide 7 (Grand Finale Card)** | The summary card must be centered in the vertical and horizontal middle of the slide (`justify-content: center; gap: 20px;`). **NO** buttons, CTAs, or share boxes at the bottom of the final slide. |
 | **Neo-Brutalist Aesthetic** | Maintain high-contrast brutalist borders (`2px solid #111`), vibrant accents (`#FFE600`, `#00F0FF`, `#FF3366`, `#00F59B`), and JetBrains Mono / Space Grotesk typography. |
 
 ---
@@ -82,12 +83,12 @@ Developers and coding agents working on Macromix must strictly enforce these con
 | ⚡ @handle              WEEKEND WRAPPED               |
 +-------------------------------------------------------+
 | Slide 1: Week in Fuel (Total Calories, Meals, Protein) |
-| Slide 2: MVP Food & Top Dishes (Top 4 foods, Quote)   |
+| Slide 2: MVP Food & Top Dishes (Top items, nothing below) |
 | Slide 3: Peak Consistency Win (Best Day Macro Radar)  |
 | Slide 4: The Macro Bridge (Smart Contextual Swaps)    |
 | Slide 5: Energy Runway (Deficit/Surplus & Prep)       |
 | Slide 6: Archetype Persona (Gamified identity & tags) |
-| Slide 7: Grand Finale Summary Card (Clean 4 pillars)  |
+| Slide 7: Grand Finale Summary Card (Vertically Centered) |
 +-------------------------------------------------------+
 ```
 
