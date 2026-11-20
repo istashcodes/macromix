@@ -895,7 +895,7 @@ export async function savePushSubscription(handle, subscription) {
   }
 }
 
-export async function syncWeekendWrappedViewedToFirestore(handle, edition = '2026_w45_nov') {
+export async function syncWeekendWrappedViewedToFirestore(handle, edition = '2026_w47_nov') {
   const database = initFirebaseDB();
   if (!database || !handle) return false;
   const clean = handle.trim().toLowerCase().replace(/^@+/, '');

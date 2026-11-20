@@ -5135,10 +5135,20 @@ function closeIosInstallModal() {
 }
 
 // ==========================================================================
-// Weekend Wrapped Feature Controller (Exclusively for @istashmacros and @kalay on Friday/Weekend)
+// Weekend Wrapped Feature Controller (Exclusively for @istashmacros, @kalay, and @katara on Friday/Weekend)
 // ==========================================================================
 const WRAPPED_SLIDE_DURATION_MS = 6500;
-const WRAPPED_CURRENT_EDITION = '2026_w45_nov';
+function getWrappedCurrentEdition() {
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  const monthStr = now.toLocaleString('en-US', { month: 'short' }).toLowerCase();
+  return `${d.getUTCFullYear()}_w${weekNo}_${monthStr}`;
+}
+const WRAPPED_CURRENT_EDITION = getWrappedCurrentEdition();
 const WRAPPED_24H_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
 let wrappedCurrentSlide = 0;
 let wrappedSlideTimer = null;
@@ -5216,35 +5226,30 @@ function syncWeekendReviewViewedState(profile, handle) {
   const clean = (handle || currentUserHandle || (typeof localStorage !== 'undefined' ? localStorage.getItem('macromix_user_handle') : '') || '').trim().toLowerCase().replace(/^@+/, '');
   if (!clean || !profile) return;
 
-  if (typeof profile.weekendReviewViewed === 'boolean') {
-    _firestoreWeekendReviewViewedCache[clean] = profile.weekendReviewViewed;
-  }
+  // Check if profile belongs to the current edition
+  const isCurrentEdition = !profile.weekendReviewEdition || profile.weekendReviewEdition === WRAPPED_CURRENT_EDITION;
 
-  const viewedAtMillis = parseTimestampToMillis(profile.weekendReviewViewedAt);
-  if (viewedAtMillis) {
-    _firestoreWeekendReviewViewedAtCache[clean] = viewedAtMillis;
-  }
-
-  if (profile.weekendReviewViewed === false) {
-    // Cloud state is UNVIEWED: wipe all viewed flags and timestamps from localStorage and cache!
+  if (!isCurrentEdition || profile.weekendReviewViewed === false) {
+    // Older edition or unviewed: treat as fresh unviewed for the current edition!
     _firestoreWeekendReviewViewedCache[clean] = false;
     delete _firestoreWeekendReviewViewedAtCache[clean];
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(`macromix_wrapped_viewed_${clean}`);
       localStorage.removeItem(`macromix_wrapped_viewed_${clean}_${WRAPPED_CURRENT_EDITION}`);
-      localStorage.removeItem(`macromix_wrapped_viewed_${clean}_2026_w45_nov`);
-      localStorage.removeItem(`macromix_wrapped_viewed_${clean}_2026_w46_nov`);
       localStorage.removeItem(`macromix_wrapped_viewed_at_${clean}`);
       localStorage.removeItem(`macromix_wrapped_viewed_at_${clean}_${WRAPPED_CURRENT_EDITION}`);
-      localStorage.removeItem(`macromix_wrapped_viewed_at_${clean}_2026_w45_nov`);
-      localStorage.removeItem(`macromix_wrapped_viewed_at_${clean}_2026_w46_nov`);
     }
-  } else if (profile.weekendReviewViewed === true) {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(`macromix_wrapped_viewed_${clean}_${WRAPPED_CURRENT_EDITION}`, '1');
-      if (viewedAtMillis) {
+  } else if (profile.weekendReviewViewed === true && isCurrentEdition) {
+    _firestoreWeekendReviewViewedCache[clean] = true;
+    const viewedAtMillis = parseTimestampToMillis(profile.weekendReviewViewedAt);
+    if (viewedAtMillis) {
+      _firestoreWeekendReviewViewedAtCache[clean] = viewedAtMillis;
+      if (typeof localStorage !== 'undefined') {
         localStorage.setItem(`macromix_wrapped_viewed_at_${clean}_${WRAPPED_CURRENT_EDITION}`, String(viewedAtMillis));
       }
+    }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(`macromix_wrapped_viewed_${clean}_${WRAPPED_CURRENT_EDITION}`, '1');
     }
   }
   updateWeekendWrappedVisibility();
@@ -6189,11 +6194,18 @@ function initWeekendWrappedEvents() {
   if (_wrappedEventsInitialized) return;
   _wrappedEventsInitialized = true;
 
-  // Purge legacy unversioned keys so they never mask unviewed state
+  // Purge legacy keys and older edition keys so they never mask unviewed state
   if (typeof localStorage !== 'undefined') {
-    ['istashmacros', 'kalay', 'katara'].forEach(h => {
-      localStorage.removeItem(`macromix_wrapped_viewed_${h}`);
-    });
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('macromix_wrapped_viewed_') || key.startsWith('macromix_wrapped_viewed_at_'))) {
+          if (!key.endsWith(`_${WRAPPED_CURRENT_EDITION}`)) {
+            localStorage.removeItem(key);
+          }
+        }
+      }
+    } catch (e) {}
   }
 
   // Proactively sync with Firestore
