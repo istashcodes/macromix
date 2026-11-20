@@ -5563,22 +5563,309 @@ const WRAPPED_PROFILES = {
   }
 };
 
+function generateDynamicWrappedProfile(handle, logs = null, targets = null, streak = 0) {
+  const clean = (handle || getWrappedActiveHandle() || '').trim().toLowerCase().replace(/^@+/, '');
+  const activeTargets = targets || userTargets || { calories: 2000, protein_g: 150, carbs_g: 200, fat_g: 65, fiber_g: 30 };
+  const allLogs = Array.isArray(logs) ? logs : (currentLogs || []);
+  const curated = WRAPPED_PROFILES[clean];
+
+  // Rolling 7-day window
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const cutoffStr = sevenDaysAgo.toISOString().slice(0, 10);
+
+  const weeklyLogs = allLogs.filter(log => {
+    const d = getLogDate(log);
+    return d >= cutoffStr;
+  });
+
+  const logsToAnalyze = weeklyLogs.length > 0 ? weeklyLogs : (allLogs.length > 0 ? allLogs : []);
+
+  // If user has zero dynamic logs but has curated profile, use curated profile
+  if (logsToAnalyze.length === 0 && curated) {
+    return curated;
+  }
+
+  // Aggregate metrics
+  let totalCalories = 0;
+  let totalProtein = 0;
+  let totalCarbs = 0;
+  let totalFat = 0;
+  let totalFiber = 0;
+  const foodFrequency = {};
+  const dayBreakdown = {};
+  let bestQuote = '';
+
+  logsToAnalyze.forEach(log => {
+    const logDate = getLogDate(log);
+    if (!dayBreakdown[logDate]) {
+      dayBreakdown[logDate] = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, count: 0 };
+    }
+    dayBreakdown[logDate].count++;
+
+    if (log.raw_transcript && log.raw_transcript.trim() && !bestQuote) {
+      bestQuote = log.raw_transcript.trim();
+    }
+
+    if (Array.isArray(log.items)) {
+      log.items.forEach(it => {
+        const cal = Number(it.calories) || 0;
+        const prot = Number(it.protein_g) || 0;
+        const carb = Number(it.carbs_g) || 0;
+        const fat = Number(it.fat_g) || 0;
+        const fib = Number(it.fiber_g) || 0;
+
+        totalCalories += cal;
+        totalProtein += prot;
+        totalCarbs += carb;
+        totalFat += fat;
+        totalFiber += fib;
+
+        dayBreakdown[logDate].calories += cal;
+        dayBreakdown[logDate].protein += prot;
+        dayBreakdown[logDate].carbs += carb;
+        dayBreakdown[logDate].fat += fat;
+        dayBreakdown[logDate].fiber += fib;
+
+        const name = (it.food_name || '').trim();
+        if (name) {
+          foodFrequency[name] = (foodFrequency[name] || 0) + 1;
+        }
+      });
+    }
+  });
+
+  const loggedDaysCount = Math.max(1, Object.keys(dayBreakdown).length);
+  const avgDailyCal = Math.round(totalCalories / loggedDaysCount);
+  const avgDailyProt = Math.round(totalProtein / loggedDaysCount);
+  const avgDailyFib = Math.round(totalFiber / loggedDaysCount);
+
+  // Top Food Items
+  const sortedFoods = Object.entries(foodFrequency)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
+
+  const pastelColors = ['#FFE600', '#fed7aa', '#dbeafe', '#e2e8f0'];
+  const foodEmojis = ['🍲', '🍳', '🥗', '🥣', '🥩', '🥑', '🌾', '🍗'];
+  const topItems = sortedFoods.length > 0 ? sortedFoods.map(([name, count], idx) => {
+    const emoji = foodEmojis[idx % foodEmojis.length];
+    return {
+      name: `${emoji} ${name}`,
+      badge: `${count} ${count === 1 ? 'Time' : 'Times'}`,
+      bg: pastelColors[idx % pastelColors.length]
+    };
+  }) : [
+    { name: '🥣 Balanced Whole Foods', badge: 'Active', bg: '#FFE600' },
+    { name: '🥚 Lean Protein Source', badge: 'Consistent', bg: '#fed7aa' }
+  ];
+
+  // Best Day
+  let bestDayKey = Object.keys(dayBreakdown)[0] || 'Today';
+  let bestDayProt = 0;
+  for (const [dayStr, data] of Object.entries(dayBreakdown)) {
+    if (data.protein > bestDayProt) {
+      bestDayProt = data.protein;
+      bestDayKey = dayStr;
+    }
+  }
+
+  let bestDayTitle = 'Best Fuel Day';
+  try {
+    const [y, m, d] = bestDayKey.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    bestDayTitle = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  } catch (e) {}
+
+  const chickenEquiv = Math.max(1, Math.round(totalProtein / 31));
+  const eggEquiv = Math.max(1, Math.round(totalProtein / 6));
+
+  // Determine Persona & Archetype
+  let archetypeTitle = 'The Momentum Pioneer';
+  let archetypeEmoji = '⚡🚀🥑🥣';
+  let archetypeQuote = 'Building foundational nutrition momentum one honest log at a time.';
+  let personaUpper = 'THE MOMENTUM PIONEER';
+
+  if (avgDailyProt >= (activeTargets.protein_g || 140)) {
+    archetypeTitle = 'The Protein Architect';
+    archetypeEmoji = '🧬💪🍗🥚';
+    archetypeQuote = 'Precision amino fueling, clean high-density protein building.';
+    personaUpper = 'THE PROTEIN ARCHITECT';
+  } else if (avgDailyFib >= (activeTargets.fiber_g || 28)) {
+    archetypeTitle = 'The Fiber Alchemist';
+    archetypeEmoji = '🌾🥗🥑🌿';
+    archetypeQuote = 'Master of complex carbs, prebiotic vitality, and gut-biome fuel.';
+    personaUpper = 'THE FIBER ALCHEMIST';
+  } else if (logsToAnalyze.length >= 8) {
+    archetypeTitle = 'The Metabolic Engine';
+    archetypeEmoji = '⚡🔥🥣🍳';
+    archetypeQuote = 'Relentless consistency, high logging velocity, perfectly dialed in.';
+    personaUpper = 'THE METABOLIC ENGINE';
+  }
+
+  const userAvatar = clean === 'katara' ? '🌾' : (clean === 'kalay' ? '🏃‍♂️' : '⚡');
+
+  const targetKcal = activeTargets.calories || 2000;
+  const calDiff = avgDailyCal - targetKcal;
+  let deficitBadge = calDiff < 0 ? `${calDiff} KCAL DEFICIT` : `+${calDiff} KCAL SURPLUS`;
+  let runwayTitle = calDiff < 0
+    ? 'Calorie Deficit<br><span style="background: #fff; color: #FF3366; padding: 2px 8px; border-radius: 8px;">Runway Ahead</span>'
+    : 'High Energy<br><span style="background: #fff; color: #FF3366; padding: 2px 8px; border-radius: 8px;">Surplus Mode</span>';
+
+  const protTarget = activeTargets.protein_g || 150;
+  const fibTarget = activeTargets.fiber_g || 30;
+  const isProteinLow = avgDailyProt < protTarget * 0.85;
+  const isFiberLow = avgDailyFib < fibTarget * 0.85;
+
+  let swap1 = {
+    badge: 'SWAP 1 • LUNCH',
+    gain: '+22g PROTEIN',
+    name: 'Add 150g Skyr, Greek Yogurt or Grilled Tofu/Chicken',
+    desc: 'Bumps your midday amino spike without weighing down your afternoon energy.'
+  };
+
+  let swap2 = {
+    badge: 'SWAP 2 • EVENING',
+    gain: '+8g FIBER & PREBIOTICS',
+    name: 'Pair evening snack with Spiced Chana, Chia Seeds, or Mixed Nuts',
+    desc: 'Stabilizes evening satiety and prevents post-dinner calorie overflow.'
+  };
+
+  if (!isProteinLow && isFiberLow) {
+    swap1 = {
+      badge: 'SWAP 1 • BREAKFAST',
+      gain: '+6g FIBER',
+      name: 'Top oats or toast with 2 tbsp Chia Seeds or Sprouted Flax',
+      desc: 'Provides effortless micronutrient and digestive support with zero prep time.'
+    };
+  }
+
+  if (!bestQuote) {
+    if (sortedFoods.length > 0) {
+      bestQuote = `Fueled up with ${sortedFoods.map(f => f[0]).join(', ')} throughout the week!`;
+    } else {
+      bestQuote = 'Started logging with intention and tracking real nutritional momentum.';
+    }
+  }
+
+  const activeStreak = streak || currentUserStreak || (logsToAnalyze.length > 0 ? 1 : 0);
+
+  return {
+    avatar: userAvatar,
+    handle: `@${clean}`,
+    fridayTag: 'WEEKEND WRAPPED',
+    shareText: `⚡ @${clean}'s Weekend Review Wrapped:\n` +
+               `🔥 ${Math.round(totalCalories).toLocaleString()} kcal logged across ${logsToAnalyze.length} meals\n` +
+               `💪 ${Math.round(totalProtein)}g Protein banked\n` +
+               `🧬 Persona: ${archetypeTitle}\n` +
+               `Tracked on macromix.web.app`,
+    slide1: {
+      subtitle: 'You showed up, tracked your real intake, and took ownership of your daily energy.',
+      totalCalories: Math.round(totalCalories).toLocaleString(),
+      badge: `${logsToAnalyze.length} ${logsToAnalyze.length === 1 ? 'MEAL' : 'MEALS'} LOGGED`,
+      totalProtein: String(Math.round(totalProtein)),
+      proteinEquiv: `Equivalent to <strong>${chickenEquiv} chicken ${chickenEquiv === 1 ? 'breast' : 'breasts'}</strong> or <strong>${eggEquiv} whole eggs</strong>!`,
+      streak: `${activeStreak}-DAY STREAK`,
+      streakSubtitle: activeStreak > 1 ? 'Habit engine locked in!' : 'Momentum reignited!'
+    },
+    slide2: {
+      title: 'Top Fuel &<br><span style="background: #111; color: #FFE600; padding: 2px 8px; border-radius: 8px;">MVP Dishes</span>',
+      subtitle: 'When hunger struck, these foods were your go-to anchors for clean fuel.',
+      topItems: topItems,
+      quote: bestQuote.length > 120 ? bestQuote.slice(0, 117) + '...' : bestQuote,
+      peakLabel: 'Fuel Window',
+      peakTime: 'Midday Power'
+    },
+    slide3: {
+      dayTitle: bestDayTitle,
+      subtitle: 'When you logged with intention, your macro compliance reached peak velocity.',
+      peakProtein: String(Math.round(bestDayProt || avgDailyProt)),
+      pctGoal: `${Math.min(100, Math.round(((bestDayProt || avgDailyProt) / (protTarget || 150)) * 100))}% OF GOAL`,
+      targetProtein: `${protTarget}g`,
+      scorecard1: {
+        label: `Fiber Target (${fibTarget}g)`,
+        value: `${avgDailyFib}g (${Math.round((avgDailyFib / (fibTarget || 30)) * 100)}% Precision)`,
+        pct: Math.min(100, Math.round((avgDailyFib / (fibTarget || 30)) * 100))
+      },
+      scorecard2: {
+        label: `Protein Target (${protTarget}g)`,
+        value: `${Math.round(bestDayProt || avgDailyProt)}g (${Math.round(((bestDayProt || avgDailyProt) / (protTarget || 150)) * 100)}% Compliance)`,
+        pct: Math.min(100, Math.round(((bestDayProt || avgDailyProt) / (protTarget || 150)) * 100))
+      },
+      winTitle: 'Weekly Highlight',
+      winBody: `You stayed disciplined and logged <strong>${logsToAnalyze.length} meals</strong> with steady nutritional density!`
+    },
+    slide4: {
+      title: 'The Macro Bridge<br><span style="background: #FFE600; color: #111; padding: 2px 8px; border-radius: 8px;">Smart Swaps</span>',
+      subtitle: 'Here is how small high-leverage swaps can elevate your macro balance effortlessly:',
+      swap1: swap1,
+      swap2: swap2
+    },
+    slide5: {
+      title: runwayTitle,
+      subtitle: `You averaged <strong>${avgDailyCal.toLocaleString()} kcal/day</strong> against your ${targetKcal.toLocaleString()} kcal target.`,
+      badge: deficitBadge,
+      avgKcal: avgDailyCal.toLocaleString(),
+      targetDetail: `Target: <strong>${targetKcal.toLocaleString()} kcal</strong> &bull; Protein: <strong>${protTarget}g</strong> &bull; Fiber: <strong>${fibTarget}g</strong>.`,
+      prescriptionHtml: calDiff < 0
+        ? '&bull; <strong>Clean Runway:</strong> You have calorie headroom for a hearty recovery meal or protein dessert.<br>&bull; <strong>Keep Momentum:</strong> Keep logging consistently throughout the weekend.'
+        : '&bull; <strong>Mindful Energy:</strong> Prioritize protein and fiber early in the day to maintain steady satiety.<br>&bull; <strong>Keep Momentum:</strong> Log every meal honestly without stress.'
+    },
+    slide6: {
+      title: `${archetypeTitle.split(' ')[0]}<br><span style="background: #111; color: #00F0FF; padding: 2px 8px; border-radius: 8px;">${archetypeTitle.split(' ').slice(1).join(' ') || 'Archetype'}</span>`,
+      subtitle: 'Your eating habits reflect your unique nutritional fingerprint.',
+      emoji: archetypeEmoji,
+      archetypeName: archetypeTitle,
+      quote: archetypeQuote,
+      tags: [
+        { text: `⚡ ${archetypeTitle}`, bg: '#fef08a' },
+        { text: `🔥 ${activeStreak}d Streak`, bg: '#bae6fd' },
+        { text: `🥗 ${logsToAnalyze.length} Meals`, bg: '#bbf7d0' },
+        { text: '✨ Active Tracker', bg: '#fbcfe8' }
+      ],
+      tier: 'Active Member'
+    },
+    slide7: {
+      handle: `@${clean}`,
+      personaUpper: personaUpper,
+      stat1Val: Math.round(totalCalories).toLocaleString(),
+      stat1Label: 'Calories',
+      stat2Val: `${Math.round(totalProtein)}g`,
+      stat2Label: 'Protein',
+      stat3Val: `🔥 ${activeStreak}d`,
+      stat3Label: 'Streak',
+      stat4Val: `${avgDailyFib}g`,
+      stat4Label: 'Fiber'
+    }
+  };
+}
+
 function getWrappedActiveHandle() {
   const handle = (currentUserHandle || (typeof localStorage !== 'undefined' ? localStorage.getItem('macromix_user_handle') : '') || '').trim().toLowerCase().replace(/^@+/, '');
-  if (WRAPPED_PROFILES[handle]) return handle;
+  if (handle) return handle;
   return 'istashmacros';
 }
 
 function isWeekendWrappedEligible() {
   const handle = (currentUserHandle || (typeof localStorage !== 'undefined' ? localStorage.getItem('macromix_user_handle') : '') || '').trim().toLowerCase().replace(/^@+/, '');
-  if (handle !== 'istashmacros' && handle !== 'kalay' && handle !== 'katara') return false;
+  if (!handle) return false;
 
-  // Check URL query param ?wrapped=1 or ?wrapped=true
+  // Check URL query param ?wrapped=1 or ?wrapped=true (allows manual review/testing anytime)
   if (typeof window !== 'undefined' && window.location) {
     const params = new URLSearchParams(window.location.search);
     if (params.get('wrapped') === '1' || params.get('wrapped') === 'true') {
       return true;
     }
+  }
+
+  // Day of week check: Friday (5), Saturday (6), Sunday (0)
+  const now = new Date();
+  const day = now.getDay();
+  const isWeekendWindow = (day === 5 || day === 6 || day === 0);
+
+  // VIP handles have access anytime, and all registered users have access on Friday/Weekend!
+  const isVip = (handle === 'istashmacros' || handle === 'kalay' || handle === 'katara');
+  if (!isVip && !isWeekendWindow) {
+    return false; // For other users, active Friday morning through Sunday night
   }
 
   const hasViewed = hasUserViewedWeekendWrapped(handle);
@@ -5599,13 +5886,13 @@ function isWeekendWrappedEligible() {
     return true; // Still within the 24-hour viewing window
   }
 
-  // 24 hours have elapsed since first watch, glowing ring disappears
+  // 24 hours have elapsed since first watch, glowing ring disappears until next Friday
   return false;
 }
 
 function renderWeeklyWrappedSlides(handle) {
   const normalized = (handle || getWrappedActiveHandle() || '').trim().toLowerCase().replace(/^@+/, '');
-  const profile = WRAPPED_PROFILES[normalized] || WRAPPED_PROFILES['istashmacros'];
+  const profile = generateDynamicWrappedProfile(normalized, currentLogs, userTargets, currentUserStreak);
 
   const avatarEl = document.getElementById('wrappedUserAvatar');
   if (avatarEl) avatarEl.textContent = profile.avatar;
@@ -6177,7 +6464,7 @@ function triggerWrappedShare() {
   if (currentUserHandle && window.MacromixFirebase && typeof window.MacromixFirebase.syncWeekendReviewShared === 'function') {
     window.MacromixFirebase.syncWeekendReviewShared(currentUserHandle);
   }
-  const profile = WRAPPED_PROFILES[handle] || WRAPPED_PROFILES['istashmacros'];
+  const profile = generateDynamicWrappedProfile(handle, currentLogs, userTargets, currentUserStreak);
   const text = profile.shareText;
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text).then(() => {
@@ -6591,6 +6878,7 @@ window.closeWeeklyWrappedModal = closeWeeklyWrappedModal;
 window.isWeekendWrappedEligible = isWeekendWrappedEligible;
 window.updateWeekendWrappedVisibility = updateWeekendWrappedVisibility;
 window.renderWeeklyWrappedSlides = renderWeeklyWrappedSlides;
+window.generateDynamicWrappedProfile = generateDynamicWrappedProfile;
 window.WRAPPED_PROFILES = WRAPPED_PROFILES;
 window.getWrappedActiveHandle = getWrappedActiveHandle;
 window.getWrappedCurrentSlide = () => wrappedCurrentSlide;

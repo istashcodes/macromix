@@ -17,6 +17,7 @@
 * **🎨 Neo-brutalist Aesthetics:** Bold high-contrast UI, thick borders, brutalist drop-shadows, animated nutrient rings, accessible color contrast, and fluid responsive design across mobile and desktop.
 * **🛡️ Passwordless Biometric Passkeys & Google OIDC:** Sign in with Face ID, Touch ID, or Google 1-Tap authentication. Uses server-verified SimpleWebAuthn with counter replay checks and Firebase Custom Tokens.
 * **🔥 Daily Streak & Friends System:** Maintain daily consistency streaks (🔥), discover friends by handle, and view their daily macromix circles in real time via a privacy-preserving leaderboard API.
+* **🎬 Spotify-Style Weekend Review Wrapped:** Automated Friday & weekend story cards in a 9:16 mobile reel format reviewing weekly intake, top MVP fuel, macro compliance, intelligent food swaps, and custom user archetypes.
 * **📱 Full Offline-Capable PWA:** Install directly to your iOS or Android home screen with instant caching, standalone window frame, background sync, and local-first persistence.
 
 ---
@@ -50,6 +51,25 @@ flowchart TD
 | **Database** | Google Cloud Firestore (Granular security rules, composite indexes) & Realtime DB (locked) |
 | **Authentication** | SimpleWebAuthn (Passkeys / FIDO2) + Firebase Auth (Google OIDC & Custom Tokens) |
 | **Hosting & CI/CD** | Firebase Hosting CDN & GitHub Actions Automated Deployments |
+
+---
+
+## 🎬 Weekend Review Wrapped Architecture & Rules
+
+Macromix includes a native **Spotify-style Weekend Review Wrapped** that automatically surfaces every Friday morning through Sunday midnight for `@istashmacros`, `@kalay`, `@katara`, and **all new user registrations going forward**.
+
+For full engineering specifications, refer to [**`WEEKEND_WRAPPED_SPEC.md`**](WEEKEND_WRAPPED_SPEC.md).
+
+### Key Rules & Behaviors:
+* **The Story Ring Indicator:** An Instagram Stories-style pulsating gradient ring glows around the Macromix brand logo (`#brand-wrapper.has-wrapped-story`) when a new weekend edition is ready. Tapping the logo opens the 7-slide modal reel.
+* **Automatic Weekly Edition Rollover:** Editions are dynamically computed per ISO calendar week (`YYYY_wWW_mon`, e.g. `2026_w47_nov`). When a new week begins, older viewed flags automatically roll over to unviewed, reigniting the story ring.
+* **24-Hour Retention Window:** After a user watches their reel, the story ring remains visible for 24 hours to enable rewatching, then gracefully hides until the next Friday edition rolls over.
+* **Automated Log Analysis (`generateDynamicWrappedProfile`):** Dynamically synthesizes the user's past 7 days of meal logs to calculate total calories, protein equivalents, top foods, best macro compliance day, smart food swaps, and custom archetype personas (e.g. *The Protein Architect*, *The Fiber Alchemist*, *The Metabolic Engine*).
+* **Strict Formatting Constraints:**
+  * **Zero AI branding:** No *"powered by google gemini..."* in the slides or modals.
+  * **Slide 2:** No *"From Your Real Audio Logs:"* header and no *"Peak Fuel Window"* / *"peak"* badge.
+  * **Slide 6:** No *"MACROMIX SOCIETY TIER"* card.
+  * **Slide 7:** No buttons, CTAs, or share boxes at the bottom of the final slide.
 
 ---
 
