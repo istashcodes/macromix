@@ -36,6 +36,7 @@ Developers and coding agents working on Macromix must strictly enforce these con
 | **No "Tap To..." Commentary** | Do NOT display "TAP ANYWHERE TO CONTINUE &rarr;" or "TAP TO..." hint lines at the bottom of slides. The story auto-advances or taps natively via overlay tap zones. |
 | **Slide 2 (MVP Dishes)** | Clean view: only shows title block and the Top Logged Fuel Items box. Entire audio transcript / voice quote box is removed (nothing below top items). **NO** `"Peak Fuel Window"` or `"peak"` badge. |
 | **Slide 6 (Archetype)** | **NO** `"MACROMIX SOCIETY TIER"` card. Focus purely on the gamified Persona Archetype and descriptive tags. |
+| **Slides 1–6 Box Spacing** | Downshift the boxes container (`.wrapped-boxes-container`) 10–20% (`clamp(...)`) so the cards occupy the visual middle of the screen estate rather than clustering tightly beneath the top title. |
 | **Slide 7 (Grand Finale Card)** | The summary card must be centered in the vertical and horizontal middle of the slide (`justify-content: center; gap: 20px;`). **NO** buttons, CTAs, or share boxes at the bottom of the final slide. |
 | **Neo-Brutalist Aesthetic** | Maintain high-contrast brutalist borders (`2px solid #111`), vibrant accents (`#FFE600`, `#00F0FF`, `#FF3366`, `#00F59B`), and JetBrains Mono / Space Grotesk typography. |
 

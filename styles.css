@@ -3559,6 +3559,31 @@ body.is-visitor-mode #timeline-input-zone,
   gap: 20px;
 }
 
+/* Boxes Container for Slides 1-6 — Downshifted to occupy middle of screen estate */
+.wrapped-boxes-container,
+.wrapped-slide:not(.wrapped-slide-7) > div:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: clamp(20px, 4.5vh, 36px);
+}
+
+/* Slides with 2 cards (Slides 4 & 5): ~10-15% downshift to center the cards */
+.wrapped-slide-4 .wrapped-boxes-container,
+.wrapped-slide-5 .wrapped-boxes-container,
+.wrapped-slide-4 > div:nth-child(2),
+.wrapped-slide-5 > div:nth-child(2) {
+  margin-top: clamp(32px, 7vh, 56px);
+}
+
+/* Slides with 1 card (Slides 2 & 6): ~15-20% downshift to place box in middle estate */
+.wrapped-slide-2 .wrapped-boxes-container,
+.wrapped-slide-6 .wrapped-boxes-container,
+.wrapped-slide-2 > div:nth-child(2),
+.wrapped-slide-6 > div:nth-child(2) {
+  margin-top: clamp(48px, 10vh, 80px);
+}
+
 /* Neo-Brutalist Components */
 .wrapped-brutal-card {
   background: #ffffff;

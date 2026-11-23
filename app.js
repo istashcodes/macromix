@@ -5938,7 +5938,7 @@ function renderWeeklyWrappedSlides(handle) {
         </p>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div class="wrapped-boxes-container">
         <div class="wrapped-brutal-card" style="background: #fff; transform: rotate(-1deg);">
           <div style="display: flex; justify-content: space-between; align-items: flex-end;">
             <div>
@@ -5989,7 +5989,7 @@ function renderWeeklyWrappedSlides(handle) {
         </p>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div class="wrapped-boxes-container">
         <div class="wrapped-brutal-card" style="background: #fff; color: #111;">
           <div style="font-size: 11px; font-weight: 900; color: #e11d48; text-transform: uppercase;">
             Top Logged Fuel Items
@@ -6015,7 +6015,7 @@ function renderWeeklyWrappedSlides(handle) {
         </p>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div class="wrapped-boxes-container">
         <div class="wrapped-brutal-card" style="background: #fff;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
@@ -6082,7 +6082,7 @@ function renderWeeklyWrappedSlides(handle) {
         </p>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div class="wrapped-boxes-container">
         <div class="wrapped-brutal-card" style="background: #fff; color: #111; padding: 14px;">
           <div style="display: flex; align-items: center; justify-content: space-between;">
             <span class="wrapped-brutal-badge" style="background: #c084fc; color: #fff; font-size: 9px;">${s4.swap1.badge}</span>
@@ -6125,7 +6125,7 @@ function renderWeeklyWrappedSlides(handle) {
         </p>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div class="wrapped-boxes-container">
         <div class="wrapped-brutal-card" style="background: #fff; color: #111;">
           <div style="display: flex; justify-content: space-between; align-items: baseline;">
             <span style="font-size: 11px; font-weight: 800; color: #64748b;">DAILY AVERAGE INTAKE</span>
@@ -6162,7 +6162,7 @@ function renderWeeklyWrappedSlides(handle) {
         </p>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div class="wrapped-boxes-container">
         <div class="wrapped-brutal-card" style="background: #fff; color: #111; text-align: center; padding: 16px;">
           <div style="font-size: 46px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));">${s6.emoji}</div>
           <div class="wrapped-font-grotesk" style="font-size: 18px; font-weight: 900; text-transform: uppercase; margin-top: 6px;">
